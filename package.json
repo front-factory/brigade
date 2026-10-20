@@ -1,0 +1,8 @@
+{
+    "private": true,
+    "name": "@frontfactory/brigade",
+    "version": "0.0.0",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    }
+}
