@@ -2,7 +2,14 @@
     "private": true,
     "name": "@frontfactory/brigade",
     "version": "0.0.0",
+    "type": "module",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "prepare": "husky"
+    },
+    "engines": {
+        "node": ">=24"
+    },
+    "devDependencies": {
+        "husky": "^9.1.7"
     }
 }
