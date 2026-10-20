@@ -1,1 +1,3 @@
 # brigade
+
+The FrontFactory brigade.
