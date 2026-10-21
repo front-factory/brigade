@@ -7,6 +7,9 @@ import { banner, bullets, card, checklist, step } from '../src/ui.js';
 const ANSI = /\x1b\[/;
 const ROWS = [['Default branch', 'main'], ['Package manager', 'pnpm'], ['Replies', 'French (project default)']];
 
+// A real terminal run sets FORCE_COLOR for child processes: drop it so colors stay off.
+delete process.env.FORCE_COLOR;
+
 // Tests run with stdout piped: colors are off, the output is plain text.
 test('plain output carries no ANSI', () => {
     for (const text of [banner('1.2.3'), card('Setup', ROWS), step(1, 3, 'Detection'), checklist([{ done: true, label: 'a', detail: 'added' }]), bullets(['x'])]) {
