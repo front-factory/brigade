@@ -1,7 +1,7 @@
 {
     "name": "@frontfactory/brigade",
     "version": "1.1.1",
-    "description": "Sets up a Claude Code architecture in any web project: a main session, a Sonnet implementer, a Haiku git-operator and a git guard.",
+    "description": "Claude Code, organized like a kitchen brigade.",
     "type": "module",
     "scripts": {
         "prepare": "husky",

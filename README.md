@@ -4,7 +4,11 @@
 [![Downloads](https://flat.badgen.net/npm/dt/@frontfactory/brigade)](https://www.npmjs.com/package/@frontfactory/brigade)
 [![License](https://flat.badgen.net/npm/license/@frontfactory/brigade)](https://www.npmjs.com/package/@frontfactory/brigade)
 
-Sets up a Claude Code architecture in any project, new or existing, without fuss.
+Claude Code, organized like a kitchen brigade.
+
+Brigade sets up a Claude Code architecture in any web project, new or existing, without fuss: a main session that
+thinks and orchestrates, an `implementer` that writes the code and a `git-operator` that handles git, each limited to
+its mission, with guardrails built in.
 
 ```sh
 npx @frontfactory/brigade init
