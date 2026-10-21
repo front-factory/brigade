@@ -42,9 +42,10 @@ detecting it (only `web` for now).
 Brigade never touches your `CLAUDE.md`: its instructions live in `.claude/rules/brigade.md`, which Claude Code loads
 at launch like a `CLAUDE.md`.
 
-When Brigade is already installed, `init` asks whether to keep the installed version or update to the one you run. On
-the same version it offers to change your options (the questions are asked again, files only change if an answer
-does) or to leave everything as it is. Without a terminal, it updates.
+When Brigade is already installed, `init` asks whether to keep the installed version or update to the one you run.
+Updating does not repeat the setup: your stored answers are reused and only the options that are new to the manifest
+are asked. On the same version it offers to change your options (every question is asked again, files only change if
+an answer does) or to leave everything as it is. Without a terminal, it updates.
 
 An existing file is never overwritten. If it differs from the kit, a `.proposed` file is written next to it; if it is
 identical, nothing happens. A file Brigade wrote and nobody touched is updated. `.gitignore` and `.gitattributes` only
@@ -56,6 +57,11 @@ updated nor proposed over.
 Re-run `npx @frontfactory/brigade init`. Kit files you never touched are updated. A file you edited is left as it is
 and a `<file>.proposed` is written next to it: diff it, merge what you want, then delete the `.proposed`.
 
+An update does not ask your options again. It reuses the answers stored in `.claude/brigade.json` and asks only the
+options the new version added (your personal reply language is not one of them). A downgrade does the same and keeps
+the answers the older version does not know. To change your options on purpose, run `init` again on the same version
+and choose "Change my options".
+
 Brigade records what it did in `.claude/brigade.json`: its version, your answers and the sha256 of each file it wrote.
 That is how it tells an untouched file from an edited one. Do not edit it by hand.
 
@@ -65,8 +71,9 @@ That is how it tells an untouched file from an edited one. Do not edit it by han
   stack for now. Run `npx @frontfactory/brigade --help` to see the usage.
 - `.proposed` files keep coming back: a proposal is rewritten only when the kit changed since the last one. Once you have
   merged what you want, delete the `.proposed`.
-- No terminal (CI, pipe): nothing is asked. `init` behaves like `--yes`, accepting every detected answer, and an
-  existing install is updated.
+- No terminal (CI, pipe): nothing is asked. `init` behaves like `--yes`: a new install accepts every detected answer, an
+  existing install is updated with its stored answers, and a new option gets its detected or default value. The run
+  prints one line naming the new options and the value used; it never fails for that.
 - "No git repository" warning: run `git init` yourself. Brigade never creates a repository.
 - A broken `.claude/settings.local.json` (invalid JSON) is left untouched, so your personal language is not written
   there. Fix the file and run `init` again.

@@ -7,6 +7,7 @@ const HELP = `Usage: brigade init [--yes] [--stack <name>]
        brigade --version
 
   --yes           accept every detected or default answer, ask nothing
+                  (an installed project is updated with its stored answers; new options get their default)
   --stack <name>  force the stack (${Object.keys(STACKS).join(', ')}); detected otherwise
   -h, --help      show this help
   -v, --version   show the version
@@ -35,7 +36,7 @@ function parse(args) {
     return options;
 }
 
-function summary({ version, answers, report, ignored, repo, personal, local }) {
+function summary({ version, answers, report, ignored, repo, personal, local, asked = [] }) {
     const lines = report.map(({ path, status }) => `${WORDS[status].padEnd(28)} ${path}${status === 'proposed' ? '.proposed' : ''}`);
     for (const { path, status, added } of ignored) {
         if (status === 'updated') lines.push(`${'lines added'.padEnd(28)} ${path} (${added.join(', ')})`);
@@ -52,7 +53,8 @@ function summary({ version, answers, report, ignored, repo, personal, local }) {
         `Documentation    ${answers.docsLanguage}`,
         `Replies for you  ${personal.language && local?.status === 'written' ? `${personal.language} (your machine only)` : 'project default'}`
     ];
-    return { files: lines.join('\n'), settings: settings.join('\n'), kept: report.some(({ status }) => status === 'proposed'), repo };
+    const added = asked.flat().map((key) => `${key}: ${answers[key]}`).join(', ');
+    return { files: lines.join('\n'), settings: settings.join('\n'), added, kept: report.some(({ status }) => status === 'proposed'), repo };
 }
 
 function print(result, interactive) {
@@ -63,15 +65,17 @@ function print(result, interactive) {
         return;
     }
 
-    const { files, settings, kept, repo } = summary(result);
+    const { files, settings, added, kept, repo } = summary(result);
 
     if (!interactive) {
-        console.log(`Brigade installed (stack: ${result.stack}).\n\n${files}\n\n${settings}`);
+        const news = added ? `\n\nNew options, default used: ${added}` : '';
+        console.log(`Brigade installed (stack: ${result.stack}).\n\n${files}\n\n${settings}${news}`);
         return;
     }
 
     prompter.note(files, 'Files');
     prompter.note(settings, 'Your setup');
+    if (added) prompter.info(`New options set up: ${added}`);
     if (kept) prompter.warn('Some files of yours differ from the kit: they were kept. Merge the .proposed version if you want it.');
     if (!repo) prompter.warn('Remember to run `git init` before your first commit.');
     prompter.outro('Done. Run `claude` here, use Plan Mode (Shift+Tab) to discuss, and /brigade-language and /brigade-effort for your own settings.');

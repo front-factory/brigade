@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { runInit } from '../src/init.js';
 import { appendMissingLines, readManifest, writeLocalSettings } from '../src/install.js';
+import { OPTIONS } from '../src/options.js';
 import { compareVersions } from '../src/version.js';
 
 function project() {
@@ -148,7 +149,10 @@ const asking = (answer) => {
     const prompter = {
         intro: noop, info: noop, warn: noop, note: noop, outro: noop, close: noop,
         text: async (_, fallback = '') => fallback,
-        validate: async (_, detected, pick) => detected || pick(),
+        validate: async (message, detected, pick) => {
+            asked.push(message);
+            return detected || pick();
+        },
         choose: async (message, options) => {
             asked.push(message);
             return /version|older|do you want/.test(message) ? answer : options[0].value;
@@ -281,4 +285,112 @@ test('CRLF ignore files are read and extended with CRLF', () => {
     assert.deepEqual(result.find(({ path }) => path === '.gitignore').added, ['.claude/settings.local.json']);
     assert.equal(readFileSync(join(cwd, '.gitignore'), 'utf8'), 'node_modules\r\nCLAUDE.local.md\r\n\r\n## Claude\r\n.claude/settings.local.json\r\n');
     assert.ok(appendMissingLines(cwd).every(({ status }) => status === 'unchanged'));
+});
+
+const MANIFEST_FILE = '.claude/brigade.json';
+const readAnswers = (cwd) => JSON.parse(readFileSync(join(cwd, MANIFEST_FILE), 'utf8'));
+const dropKey = (cwd, key) => {
+    const manifest = readAnswers(cwd);
+    delete manifest.answers[key];
+    writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
+};
+
+test('updating with a full manifest asks nothing but keep or update and keeps the answers', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true, version: '1.0.0' });
+    const before = readAnswers(cwd).answers;
+
+    const { prompter, asked } = asking('update');
+    const result = await runInit({ cwd, version: '2.0.0', interactive: true, prompter });
+    assert.deepEqual(asked, ['A newer version is available']);
+    assert.deepEqual(result.asked, []);
+    assert.deepEqual(readAnswers(cwd).answers, before);
+});
+
+test('updating asks only the group that is missing from the manifest', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true, version: '1.0.0' });
+    dropKey(cwd, 'docsLanguage');
+
+    const { prompter, asked } = asking('update');
+    const result = await runInit({ cwd, version: '2.0.0', interactive: true, prompter });
+    assert.deepEqual(asked, [
+        'A newer version is available',
+        'Language of the code, comments and commit messages (shared by the team)',
+        'Language of the documentation (shared by the team)'
+    ]);
+    assert.deepEqual(result.asked, [['codeLanguage', 'docsLanguage']]);
+    assert.ok(readAnswers(cwd).answers.docsLanguage);
+});
+
+test('without a terminal a missing option takes its default and is reported', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true, version: '1.0.0' });
+    dropKey(cwd, 'packageManager');
+
+    const result = await runInit({ cwd, yes: true, version: '2.0.0' });
+    assert.deepEqual(result.asked, [['packageManager']]);
+    assert.equal(readAnswers(cwd).answers.packageManager, 'pnpm');
+});
+
+test('a downgrade keeps the keys the older version does not know', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true, version: '2.0.0' });
+    const manifest = readAnswers(cwd);
+    manifest.answers.futureOption = 'x';
+    writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
+
+    await runInit({ cwd, yes: true, version: '1.0.0' });
+    assert.equal(readAnswers(cwd).answers.futureOption, 'x');
+});
+
+test('an update keeps edited files as .proposed, updates untouched ones and leaves decisions.md alone', async () => {
+    const cwd = project();
+    const stackDir = mkdtempSync(join(tmpdir(), 'brigade-kit-'));
+    writeFileSync(join(stackDir, 'a.md'), 'a1\n');
+    writeFileSync(join(stackDir, 'b.md'), 'b1\n');
+    mkdirSync(join(stackDir, '.claude/context'), { recursive: true });
+    writeFileSync(join(stackDir, '.claude/context/decisions.md'), 'seed\n');
+    await runInit({ cwd, yes: true, stackDir, version: '1.0.0' });
+
+    writeFileSync(join(cwd, 'a.md'), 'edited\n');
+    writeFileSync(join(cwd, '.claude/context/decisions.md'), '- mine\n');
+    writeFileSync(join(stackDir, 'a.md'), 'a2\n');
+    writeFileSync(join(stackDir, 'b.md'), 'b2\n');
+    writeFileSync(join(stackDir, '.claude/context/decisions.md'), 'seed2\n');
+    dropKey(cwd, 'docsLanguage');
+
+    const result = await runInit({ cwd, stackDir, version: '2.0.0', interactive: true, prompter: asking('update').prompter });
+    assert.equal(statuses(result)['a.md'], 'proposed');
+    assert.equal(statuses(result)['b.md'], 'updated');
+    assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'edited\n');
+    assert.equal(readFileSync(join(cwd, 'b.md'), 'utf8'), 'b2\n');
+    assert.equal(readFileSync(join(cwd, '.claude/context/decisions.md'), 'utf8'), '- mine\n');
+    assert.ok(!existsSync(join(cwd, '.claude/context/decisions.md.proposed')));
+});
+
+test('the same version still asks every question again', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true, version: '1.0.0' });
+    const { prompter, asked } = asking('update');
+    await runInit({ cwd, version: '1.0.0', interactive: true, prompter });
+    assert.ok(asked.includes('Reference branch of the work'));
+    assert.ok(asked.includes('Language of the documentation (shared by the team)'));
+    assert.ok(asked.includes('And for you? This stays on your machine'));
+});
+
+test('a first install asks every question', async () => {
+    const cwd = project();
+    const { prompter, asked } = asking('update');
+    const result = await runInit({ cwd, version: '1.0.0', interactive: true, prompter });
+    assert.ok(asked.includes('Default branch of the repository'));
+    assert.ok(asked.includes('Language of the documentation (shared by the team)'));
+    assert.ok(asked.includes('And for you? This stays on your machine'));
+    assert.deepEqual(result.asked, []);
+});
+
+test('OPTIONS declares exactly the answers a fresh install stores', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true });
+    assert.deepEqual(OPTIONS.flatMap(({ keys }) => keys).sort(), Object.keys(readAnswers(cwd).answers).sort());
 });
