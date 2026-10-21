@@ -63,7 +63,8 @@ the answers the older version does not know. To change your options on purpose, 
 and choose "Change my options".
 
 Brigade records what it did in `.claude/brigade.json`: its version, your answers and the sha256 of each file it wrote.
-That is how it tells an untouched file from an edited one. Do not edit it by hand.
+That is how it tells an untouched file from an edited one. Do not edit it by hand. Commit it with the rest of `.claude/`:
+the install is shared by the whole team, and anyone can then update it from any machine.
 
 ## Troubleshooting
 

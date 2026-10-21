@@ -69,7 +69,7 @@ function print(result, interactive) {
 
     if (!interactive) {
         const news = added ? `\n\nNew options, default used: ${added}` : '';
-        console.log(`Brigade installed (stack: ${result.stack}).\n\n${files}\n\n${settings}${news}`);
+        console.log(`Brigade installed (stack: ${result.stack}).\n\n${files}\n\n${settings}${news}\n\nCommit .claude/ including .claude/brigade.json so the install is shared with your team and can be updated from any machine.`);
         return;
     }
 
@@ -78,7 +78,7 @@ function print(result, interactive) {
     if (added) prompter.info(`New options set up: ${added}`);
     if (kept) prompter.warn('Some files of yours differ from the kit: they were kept. Merge the .proposed version if you want it.');
     if (!repo) prompter.warn('Remember to run `git init` before your first commit.');
-    prompter.outro('Done. Run `claude` here, use Plan Mode (Shift+Tab) to discuss, and /brigade-language and /brigade-effort for your own settings.');
+    prompter.outro('Done. Commit `.claude/` with `.claude/brigade.json` to share the install with your team: anyone can then update it from any machine. Run `claude` here, use Plan Mode (Shift+Tab) to discuss, and /brigade-language and /brigade-effort for your own settings.');
 }
 
 const isHelp = (arg) => arg === '--help' || arg === '-h';

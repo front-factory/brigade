@@ -4,7 +4,7 @@ import { dirname, join, relative } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { CONVENTIONS } from '../src/conventions.js';
-import { render } from '../src/install.js';
+import { render, sha } from '../src/install.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TEMPLATES = join(ROOT, 'templates', 'web');
@@ -16,6 +16,7 @@ const ANSWERS = {
     defaultBranch: 'main',
     baseBranch: 'develop',
     packageManager: 'npm',
+    commitConvention: 'conventional',
     commitFormat: CONVENTIONS.conventional.format,
     replyLanguage: 'French',
     codeLanguage: 'English',
@@ -38,5 +39,23 @@ test('the .claude/ of this repo is the rendered copy of templates/web/', () => {
         const expected = render(readFileSync(source, 'utf8'), ANSWERS);
         const actual = readFileSync(join(ROOT, path), 'utf8');
         assert.equal(actual, expected, `${path} drifted from templates/web/${path}`);
+    }
+});
+
+test('the committed .claude/brigade.json matches the kit and the answers', () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, '.claude', 'brigade.json'), 'utf8'));
+    assert.deepEqual(manifest.answers, ANSWERS);
+
+    const paths = new Set();
+    for (const source of listFiles(TEMPLATES)) {
+        const path = relative(TEMPLATES, source).split('\\').join('/');
+        paths.add(path);
+        if (SKIP.has(path)) continue;
+
+        const expected = sha(render(readFileSync(source, 'utf8'), ANSWERS));
+        assert.equal(manifest.files[path], expected, `brigade.json hash of ${path} is stale`);
+    }
+    for (const path of Object.keys(manifest.files)) {
+        assert.ok(paths.has(path), `brigade.json lists ${path}, which is not in the kit`);
     }
 });

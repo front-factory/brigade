@@ -1,5 +1,5 @@
 import { isGitRepo } from './detect.js';
-import { appendMissingLines, installFiles, readManifest, writeLocalSettings, writeManifest } from './install.js';
+import { appendMissingLines, hasKitFiles, installFiles, MANIFEST, readManifest, writeLocalSettings, writeManifest } from './install.js';
 import { askOptions } from './options.js';
 import { createPrompter } from './prompt.js';
 import { DEFAULT_STACK, STACKS, detectStack } from './stacks.js';
@@ -49,6 +49,9 @@ export async function runInit({ cwd, yes = false, stack, stackDir, version = VER
 
     if (!repo) {
         prompter.warn('No git repository here. Brigade will not create one: run `git init` when you are ready. The branch names below are kept for then.');
+    }
+    if (!previous && hasKitFiles({ cwd, stackDir: dir })) {
+        prompter.warn(`${MANIFEST} is missing but Brigade files already exist here. Nothing is overwritten: files identical to the kit are adopted and files that differ get a .proposed. If the manifest exists in your team's repo, restore it from git first.`);
     }
     // A version change replays the kit with the stored answers and only asks the missing options. Otherwise (first
     // install, same version) every question is asked.

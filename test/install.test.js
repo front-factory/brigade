@@ -407,3 +407,39 @@ test('OPTIONS declares exactly the answers a fresh install stores', async () => 
     await runInit({ cwd, yes: true });
     assert.deepEqual(OPTIONS.flatMap(({ keys }) => keys).sort(), Object.keys(readAnswers(cwd).answers).sort());
 });
+
+const warnings = () => {
+    const { prompter } = asking('update');
+    const seen = [];
+    prompter.warn = (message) => seen.push(message);
+    return { prompter, seen };
+};
+const lostManifest = (message) => /brigade\.json is missing/.test(message);
+
+test('a missing manifest with kit files already there warns and still installs', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true });
+    execFileSync('rm', [join(cwd, MANIFEST_FILE)]);
+
+    const { prompter, seen } = warnings();
+    const result = await runInit({ cwd, interactive: true, prompter });
+    assert.equal(seen.filter(lostManifest).length, 1);
+    assert.ok(result.report.every(({ status }) => status !== 'proposed'));
+    assert.ok(existsSync(join(cwd, MANIFEST_FILE)));
+});
+
+test('no lost-manifest warning on a true first install', async () => {
+    const cwd = project();
+    const { prompter, seen } = warnings();
+    await runInit({ cwd, interactive: true, prompter });
+    assert.ok(!seen.some(lostManifest));
+});
+
+test('no lost-manifest warning when the manifest exists', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true });
+
+    const { prompter, seen } = warnings();
+    await runInit({ cwd, interactive: true, prompter });
+    assert.ok(!seen.some(lostManifest));
+});
