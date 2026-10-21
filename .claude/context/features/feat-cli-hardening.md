@@ -17,6 +17,12 @@ Harden the Brigade CLI (`src/`): no half-installed state, clear errors on bad in
 - [x] Small cleanups: `detectCommitConvention` called twice in `ask()`, shared "72 characters max" constant in `conventions.js`, CRLF handling in `normalize` and hashes
 - [x] Tests for each of the above (cli, install, detect)
 
+## Active audit
+
+- File: `.claude/context/audits/2026-10-21-project-review.md` (baseline 1eec657)
+- Open: G1-G5, C5b, C9, C14, T2-T4, R1-R7
+- Deferred: C10-C12
+
 ## Decisions and open questions
 
 - Out of scope: `--dry-run`, finer language detection, monorepos.
