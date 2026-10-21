@@ -1,6 +1,6 @@
 {
     "name": "@frontfactory/brigade",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Sets up a Claude Code architecture in any web project: a main session, a Sonnet implementer, a Haiku git-operator and a git guard.",
     "type": "module",
     "scripts": {

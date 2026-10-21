@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.1.1](https://github.com/front-factory/brigade/compare/v1.1.0...v1.1.1) (2026-10-21)
+
+### Bug Fixes
+
+* **cli:** warn when the manifest is lost and share it ([232300c](https://github.com/front-factory/brigade/commit/232300c583bfd84fe7187d3910eba197d5320470))
+* **install:** write architecture.md once and never propose over it ([5171fec](https://github.com/front-factory/brigade/commit/5171fecca6ab1be3778010b12ad6d13ed3e3fd4c))
+
 ## [1.1.0](https://github.com/front-factory/brigade/compare/v1.0.0...v1.1.0) (2026-10-21)
 
 ### Features
