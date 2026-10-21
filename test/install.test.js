@@ -545,16 +545,14 @@ test('a proposed brigade.md that already mentions the options file gets no note'
     assert.equal(result.report.find(({ path }) => path === RULES).note, undefined);
 });
 
-// The setup flow of a first install, with a dev to ask.
-const fresh = async (cwd, script = {}, env = { LANG: 'fr_FR.UTF-8' }) => {
+// Runs fn with a fixed locale, whatever the host one is.
+const withLocale = async (env, fn) => {
     const saved = { LC_ALL: process.env.LC_ALL, LC_MESSAGES: process.env.LC_MESSAGES, LANG: process.env.LANG };
     delete process.env.LC_ALL;
     delete process.env.LC_MESSAGES;
     Object.assign(process.env, env);
     try {
-        const { prompter, asked, cards } = asking('update', script);
-        const result = await runInit({ cwd, interactive: true, prompter });
-        return { result, asked, cards };
+        return await fn();
     } finally {
         for (const [key, value] of Object.entries(saved)) {
             if (value === undefined) delete process.env[key];
@@ -562,6 +560,13 @@ const fresh = async (cwd, script = {}, env = { LANG: 'fr_FR.UTF-8' }) => {
         }
     }
 };
+
+// The setup flow of a first install, with a dev to ask.
+const fresh = (cwd, script = {}, env = { LANG: 'fr_FR.UTF-8' }) => withLocale(env, async () => {
+    const { prompter, asked, cards } = asking('update', script);
+    const result = await runInit({ cwd, interactive: true, prompter });
+    return { result, asked, cards };
+});
 const HOW = 'How do you want to set up Brigade?';
 const RIGHT = 'Is the setup right?';
 const DEFAULT_BRANCH = 'Default branch of the repository';
@@ -598,7 +603,7 @@ test('"Install as is" is the first and default choice', async () => {
         if (message === HOW) seen.push(...options.map(({ value, label, hint }) => ({ value, label, hint })));
         return choose(message, options, ...rest);
     };
-    await runInit({ cwd, interactive: true, prompter });
+    await withLocale({ LANG: 'fr_FR.UTF-8' }, () => runInit({ cwd, interactive: true, prompter }));
     assert.deepEqual(seen.map(({ label }) => label), ['Install as is', 'Customize']);
     assert.equal(seen[0].hint, undefined);
 
