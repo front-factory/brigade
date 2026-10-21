@@ -51,6 +51,35 @@ identical, nothing happens. A file Brigade wrote and nobody touched is updated. 
 get the lines they miss. `.claude/context/decisions.md` is written once and then belongs to the team: it is never
 updated nor proposed over.
 
+## Update
+
+Re-run `npx @frontfactory/brigade init`. Kit files you never touched are updated. A file you edited is left as it is
+and a `<file>.proposed` is written next to it: diff it, merge what you want, then delete the `.proposed`.
+
+Brigade records what it did in `.claude/brigade.json`: its version, your answers and the sha256 of each file it wrote.
+That is how it tells an untouched file from an edited one. Do not edit it by hand.
+
+## Troubleshooting
+
+- `Unknown stack` or `Unknown option` from `init`: only `--yes` (`-y`) and `--stack <name>` exist, and `web` is the only
+  stack for now. Run `npx @frontfactory/brigade --help` to see the usage.
+- `.proposed` files keep coming back: a proposal is rewritten only when the kit changed since the last one. Once you have
+  merged what you want, delete the `.proposed`.
+- No terminal (CI, pipe): nothing is asked. `init` behaves like `--yes`, accepting every detected answer, and an
+  existing install is updated.
+- "No git repository" warning: run `git init` yourself. Brigade never creates a repository.
+- A broken `.claude/settings.local.json` (invalid JSON) is left untouched, so your personal language is not written
+  there. Fix the file and run `init` again.
+
+## Security model of the git guard
+
+The hook (`templates/web/.claude/hooks/git-guard.mjs`, PreToolUse on Bash) is a safety net against mistakes, not a
+security boundary. It parses the text of the command, so it can miss indirect forms: subshells, `bash -c`, aliases,
+scripts. The real protections are the `permissions` in `settings.json` and branch protection on the remote.
+
+"Never read or write secrets" is a rule given to Claude, not an enforcement, beyond the `deny` `Read` rules in
+`settings.json`.
+
 ## Git
 
 Only `git-operator` writes to git, enforced by a hook. Writing on the default or reference branch, `push`, `merge` and
