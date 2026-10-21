@@ -12,21 +12,14 @@ permissions:
 
 jobs:
   test:
-    name: Test (Node ${{ matrix.node }})
+    name: Test (Node 24)
     runs-on: ubuntu-latest
-
-    # Every version the published `engines` field promises. fail-fast is off so
-    # a break on one version still reports the others.
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [ 24 ]
 
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 24
           cache: npm
 
       - name: Install Dependencies
