@@ -4,7 +4,7 @@ import { dirname, join, relative } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { CONVENTIONS } from '../src/conventions.js';
-import { render, sha } from '../src/install.js';
+import { OPTIONS_FILE, render, renderOptions, sha } from '../src/install.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TEMPLATES = join(ROOT, 'templates', 'web');
@@ -58,4 +58,12 @@ test('the committed .claude/brigade.json matches the kit and the answers', () =>
     for (const path of Object.keys(manifest.files)) {
         assert.ok(paths.has(path), `brigade.json lists ${path}, which is not in the kit`);
     }
+});
+
+test('brigade.md has no placeholder and brigade-options.md is generated from the answers', () => {
+    assert.doesNotMatch(readFileSync(join(TEMPLATES, '.claude/rules/brigade.md'), 'utf8'), /__[A-Z_]+__/);
+    assert.equal(readFileSync(join(ROOT, OPTIONS_FILE), 'utf8'), renderOptions(ANSWERS));
+
+    const manifest = JSON.parse(readFileSync(join(ROOT, '.claude', 'brigade.json'), 'utf8'));
+    assert.equal(manifest.files[OPTIONS_FILE], undefined);
 });

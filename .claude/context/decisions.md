@@ -14,3 +14,4 @@
 - Releases are automated by semantic-release from Conventional Commits: version and CHANGELOG are never edited by hand.
 - This repo's `.claude/` is the rendered copy of `templates/web/` (dogfooding): `test/dogfood.test.js` guards against drift.
 - `.claude/brigade.json` is committed and shared like in any install (the whole team shares the install, any developer can install or update from any machine): `test/dogfood.test.js` checks it matches `.claude/`.
+- `rules/brigade.md` is pure kit (no placeholders); project options live in the generated `rules/brigade-options.md`, so kit updates never conflict.

@@ -1,5 +1,5 @@
 import { isGitRepo } from './detect.js';
-import { appendMissingLines, hasKitFiles, installFiles, MANIFEST, readManifest, writeLocalSettings, writeManifest } from './install.js';
+import { appendMissingLines, hasKitFiles, installFiles, MANIFEST, readManifest, writeLocalSettings, writeManifest, writeOptionsFile } from './install.js';
 import { askOptions } from './options.js';
 import { createPrompter } from './prompt.js';
 import { DEFAULT_STACK, STACKS, detectStack } from './stacks.js';
@@ -59,6 +59,7 @@ export async function runInit({ cwd, yes = false, stack, stackDir, version = VER
     const { answers, personal, asked } = await askOptions({ cwd, prompter, previous: previous?.answers ?? {}, full: !update });
 
     const { report, hashes } = installFiles({ cwd, stackDir: dir, answers, previous });
+    report.push(writeOptionsFile({ cwd, answers }));
     writeManifest({ cwd, version, stack: name, answers, hashes });
     const ignored = appendMissingLines(cwd);
     const local = personal.language ? writeLocalSettings(cwd, { language: personal.language }) : null;

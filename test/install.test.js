@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { runInit } from '../src/init.js';
-import { appendMissingLines, readManifest, writeLocalSettings } from '../src/install.js';
+import { appendMissingLines, readManifest, render, sha, writeLocalSettings } from '../src/install.js';
 import { OPTIONS } from '../src/options.js';
 import { compareVersions } from '../src/version.js';
 
@@ -17,6 +17,7 @@ function project() {
 }
 
 const RULES = '.claude/rules/brigade.md';
+const OPTIONS_PATH = '.claude/rules/brigade-options.md';
 const statuses = (result) => Object.fromEntries(result.report.map(({ path, status }) => [path, status]));
 
 test('installs the web kit on a fresh project with the detected answers', async () => {
@@ -29,7 +30,8 @@ test('installs the web kit on a fresh project with the detected answers', async 
     assert.ok(result.report.every(({ status }) => status === 'created'));
 
     const rules = readFileSync(join(cwd, RULES), 'utf8');
-    assert.match(rules, /Default branch: `main`/);
+    assert.match(rules, /brigade-options\.md/);
+    assert.match(readFileSync(join(cwd, OPTIONS_PATH), 'utf8'), /Default branch: `main`/);
     assert.doesNotMatch(rules, /__[A-Z_]+__/);
     assert.ok(!existsSync(join(cwd, 'CLAUDE.md')));
     assert.ok(existsSync(join(cwd, '.claude/brigade.json')));
@@ -442,4 +444,92 @@ test('no lost-manifest warning when the manifest exists', async () => {
     const { prompter, seen } = warnings();
     await runInit({ cwd, interactive: true, prompter });
     assert.ok(!seen.some(lostManifest));
+});
+
+test('the options file follows the answers, is overwritten when edited and is not in the manifest', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true });
+    const rules = readFileSync(join(cwd, RULES), 'utf8');
+    assert.equal(readManifest(cwd).files[OPTIONS_PATH], undefined);
+
+    writeFileSync(join(cwd, OPTIONS_PATH), 'mine\n');
+    const again = await runInit({ cwd, yes: true });
+    assert.equal(statuses(again)[OPTIONS_PATH], 'updated');
+    assert.match(readFileSync(join(cwd, OPTIONS_PATH), 'utf8'), /Package manager: `pnpm`/);
+    assert.ok(!existsSync(join(cwd, `${OPTIONS_PATH}.proposed`)));
+    assert.equal(statuses(await runInit({ cwd, yes: true }))[OPTIONS_PATH], 'unchanged');
+
+    // An answer changes: only the options file follows, the kit file stays untouched.
+    const manifest = readManifest(cwd);
+    manifest.answers.packageManager = 'yarn';
+    writeFileSync(join(cwd, '.claude/brigade.json'), JSON.stringify(manifest));
+    const changed = await runInit({ cwd, yes: true });
+    assert.equal(statuses(changed)[OPTIONS_PATH], 'updated');
+    assert.equal(statuses(changed)[RULES], 'unchanged');
+    assert.match(readFileSync(join(cwd, OPTIONS_PATH), 'utf8'), /Package manager: `yarn`/);
+    assert.equal(readFileSync(join(cwd, RULES), 'utf8'), rules);
+});
+
+test('a kit update of brigade.md is applied without a proposal when the answers are unchanged', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true, version: '1.0.0' });
+    // Simulate an install of an older kit: the old text is what the manifest knows.
+    const old = readFileSync(join(cwd, RULES), 'utf8').replace('Keep changes small and focused.', 'Keep changes small.');
+    writeFileSync(join(cwd, RULES), old);
+    const manifest = readManifest(cwd);
+    manifest.files[RULES] = sha(old);
+    writeFileSync(join(cwd, '.claude/brigade.json'), JSON.stringify(manifest));
+
+    const result = await runInit({ cwd, yes: true, version: '1.0.1' });
+    assert.equal(statuses(result)[RULES], 'updated');
+    assert.equal(statuses(result)[OPTIONS_PATH], 'unchanged');
+    assert.match(readFileSync(join(cwd, RULES), 'utf8'), /Keep changes small and focused\./);
+    assert.ok(!existsSync(join(cwd, `${RULES}.proposed`)));
+});
+
+// Migration from the old brigade.md, rendered with the answers inline.
+const OLD_ANSWERS = { defaultBranch: 'main', baseBranch: 'develop', packageManager: 'pnpm', commitFormat: 'Conventional Commits.', replyLanguage: 'French', codeLanguage: 'English', docsLanguage: 'English' };
+const oldRules = (extra = '') => render(readFileSync(new URL('./fixtures/old-brigade.md', import.meta.url), 'utf8'), OLD_ANSWERS) + extra;
+
+async function oldInstall({ edit = '', manifest = true } = {}) {
+    const cwd = project();
+    const text = oldRules();
+    mkdirSync(join(cwd, '.claude/rules'), { recursive: true });
+    writeFileSync(join(cwd, RULES), text + edit);
+    if (manifest) writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify({ version: '1.0.0', stack: 'web', answers: OLD_ANSWERS, files: { [RULES]: sha(text) } }));
+    const result = await runInit({ cwd, yes: true });
+    return { cwd, result };
+}
+
+test('an unedited old brigade.md is updated and the options file is created', async () => {
+    const { cwd, result } = await oldInstall();
+    assert.equal(statuses(result)[RULES], 'updated');
+    assert.ok(!existsSync(join(cwd, `${RULES}.proposed`)));
+    assert.match(readFileSync(join(cwd, RULES), 'utf8'), /brigade-options\.md/);
+    assert.equal(statuses(result)[OPTIONS_PATH], 'created');
+});
+
+test('an edited old brigade.md is kept, proposed with a migration note', async () => {
+    const { cwd, result } = await oldInstall({ edit: '\n- my own rule\n' });
+    assert.equal(statuses(result)[RULES], 'proposed');
+    assert.match(result.report.find(({ path }) => path === RULES).note, /brigade-options\.md/);
+    assert.match(readFileSync(join(cwd, RULES), 'utf8'), /my own rule/);
+    assert.match(readFileSync(join(cwd, `${RULES}.proposed`), 'utf8'), /brigade-options\.md/);
+    assert.equal(statuses(result)[OPTIONS_PATH], 'created');
+});
+
+test('an old brigade.md with a lost manifest is proposed with the note', async () => {
+    const { cwd, result } = await oldInstall({ manifest: false });
+    assert.equal(statuses(result)[RULES], 'proposed');
+    assert.ok(result.report.find(({ path }) => path === RULES).note);
+    assert.ok(existsSync(join(cwd, OPTIONS_PATH)));
+});
+
+test('a proposed brigade.md that already mentions the options file gets no note', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true });
+    writeFileSync(join(cwd, RULES), 'mine, see brigade-options.md\n');
+    const result = await runInit({ cwd, yes: true });
+    assert.equal(statuses(result)[RULES], 'proposed');
+    assert.equal(result.report.find(({ path }) => path === RULES).note, undefined);
 });
