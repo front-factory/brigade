@@ -14,11 +14,15 @@ A brief to a subagent states the goal, the branch, the relevant files, the const
 
 - Default branch: `__DEFAULT_BRANCH__`. Reference branch of the work: `__BASE_BRANCH__`. Both are protected: writing on them needs the user's confirmation.
 - Check the current branch before any code.
-- When a piece of work is finished and its open questions are settled, propose the commit in one sentence. Never call `git-operator` without the user's go. The user can ask for a commit at any moment.
+- A feature (several steps, sessions or files) = its own branch + a state file. Small work (a fix, a few files, one sitting) has neither: it ends with a commit on the current branch. Before any code, judge which it is and follow the skill `feature`: propose, wait for the user's answer, then `git-operator` creates the branch (with the user's go).
+- When the work is finished and its open questions are settled, propose the commit in one sentence. Never call `git-operator` without the user's go. The user can ask for a commit at any moment.
+- The feature file `.claude/context/features/<branch-with-slashes-as-dashes>.md` is shared and travels with the branch. `implementer` updates it at important steps; mention it in the `git-operator` brief so it goes in the same commit.
+- Pushing needs the user's confirmation. At the end of a session, or on pause/handoff, if commits are not pushed, propose the push in one sentence: without a push nothing survives.
 - Commit format, for `git-operator`: __COMMIT_FORMAT__
 
 ## Rules
 
+- At the start of a session, read `.claude/context/decisions.md` (team decisions, shared).
 - Keep changes small and focused.
 - Use the project's package manager: `__PACKAGE_MANAGER__`.
 - Run lint, build or tests only when the user asks or the task needs them. Do not assume they exist.

@@ -1,0 +1,30 @@
+{
+    "version": "0.0.0",
+    "stack": "web",
+    "answers": {
+        "defaultBranch": "main",
+        "baseBranch": "develop",
+        "packageManager": "npm",
+        "commitConvention": "conventional",
+        "commitFormat": "Conventional Commits: `type(scope): description` (`feat`, `fix`, `chore`, `refactor`, `docs`, `test`), imperative mood, 72 characters max.",
+        "replyLanguage": "French",
+        "codeLanguage": "English",
+        "docsLanguage": "English"
+    },
+    "files": {
+        ".claude/agents/git-operator.md": "b94194d221da5749c3ff3e836e663d30b4d3c761c2bcebca77083916e784d622",
+        ".claude/agents/implementer.md": "bfe9a58f46757a42f49f762206bbce67a48ad679b2fb6416463adfad4ed7f34f",
+        ".claude/commands/brigade-effort.md": "3eb4ff6d78cf0f091f3bbd45bfeb1c448f8c879ee348be1650651b8c1a833a46",
+        ".claude/commands/brigade-language.md": "ad8d15e5d80ff36b0a734478e94fc9ed10ff472dd4ed199be0fb8dffcd23983e",
+        ".claude/context/architecture.md": "ed58f151321debdc40c590fd54d4a7ec41068d39c4cc8f1e92feda81e8b4f83c",
+        ".claude/context/audits/_template.md": "027b0ceb32d0a111435950f851c83a93ed34200df820a55f9d22c724605b5e28",
+        ".claude/context/features/_template.md": "8fb4f614cb6118b0f43d84668e78929a7fb4c2e1f5d3370caaf44be3a05986f1",
+        ".claude/context/local-template.md": "d4343856652dbbab46d5d45b31832f4b66f6b5528ea4926a2ed23eac7c201b35",
+        ".claude/hooks/git-guard.mjs": "99af93947802643ee53f04054c200653056ee593a0d5bdd0a5839f71543955d8",
+        ".claude/rules/brigade.md": "ca11dbf2402a5c01821a9841ce0fecc823f2d3fdbc8c7a36b3e1dbbf9b69691a",
+        ".claude/settings.json": "a084b265193950f7f6d21b905677eb10465972460c01d4ad68cede40f7fa65be",
+        ".claude/skills/audit/SKILL.md": "322ad4c763e0e3ec588934e1098a7e990205799c4966e6324f74d1dc8b74c2f6",
+        ".claude/skills/feature/SKILL.md": "a499dec146fd91063562026e33dd5c8c9ec191c9580f038511f5bac1ba3f0cf0",
+        ".claude/skills/session-start/SKILL.md": "2722d250e40876500094715a48e3411aacfa7814d29d455162a7af5d7956cbde"
+    }
+}

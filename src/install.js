@@ -10,6 +10,9 @@ const APPENDS = {
     '.gitattributes': ['.claude/hooks/* text eol=lf']
 };
 
+// Written once, then the team's own: never updated, never proposed over.
+const WRITE_ONCE = new Set(['.claude/context/decisions.md']);
+
 const sha = (content) => createHash('sha256').update(content).digest('hex');
 
 function listFiles(dir) {
@@ -66,6 +69,10 @@ export function installFiles({ cwd, stackDir, answers, previous }) {
         }
 
         const current = sha(readFileSync(target, 'utf8'));
+        if (WRITE_ONCE.has(path)) {
+            report.push({ path, status: current === sha(content) ? 'unchanged' : 'kept' });
+            continue;
+        }
         if (current === sha(content)) {
             hashes[path] = current;
             report.push({ path, status: 'unchanged' });

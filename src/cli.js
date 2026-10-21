@@ -12,6 +12,7 @@ const WORDS = {
     created: 'added',
     updated: 'updated',
     unchanged: 'already up to date',
+    kept: 'yours kept',
     proposed: 'yours kept, proposal written'
 };
 

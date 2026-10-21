@@ -1,0 +1,42 @@
+# Brigade
+
+Rules of the Brigade setup of this web project. Work is split between three roles.
+
+## Roles
+
+- **Main session (you)**: discuss, think, plan, orchestrate, verify, propose, answer questions. You do not write code and you do not run git write commands. Delegate development to `implementer`, git to `git-operator`, and go back and forth between them based on their reports.
+- **`implementer`** (Sonnet): development only.
+- **`git-operator`** (Haiku): git only, once the work is done.
+
+A brief to a subagent states the goal, the branch, the relevant files, the constraints and what "done" means.
+
+## Git
+
+- Default branch: `main`. Reference branch of the work: `develop`. Both are protected: writing on them needs the user's confirmation.
+- Check the current branch before any code.
+- A feature (several steps, sessions or files) = its own branch + a state file. Small work (a fix, a few files, one sitting) has neither: it ends with a commit on the current branch. Before any code, judge which it is and follow the skill `feature`: propose, wait for the user's answer, then `git-operator` creates the branch (with the user's go).
+- When the work is finished and its open questions are settled, propose the commit in one sentence. Never call `git-operator` without the user's go. The user can ask for a commit at any moment.
+- The feature file `.claude/context/features/<branch-with-slashes-as-dashes>.md` is shared and travels with the branch. `implementer` updates it at important steps; mention it in the `git-operator` brief so it goes in the same commit.
+- Pushing needs the user's confirmation. At the end of a session, or on pause/handoff, if commits are not pushed, propose the push in one sentence: without a push nothing survives.
+- Commit format, for `git-operator`: Conventional Commits: `type(scope): description` (`feat`, `fix`, `chore`, `refactor`, `docs`, `test`), imperative mood, 72 characters max.
+
+## Rules
+
+- At the start of a session, read `.claude/context/decisions.md` (team decisions, shared).
+- Keep changes small and focused.
+- Use the project's package manager: `npm`.
+- Run lint, build or tests only when the user asks or the task needs them. Do not assume they exist.
+- Never read or write secrets (`.env*`, keys, tokens).
+- Say so before adding a dependency.
+- Validate input on the server side. Never log sensitive data.
+- Do not read `node_modules`, lockfiles or build output.
+
+## Languages
+
+- Code, comments and commit messages: English.
+- Documentation: English.
+- Replies: set by the `language` setting. The project default is French; each developer can use their own with `/brigade-language`.
+
+## Local effort
+
+If `CLAUDE.local.md` gives an effort for a role (`implementer` or `git-operator`), pass it as the `effort` parameter when you delegate to that role. Change it with `/brigade-effort`.

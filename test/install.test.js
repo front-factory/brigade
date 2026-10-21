@@ -34,6 +34,25 @@ test('installs the web kit on a fresh project with the detected answers', async 
     assert.ok(existsSync(join(cwd, '.claude/brigade.json')));
 });
 
+test('installs the skills and the context folder, decisions.md is written once', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true });
+    for (const file of [
+        'skills/audit/SKILL.md', 'skills/feature/SKILL.md', 'skills/session-start/SKILL.md',
+        'context/architecture.md', 'context/decisions.md', 'context/local-template.md', 'context/audits/_template.md',
+        'context/features/_template.md'
+    ]) assert.ok(existsSync(join(cwd, '.claude', file)), file);
+    assert.match(readFileSync(join(cwd, '.claude/context/local-template.md'), 'utf8'), /features\/<branch>\.md/);
+
+    const decisions = join(cwd, '.claude/context/decisions.md');
+    writeFileSync(decisions, '- use pnpm\n');
+    const result = await runInit({ cwd, yes: true });
+    assert.equal(statuses(result)['.claude/context/decisions.md'], 'kept');
+    assert.equal(readFileSync(decisions, 'utf8'), '- use pnpm\n');
+    assert.ok(!existsSync(`${decisions}.proposed`));
+    assert.equal(JSON.parse(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8')).files['.claude/context/decisions.md'], undefined);
+});
+
 test('a second run changes nothing', async () => {
     const cwd = project();
     await runInit({ cwd, yes: true });
