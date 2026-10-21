@@ -53,6 +53,7 @@ test('init --yes installs the kit', () => {
     const { code, cwd } = brigade(['init', '--yes']);
     assert.equal(code, 0);
     assert.ok(existsSync(join(cwd, '.claude/brigade.json')));
+    assert.ok(existsSync(join(cwd, '.claude/rules/brigade-options.md')));
 });
 
 test('a corrupted manifest stops init with a clear error and writes nothing', () => {

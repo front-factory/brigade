@@ -1,5 +1,5 @@
 {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "stack": "web",
     "answers": {
         "defaultBranch": "main",
@@ -20,7 +20,7 @@
         ".claude/context/features/_template.md": "8fb4f614cb6118b0f43d84668e78929a7fb4c2e1f5d3370caaf44be3a05986f1",
         ".claude/context/local-template.md": "d4343856652dbbab46d5d45b31832f4b66f6b5528ea4926a2ed23eac7c201b35",
         ".claude/hooks/git-guard.mjs": "99af93947802643ee53f04054c200653056ee593a0d5bdd0a5839f71543955d8",
-        ".claude/rules/brigade.md": "ca11dbf2402a5c01821a9841ce0fecc823f2d3fdbc8c7a36b3e1dbbf9b69691a",
+        ".claude/rules/brigade.md": "5117c4d0213c4ab0a50114099ebfcfff1940abda1d71ea1321be607719609385",
         ".claude/settings.json": "a084b265193950f7f6d21b905677eb10465972460c01d4ad68cede40f7fa65be",
         ".claude/skills/audit/SKILL.md": "322ad4c763e0e3ec588934e1098a7e990205799c4966e6324f74d1dc8b74c2f6",
         ".claude/skills/feature/SKILL.md": "a499dec146fd91063562026e33dd5c8c9ec191c9580f038511f5bac1ba3f0cf0",

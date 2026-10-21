@@ -42,6 +42,9 @@ function summary({ version, answers, report, ignored, repo, personal, local, ask
         if (status === 'updated') lines.push(`${'lines added'.padEnd(28)} ${path} (${added.join(', ')})`);
     }
 
+    const notes = report.filter(({ note }) => note).map(({ path, note }) => `${path}: ${note}`);
+    if (notes.length) lines.push('', ...notes);
+
     const settings = [
         `Brigade          ${version}`,
         `Default branch   ${answers.defaultBranch}`,

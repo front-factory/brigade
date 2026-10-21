@@ -57,6 +57,11 @@ project: they are never updated nor proposed over.
 Re-run `npx @frontfactory/brigade init`. Kit files you never touched are updated. A file you edited is left as it is
 and a `<file>.proposed` is written next to it: diff it, merge what you want, then delete the `.proposed`.
 
+Older installs had your options written inside `.claude/rules/brigade.md`. They now live in the generated
+`.claude/rules/brigade-options.md`, and `brigade.md` is pure kit. If you never edited your `brigade.md`, it is updated
+silently. If you did (or the manifest is lost), a `brigade.md.proposed` is written with a note: merge it, or delete
+your edits and re-run.
+
 An update does not ask your options again. It reuses the answers stored in `.claude/brigade.json` and asks only the
 options the new version added (your personal reply language is not one of them). A downgrade does the same and keeps
 the answers the older version does not know. To change your options on purpose, run `init` again on the same version
@@ -101,7 +106,8 @@ the work survives between developers and machines. `CLAUDE.local.md` stays perso
 
 Create `templates/<name>/` with the same layout as `templates/web/`, then add one entry in `src/stacks.js`. Placeholders:
 `__DEFAULT_BRANCH__`, `__BASE_BRANCH__`, `__PACKAGE_MANAGER__`, `__COMMIT_FORMAT__`, `__REPLY_LANGUAGE__`,
-`__CODE_LANGUAGE__`, `__DOCS_LANGUAGE__`.
+`__CODE_LANGUAGE__`, `__DOCS_LANGUAGE__`. Do not use them in `.claude/rules/brigade.md`: it stays pure kit, and the
+answers reach it through `.claude/rules/brigade-options.md`, which Brigade generates from the answers (see `renderOptions` in `src/install.js`).
 
 ## Develop
 
