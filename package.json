@@ -1,6 +1,7 @@
 {
     "name": "@frontfactory/brigade",
     "version": "0.0.0",
+    "description": "Sets up a Claude Code architecture in any web project: a main session, a Sonnet implementer, a Haiku git-operator and a git guard.",
     "type": "module",
     "scripts": {
         "prepare": "husky",
@@ -25,6 +26,22 @@
     },
     "dependencies": {
         "@clack/prompts": "^1.8.1"
+    },
+    "keywords": [
+        "claude-code",
+        "claude",
+        "cli",
+        "scaffold",
+        "git-hooks"
+    ],
+    "license": "MIT",
+    "homepage": "https://github.com/front-factory/brigade#readme",
+    "bugs": {
+        "url": "https://github.com/front-factory/brigade/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/front-factory/brigade.git"
     },
     "files": [
         "bin",
