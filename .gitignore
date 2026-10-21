@@ -10,3 +10,4 @@
 ## Claude
 .claude/settings.local.json
 CLAUDE.local.md
+.claude/brigade.json
