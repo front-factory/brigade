@@ -1,3 +1,5 @@
+import { parseArgs } from 'node:util';
+
 import { CONVENTIONS } from './conventions.js';
 import { runInit } from './init.js';
 import { STACKS } from './stacks.js';
@@ -22,16 +24,21 @@ const WORDS = {
 };
 
 function parse(args) {
-    const options = { yes: false, stack: undefined };
-    for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--yes' || args[i] === '-y') options.yes = true;
-        else if (args[i] === '--stack') {
-            const value = args[++i];
-            if (!value || value.startsWith('-')) throw new Error(`--stack needs a value (${Object.keys(STACKS).join(', ')})`);
-            options.stack = value;
+    let values;
+    try {
+        ({ values } = parseArgs({ args, options: { yes: { type: 'boolean', short: 'y' }, stack: { type: 'string' } } }));
+    } catch (error) {
+        const arg = /'([^']+)'/.exec(error.message)?.[1];
+        if (error.code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE' && arg?.startsWith('--stack')) {
+            throw new Error(`--stack needs a value (${Object.keys(STACKS).join(', ')})`);
         }
-        else throw new Error(`Unknown option: ${args[i]}`);
+        if (error.code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION' || error.code === 'ERR_PARSE_ARGS_UNEXPECTED_POSITIONAL') {
+            throw new Error(`Unknown option: ${arg}`);
+        }
+        throw error;
     }
+    const options = { yes: values.yes ?? false, stack: values.stack };
+    if (options.stack === '') throw new Error(`--stack needs a value (${Object.keys(STACKS).join(', ')})`);
     if (options.stack && !STACKS[options.stack]) throw new Error(`Unknown stack: ${options.stack}`);
     return options;
 }

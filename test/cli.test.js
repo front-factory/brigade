@@ -46,6 +46,7 @@ test('--stack without a value gives a clear message', () => {
 
 test('an unknown stack and an unknown option are rejected', () => {
     assert.match(brigade(['init', '--stack', 'nope']).err, /Unknown stack: nope/);
+    assert.match(brigade(['init', '--stack=nope']).err, /Unknown stack: nope/);
     assert.match(brigade(['init', '--nope']).err, /Unknown option: --nope/);
 });
 
