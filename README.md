@@ -40,9 +40,15 @@ The rest of the kit, all under `.claude/`:
 
 ## Install
 
-`init` detects the default branch, the package manager, the commit convention and the language, and asks you to
-validate each one. `--yes` (or `-y`) accepts everything detected. `--stack <name>` forces the stack instead of
-detecting it (only `web` for now).
+`init` detects the default branch, the package manager, the commit convention and the language, then shows what will
+be set up in one card. Choose "Install as is" (the default) or "Customize" to answer every option one by one. An option
+that cannot be detected is asked even in the express path. After "Customize", or when something had to be asked, a recap
+is shown before anything is written: "Everything is right" installs, "Change something" lets you pick the groups to
+redo (branches, package manager, commit format, languages) and shows the recap again. There are two language
+questions: the language of Claude's replies, then the language of code and docs together, or "Different for code and
+docs" to choose each apart. Customize also asks your own reply language, which stays on your machine. Cancelling writes
+nothing. `--yes` (or `-y`) accepts everything detected. `--stack <name>` forces the stack instead of detecting it (only
+`web` for now).
 
 Brigade never touches your `CLAUDE.md`: its instructions live in `.claude/rules/brigade.md`, which Claude Code loads
 at launch like a `CLAUDE.md`.

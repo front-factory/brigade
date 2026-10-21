@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 
-import { CONVENTIONS } from './conventions.js';
 import { runInit } from './init.js';
+import { recapRows } from './options.js';
 import { STACKS } from './stacks.js';
 import { VERSION } from './version.js';
 
@@ -43,29 +43,31 @@ function parse(args) {
     return options;
 }
 
+// Plain-text rows, the label padded to a common column.
+const plain = (rows) => rows.map(([label, value]) => `${label.padEnd(17)}${value}`).join('\n');
+
 function summary({ version, answers, report, ignored, repo, personal, local, asked = [] }) {
-    const lines = report.map(({ path, status }) => `${WORDS[status].padEnd(28)} ${path}${status === 'proposed' ? '.proposed' : ''}`);
+    const files = report.map(({ path, status }) => ({
+        done: status === 'created' || status === 'updated',
+        label: `${path}${status === 'proposed' ? '.proposed' : ''}`,
+        detail: WORDS[status],
+        plain: `${WORDS[status].padEnd(28)} ${path}${status === 'proposed' ? '.proposed' : ''}`
+    }));
     for (const { path, status, added } of ignored) {
-        if (status === 'updated') lines.push(`${'lines added'.padEnd(28)} ${path} (${added.join(', ')})`);
+        if (status === 'updated') files.push({ done: true, label: path, detail: `lines added (${added.join(', ')})`, plain: `${'lines added'.padEnd(28)} ${path} (${added.join(', ')})` });
     }
 
     const notes = report.filter(({ note }) => note).map(({ path, note }) => `${path}: ${note}`);
-    if (notes.length) lines.push('', ...notes);
-
-    const settings = [
-        `Brigade          ${version}`,
-        `Default branch   ${answers.defaultBranch}`,
-        `Reference branch ${answers.baseBranch}`,
-        `Package manager  ${answers.packageManager}`,
-        `Commit format    ${CONVENTIONS[answers.commitConvention]?.label ?? 'Custom'}`,
-        `Replies          ${answers.replyLanguage} (project default)`,
-        `Code             ${answers.codeLanguage}`,
-        `Documentation    ${answers.docsLanguage}`,
-        `Replies for you  ${personal.language && local?.status === 'written' ? `${personal.language} (your machine only)` : 'project default'}`
+    const rows = [
+        ['Brigade', version],
+        ...recapRows(answers),
+        ['Replies for you', personal.language && local?.status === 'written' ? `${personal.language} (your machine only)` : 'project default']
     ];
     const added = asked.flat().map((key) => `${key}: ${answers[key]}`).join(', ');
-    return { files: lines.join('\n'), settings: settings.join('\n'), added, kept: report.some(({ status }) => status === 'proposed'), repo };
+    return { files, notes, rows, added, kept: report.some(({ status }) => status === 'proposed'), repo };
 }
+
+const plainFiles = (files, notes) => [...files.map(({ plain }) => plain), ...(notes.length ? ['', ...notes] : [])].join('\n');
 
 function print(result, interactive) {
     const { prompter } = result;
@@ -75,20 +77,26 @@ function print(result, interactive) {
         return;
     }
 
-    const { files, settings, added, kept, repo } = summary(result);
+    const { files, notes, rows, added, kept, repo } = summary(result);
 
     if (!interactive) {
         const news = added ? `\n\nNew options, default used: ${added}` : '';
-        console.log(`Brigade installed (stack: ${result.stack}).\n\n${files}\n\n${settings}${news}\n\nCommit .claude/ including .claude/brigade.json so the install is shared with your team and can be updated from any machine.`);
+        console.log(`Brigade installed (stack: ${result.stack}).\n\n${plainFiles(files, notes)}\n\n${plain(rows)}${news}\n\nCommit .claude/ including .claude/brigade.json so the install is shared with your team and can be updated from any machine.`);
         return;
     }
 
-    prompter.note(files, 'Files');
-    prompter.note(settings, 'Your setup');
+    prompter.step(3, 3, 'Installation');
+    prompter.files(files);
+    for (const note of notes) prompter.info(note);
+    prompter.card('Your setup', rows);
     if (added) prompter.info(`New options set up: ${added}`);
     if (kept) prompter.warn('Some files of yours differ from the kit: they were kept. Merge the .proposed version if you want it.');
     if (!repo) prompter.warn('Remember to run `git init` before your first commit.');
-    prompter.outro('Done. Commit `.claude/` with `.claude/brigade.json` to share the install with your team: anyone can then update it from any machine. Run `claude` here, use Plan Mode (Shift+Tab) to discuss, and /brigade-language and /brigade-effort for your own settings.');
+    prompter.done('Done. Brigade is ready.', [
+        'Commit `.claude/` (with `brigade.json`) to share the install.',
+        'Run `claude` here, Shift+Tab for Plan Mode.',
+        '/brigade-language and /brigade-effort set your own preferences.'
+    ]);
 }
 
 const isHelp = (arg) => arg === '--help' || arg === '-h';

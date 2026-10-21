@@ -38,7 +38,7 @@ export async function runInit({ cwd, yes = false, stack, stackDir, version = VER
 
     prompter ??= createPrompter({ interactive: Boolean(interactive) });
     const repo = isGitRepo(cwd);
-    prompter.intro(`Brigade ${version}`);
+    prompter.banner(version);
     prompter.info(`Stack: ${name}${stack ? '' : ' (the only one available for now)'}.`);
 
     const installed = previous?.version;

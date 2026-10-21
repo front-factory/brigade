@@ -1,16 +1,20 @@
 import * as p from '@clack/prompts';
 
+import * as ui from './ui.js';
+
 const OTHER = Symbol('other');
 
 // Non-interactive (no TTY or `--yes`): every question resolves to its default and nothing is printed.
 export function createPrompter({ interactive }) {
+    const cancelled = () => {
+        console.log(`\n${ui.dim('Cancelled. Nothing was written.')}`);
+        process.exit(1);
+    };
+
     // Nothing is written before the last question, so cancelling leaves the project untouched.
     const answer = async (pending) => {
         const value = await pending;
-        if (p.isCancel(value)) {
-            p.cancel('Cancelled. Nothing was written.');
-            process.exit(1);
-        }
+        if (p.isCancel(value)) cancelled();
         return value;
     };
 
@@ -39,17 +43,28 @@ export function createPrompter({ interactive }) {
         return keep ? detected : pick();
     }
 
+    // Several values among `options` ([{ value, label, hint? }]), at least one. Nothing is asked without a dev.
+    async function multi(message, options) {
+        if (!interactive) return [];
+        return answer(p.multiselect({ message, options: options.map(({ value, label, hint }) => ({ value, label, hint })), required: true }));
+    }
+
     const when = (fn) => (...args) => interactive && fn(...args);
 
     return {
         text,
+        interactive,
         choose,
+        multi,
         validate,
-        intro: when((title) => p.intro(title)),
-        info: when((message) => p.log.info(message)),
-        warn: when((message) => p.log.warn(message)),
-        note: when((message, title) => p.note(message, title)),
-        outro: when((message) => p.outro(message)),
+        banner: when((version) => console.log(ui.banner(version))),
+        step: when((n, total, label) => console.log(ui.step(n, total, label))),
+        card: when((title, rows) => console.log(ui.card(title, rows))),
+        files: when((items) => console.log(`\n${ui.checklist(items)}`)),
+        info: when((message) => console.log(`${ui.dim('·')} ${ui.dim(message)}`)),
+        warn: when((message) => console.log(`${ui.accent('!')} ${message}`)),
+        outro: when((message) => console.log(`\n${message}`)),
+        done: when((message, lines) => console.log(`\n${ui.success('✓')} ${ui.bright(message)}\n${ui.bullets(lines)}\n`)),
         close: () => {}
     };
 }

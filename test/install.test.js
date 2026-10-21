@@ -153,11 +153,27 @@ test('a personal choice merges into settings.local.json and spares a broken file
     assert.equal(readFileSync(join(cwd, '.claude/settings.local.json'), 'utf8'), '{ broken');
 });
 
-const asking = (answer) => {
+// A scripted prompter. `answer` is the reply to the version questions; `script` maps a question (substring) to the
+// values to pick, one per time it is asked (then the first option is taken). CANCEL throws, as a cancelled prompt
+// would. `multi` questions take lists of values. `cards` records the cards shown.
+const REPLIES = "Language of Claude's replies for this project (each developer can use their own later)";
+const CODE_DOCS = 'Language of the code, comments, commit messages and documentation';
+const CHANGE = 'What do you want to change?';
+const CANCEL = '__cancel__';
+
+const asking = (answer, script = {}) => {
     const asked = [];
+    const cards = [];
+    const queues = Object.fromEntries(Object.entries(script).map(([question, values]) => [question, [...[].concat(values)]]));
+    const next = (message) => {
+        const question = Object.keys(queues).find((key) => message.includes(key));
+        return question && queues[question].length ? queues[question].shift() : undefined;
+    };
     const noop = () => {};
     const prompter = {
-        intro: noop, info: noop, warn: noop, note: noop, outro: noop, close: noop,
+        interactive: true,
+        banner: noop, step: noop, files: noop, info: noop, warn: noop, outro: noop, done: noop, close: noop,
+        card: (title, rows) => cards.push({ title, rows }),
         text: async (_, fallback = '') => fallback,
         validate: async (message, detected, pick) => {
             asked.push(message);
@@ -165,10 +181,17 @@ const asking = (answer) => {
         },
         choose: async (message, options) => {
             asked.push(message);
-            return /version|older|do you want/.test(message) ? answer : options[0].value;
+            if (/version|older|do you want to do/.test(message)) return answer;
+            const picked = next(message);
+            if (picked === CANCEL) throw new Error('cancelled');
+            return picked ?? options[0].value;
+        },
+        multi: async (message, options) => {
+            asked.push(message);
+            return next(message) ?? [options[0].value];
         }
     };
-    return { prompter, asked };
+    return { prompter, asked, cards };
 };
 
 test('versions are compared numerically', () => {
@@ -326,10 +349,10 @@ test('updating asks only the group that is missing from the manifest', async () 
     const result = await runInit({ cwd, version: '2.0.0', interactive: true, prompter });
     assert.deepEqual(asked, [
         'A newer version is available',
-        'Language of the code, comments and commit messages (shared by the team)',
-        'Language of the documentation (shared by the team)'
+        REPLIES,
+        CODE_DOCS
     ]);
-    assert.deepEqual(result.asked, [['codeLanguage', 'docsLanguage']]);
+    assert.deepEqual(result.asked, [['replyLanguage', 'codeLanguage', 'docsLanguage']]);
     assert.ok(readAnswers(cwd).answers.docsLanguage);
 });
 
@@ -384,24 +407,12 @@ test('an update keeps edited files as .proposed, updates untouched ones and leav
     assert.ok(!existsSync(join(cwd, '.claude/context/architecture.md.proposed')));
 });
 
-test('the same version still asks every question again', async () => {
+test('the same version still asks the whole setup again', async () => {
     const cwd = project();
     await runInit({ cwd, yes: true, version: '1.0.0' });
     const { prompter, asked } = asking('update');
     await runInit({ cwd, version: '1.0.0', interactive: true, prompter });
-    assert.ok(asked.includes('Reference branch of the work'));
-    assert.ok(asked.includes('Language of the documentation (shared by the team)'));
-    assert.ok(asked.includes('And for you? This stays on your machine'));
-});
-
-test('a first install asks every question', async () => {
-    const cwd = project();
-    const { prompter, asked } = asking('update');
-    const result = await runInit({ cwd, version: '1.0.0', interactive: true, prompter });
-    assert.ok(asked.includes('Default branch of the repository'));
-    assert.ok(asked.includes('Language of the documentation (shared by the team)'));
-    assert.ok(asked.includes('And for you? This stays on your machine'));
-    assert.deepEqual(result.asked, []);
+    assert.ok(asked.includes('How do you want to set up Brigade?'));
 });
 
 test('OPTIONS declares exactly the answers a fresh install stores', async () => {
@@ -532,4 +543,186 @@ test('a proposed brigade.md that already mentions the options file gets no note'
     const result = await runInit({ cwd, yes: true });
     assert.equal(statuses(result)[RULES], 'proposed');
     assert.equal(result.report.find(({ path }) => path === RULES).note, undefined);
+});
+
+// The setup flow of a first install, with a dev to ask.
+const fresh = async (cwd, script = {}, env = { LANG: 'fr_FR.UTF-8' }) => {
+    const saved = { LC_ALL: process.env.LC_ALL, LC_MESSAGES: process.env.LC_MESSAGES, LANG: process.env.LANG };
+    delete process.env.LC_ALL;
+    delete process.env.LC_MESSAGES;
+    Object.assign(process.env, env);
+    try {
+        const { prompter, asked, cards } = asking('update', script);
+        const result = await runInit({ cwd, interactive: true, prompter });
+        return { result, asked, cards };
+    } finally {
+        for (const [key, value] of Object.entries(saved)) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+        }
+    }
+};
+const HOW = 'How do you want to set up Brigade?';
+const RIGHT = 'Is the setup right?';
+const DEFAULT_BRANCH = 'Default branch of the repository';
+const MANAGER = 'Package manager';
+const COMMIT = 'Commit convention';
+const MINE = 'And for you?';
+const langs = ({ result: { answers } }) => [answers.replyLanguage, answers.codeLanguage, answers.docsLanguage];
+
+test('express "Install as is": one card, one choice, the detected setup is stored', async () => {
+    const cwd = project();
+    const { result, asked, cards } = await fresh(cwd, { [HOW]: 'asis' });
+    assert.deepEqual(asked, [HOW]);
+    assert.deepEqual(cards.map(({ title }) => title), ['Here is what will be set up']);
+    assert.deepEqual(cards[0].rows.find(([label]) => label === 'Package manager'), ['Package manager', 'pnpm']);
+    assert.deepEqual(
+        { ...result.answers, commitFormat: undefined },
+        {
+            defaultBranch: 'main', baseBranch: 'main', packageManager: 'pnpm', commitConvention: 'conventional', commitFormat: undefined,
+            replyLanguage: 'French', codeLanguage: 'English', docsLanguage: 'English'
+        }
+    );
+    assert.match(result.answers.commitFormat, /^Conventional Commits/);
+    assert.deepEqual(result.personal, {});
+    assert.deepEqual(result.asked, []);
+    assert.ok(existsSync(join(cwd, MANIFEST_FILE)));
+});
+
+test('"Install as is" is the first and default choice', async () => {
+    const cwd = project();
+    const seen = [];
+    const { prompter } = asking('update');
+    const choose = prompter.choose;
+    prompter.choose = async (message, options, ...rest) => {
+        if (message === HOW) seen.push(...options.map(({ value, label, hint }) => ({ value, label, hint })));
+        return choose(message, options, ...rest);
+    };
+    await runInit({ cwd, interactive: true, prompter });
+    assert.deepEqual(seen.map(({ label }) => label), ['Install as is', 'Customize']);
+    assert.equal(seen[0].hint, undefined);
+
+    const bare = project();
+    writeFileSync(join(bare, 'package.json'), '{}');
+    const again = asking('update');
+    const hints = [];
+    const pick = again.prompter.choose;
+    again.prompter.choose = async (message, options, ...rest) => {
+        if (message === HOW) hints.push(options[0].hint);
+        return pick(message, options, ...rest);
+    };
+    await runInit({ cwd: bare, interactive: true, prompter: again.prompter });
+    assert.match(hints[0], /will be asked/);
+});
+
+test('an option that cannot be detected is asked in express, then the recap is shown', async () => {
+    const cwd = project();
+    writeFileSync(join(cwd, 'package.json'), '{}');
+    const { result, asked, cards } = await fresh(cwd, { [MANAGER]: 'yarn' });
+    // The scripted validate asks once, then the choice.
+    assert.deepEqual(asked, [HOW, MANAGER, MANAGER, RIGHT]);
+    assert.equal(cards[0].rows.find(([label]) => label === 'Package manager')[1], 'to choose');
+    assert.deepEqual(cards.map(({ title }) => title), ['Here is what will be set up', 'Your setup']);
+    assert.equal(result.answers.packageManager, 'yarn');
+    assert.equal(result.answers.defaultBranch, 'main');
+    assert.equal(readAnswers(cwd).answers.packageManager, 'yarn');
+});
+
+test('Customize asks every option one by one, then the recap', async () => {
+    const cwd = project();
+    const { result, asked, cards } = await fresh(cwd, { [HOW]: 'customize' });
+    // The scripted validate records its title and keeps the detected value.
+    assert.deepEqual(asked, [HOW, DEFAULT_BRANCH, 'Reference branch of the work', MANAGER, COMMIT, REPLIES, CODE_DOCS, `${MINE} This stays on your machine`, RIGHT]);
+    assert.deepEqual(cards.map(({ title }) => title), ['Here is what will be set up', 'Your setup']);
+    assert.equal(result.answers.packageManager, 'pnpm');
+    assert.equal(result.answers.commitConvention, 'conventional');
+});
+
+test('"Change something" re-asks only the chosen group and keeps the other answers', async () => {
+    const cwd = project();
+    const { result, asked, cards } = await fresh(cwd, {
+        [HOW]: 'customize',
+        [RIGHT]: ['change', 'change', 'ok'],
+        [CHANGE]: [['packageManager'], ['branches']],
+        [MANAGER]: ['bun', 'yarn'],
+        [DEFAULT_BRANCH]: 'x'
+    });
+    const after = asked.slice(asked.indexOf(RIGHT));
+    // Round one: only the package manager. Round two: only the branches. No "Is that right?" in either.
+    assert.deepEqual(after, [RIGHT, CHANGE, MANAGER, RIGHT, CHANGE, 'Reference branch of the work', RIGHT]);
+    assert.equal(cards.filter(({ title }) => title === 'Your setup').length, 3);
+    assert.equal(result.answers.packageManager, 'bun');
+    assert.equal(result.answers.defaultBranch, 'main');
+    assert.equal(result.answers.replyLanguage, 'French');
+    assert.equal(readAnswers(cwd).answers.packageManager, 'bun');
+});
+
+test('an edited group starts from the current values', async () => {
+    const cwd = project();
+    const offered = [];
+    const { prompter } = asking('update', { [HOW]: 'customize', [MANAGER]: ['bun'], [RIGHT]: ['change', 'change', 'ok'], [CHANGE]: [['packageManager'], ['packageManager']] });
+    const choose = prompter.choose;
+    prompter.choose = async (message, options, ...rest) => {
+        if (message === MANAGER) offered.push(options[0].value);
+        return choose(message, options, ...rest);
+    };
+    await runInit({ cwd, interactive: true, prompter });
+    assert.deepEqual(offered, ['pnpm', 'bun']);
+});
+
+test('the two language questions: replies, then code and docs together or apart', async () => {
+    assert.deepEqual(langs(await fresh(project(), { [HOW]: 'asis' })), ['French', 'English', 'English']);
+    assert.deepEqual(langs(await fresh(project(), { [HOW]: 'asis' }, { LANG: 'en_US.UTF-8' })), ['English', 'English', 'English']);
+
+    const together = await fresh(project(), { [HOW]: 'customize', [CODE_DOCS]: 'French' });
+    assert.deepEqual(langs(together), ['French', 'French', 'French']);
+
+    const different = await fresh(project(), {
+        [HOW]: 'customize',
+        [CODE_DOCS]: '__different__',
+        'Language of the code, comments and commit messages (shared by the team)': 'English',
+        'Language of the documentation (shared by the team)': 'French'
+    });
+    assert.deepEqual(langs(different), ['French', 'English', 'French']);
+    assert.ok(different.asked.includes('Language of the documentation (shared by the team)'));
+});
+
+test('the personal reply language is asked in Customize, skipped in express, kept on this machine', async () => {
+    const express = await fresh(project(), { [HOW]: 'asis' });
+    assert.ok(!express.asked.some((question) => question.startsWith(MINE)));
+
+    const cwd = project();
+    const { result, asked } = await fresh(cwd, { [HOW]: 'customize', [MINE]: 'own', 'Your own reply language': 'English' });
+    assert.ok(asked.some((question) => question.startsWith(MINE)));
+    assert.deepEqual(result.personal, { language: 'English' });
+    assert.equal(result.local.status, 'written');
+    assert.equal(JSON.parse(readFileSync(join(cwd, '.claude/settings.local.json'), 'utf8')).language, 'English');
+    assert.equal(readAnswers(cwd).personal, undefined);
+});
+
+test('editing the languages group asks the personal question again', async () => {
+    const { asked } = await fresh(project(), { [HOW]: 'customize', [RIGHT]: ['change', 'ok'], [CHANGE]: [['languages']] });
+    assert.equal(asked.filter((question) => question.startsWith(MINE)).length, 2);
+});
+
+test('"Change my options" starts from the stored answers', async () => {
+    const cwd = project();
+    await runInit({ cwd, yes: true, version: '1.0.0' });
+    const manifest = readAnswers(cwd);
+    Object.assign(manifest.answers, { packageManager: 'bun', replyLanguage: 'English', codeLanguage: 'English', docsLanguage: 'French' });
+    writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
+
+    const { prompter, cards } = asking('update', { [HOW]: 'asis' });
+    const result = await runInit({ cwd, version: '1.0.0', interactive: true, prompter });
+    assert.ok(cards[0].rows.some(([label, value]) => label === 'Documentation' && value === 'French'));
+    assert.equal(result.answers.packageManager, 'bun');
+    assert.equal(result.answers.docsLanguage, 'French');
+});
+
+test('cancelling at the first choice or at the recap leaves the project untouched', async () => {
+    for (const script of [{ [HOW]: CANCEL }, { [HOW]: 'customize', [RIGHT]: CANCEL }, { [HOW]: 'customize', [RIGHT]: 'change', [CHANGE]: [['commit']], [COMMIT]: CANCEL }]) {
+        const cwd = project();
+        await assert.rejects(fresh(cwd, script), /cancelled/);
+        assert.ok(!existsSync(join(cwd, '.claude')));
+    }
 });
