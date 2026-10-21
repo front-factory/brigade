@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.1.0](https://github.com/front-factory/brigade/compare/v1.0.0...v1.1.0) (2026-10-21)
+
+### Features
+
+* **cli:** make the install atomic and harden the CLI ([1eec657](https://github.com/front-factory/brigade/commit/1eec65721fe5bdf42e39315a70c2183967b6112f))
+* **cli:** update without asking again, only ask new options ([7ecf490](https://github.com/front-factory/brigade/commit/7ecf4908a011e3bb8cfda9227a5d2d99991ec0ca))
+
 ## 1.0.0 (2026-10-21)
 
 ### Features
