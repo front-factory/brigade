@@ -49,8 +49,8 @@ an answer does) or to leave everything as it is. Without a terminal, it updates.
 
 An existing file is never overwritten. If it differs from the kit, a `.proposed` file is written next to it; if it is
 identical, nothing happens. A file Brigade wrote and nobody touched is updated. `.gitignore` and `.gitattributes` only
-get the lines they miss. `.claude/context/decisions.md` is written once and then belongs to the team: it is never
-updated nor proposed over.
+get the lines they miss. `.claude/context/decisions.md` and `.claude/context/architecture.md` are written once and then belong to the
+project: they are never updated nor proposed over.
 
 ## Update
 

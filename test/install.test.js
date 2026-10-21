@@ -35,7 +35,7 @@ test('installs the web kit on a fresh project with the detected answers', async 
     assert.ok(existsSync(join(cwd, '.claude/brigade.json')));
 });
 
-test('installs the skills and the context folder, decisions.md is written once', async () => {
+test('installs the skills and the context folder, decisions.md and architecture.md are written once', async () => {
     const cwd = project();
     await runInit({ cwd, yes: true });
     for (const file of [
@@ -52,6 +52,14 @@ test('installs the skills and the context folder, decisions.md is written once',
     assert.equal(readFileSync(decisions, 'utf8'), '- use pnpm\n');
     assert.ok(!existsSync(`${decisions}.proposed`));
     assert.equal(JSON.parse(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8')).files['.claude/context/decisions.md'], undefined);
+
+    const architecture = join(cwd, '.claude/context/architecture.md');
+    writeFileSync(architecture, '# mine\n');
+    const again = await runInit({ cwd, yes: true });
+    assert.equal(statuses(again)['.claude/context/architecture.md'], 'kept');
+    assert.equal(readFileSync(architecture, 'utf8'), '# mine\n');
+    assert.ok(!existsSync(`${architecture}.proposed`));
+    assert.equal(JSON.parse(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8')).files['.claude/context/architecture.md'], undefined);
 });
 
 test('a second run changes nothing', async () => {
@@ -344,20 +352,23 @@ test('a downgrade keeps the keys the older version does not know', async () => {
     assert.equal(readAnswers(cwd).answers.futureOption, 'x');
 });
 
-test('an update keeps edited files as .proposed, updates untouched ones and leaves decisions.md alone', async () => {
+test('an update keeps edited files as .proposed, updates untouched ones and leaves decisions.md and architecture.md alone', async () => {
     const cwd = project();
     const stackDir = mkdtempSync(join(tmpdir(), 'brigade-kit-'));
     writeFileSync(join(stackDir, 'a.md'), 'a1\n');
     writeFileSync(join(stackDir, 'b.md'), 'b1\n');
     mkdirSync(join(stackDir, '.claude/context'), { recursive: true });
     writeFileSync(join(stackDir, '.claude/context/decisions.md'), 'seed\n');
+    writeFileSync(join(stackDir, '.claude/context/architecture.md'), 'arch\n');
     await runInit({ cwd, yes: true, stackDir, version: '1.0.0' });
 
     writeFileSync(join(cwd, 'a.md'), 'edited\n');
     writeFileSync(join(cwd, '.claude/context/decisions.md'), '- mine\n');
+    writeFileSync(join(cwd, '.claude/context/architecture.md'), '# mine\n');
     writeFileSync(join(stackDir, 'a.md'), 'a2\n');
     writeFileSync(join(stackDir, 'b.md'), 'b2\n');
     writeFileSync(join(stackDir, '.claude/context/decisions.md'), 'seed2\n');
+    writeFileSync(join(stackDir, '.claude/context/architecture.md'), 'arch2\n');
     dropKey(cwd, 'docsLanguage');
 
     const result = await runInit({ cwd, stackDir, version: '2.0.0', interactive: true, prompter: asking('update').prompter });
@@ -367,6 +378,8 @@ test('an update keeps edited files as .proposed, updates untouched ones and leav
     assert.equal(readFileSync(join(cwd, 'b.md'), 'utf8'), 'b2\n');
     assert.equal(readFileSync(join(cwd, '.claude/context/decisions.md'), 'utf8'), '- mine\n');
     assert.ok(!existsSync(join(cwd, '.claude/context/decisions.md.proposed')));
+    assert.equal(readFileSync(join(cwd, '.claude/context/architecture.md'), 'utf8'), '# mine\n');
+    assert.ok(!existsSync(join(cwd, '.claude/context/architecture.md.proposed')));
 });
 
 test('the same version still asks every question again', async () => {

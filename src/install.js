@@ -11,7 +11,7 @@ const APPENDS = {
 };
 
 // Written once, then the team's own: never updated, never proposed over.
-const WRITE_ONCE = new Set(['.claude/context/decisions.md']);
+const WRITE_ONCE = new Set(['.claude/context/decisions.md', '.claude/context/architecture.md']);
 
 // Line endings do not count: a CRLF checkout of a kit file is the same file.
 const sha = (content) => createHash('sha256').update(content.replace(/\r\n/g, '\n')).digest('hex');

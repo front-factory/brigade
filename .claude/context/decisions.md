@@ -8,7 +8,7 @@
 - Node >= 24 (`engines`): `node:test` replaces a test dependency.
 - The CLI never creates a git repository: the user decides when to `git init`.
 - `.claude/brigade.json` stores the version, the answers and the sha256 of written files: untouched files are updated, edited ones get a `.proposed`.
-- `decisions.md` is write-once: the team owns it, Brigade never overwrites it.
+- `decisions.md` and `architecture.md` are write-once: the project owns them, Brigade never overwrites them.
 - Brigade never touches CLAUDE.md: its rules live in `.claude/rules/brigade.md`.
 - The git guard is a safety net, not a security boundary.
 - Releases are automated by semantic-release from Conventional Commits: version and CHANGELOG are never edited by hand.
