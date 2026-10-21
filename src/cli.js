@@ -1,11 +1,15 @@
 import { CONVENTIONS } from './conventions.js';
 import { runInit } from './init.js';
 import { STACKS } from './stacks.js';
+import { VERSION } from './version.js';
 
 const HELP = `Usage: brigade init [--yes] [--stack <name>]
+       brigade --version
 
   --yes           accept every detected or default answer, ask nothing
   --stack <name>  force the stack (${Object.keys(STACKS).join(', ')}); detected otherwise
+  -h, --help      show this help
+  -v, --version   show the version
 `;
 
 const WORDS = {
@@ -20,7 +24,11 @@ function parse(args) {
     const options = { yes: false, stack: undefined };
     for (let i = 0; i < args.length; i++) {
         if (args[i] === '--yes' || args[i] === '-y') options.yes = true;
-        else if (args[i] === '--stack') options.stack = args[++i];
+        else if (args[i] === '--stack') {
+            const value = args[++i];
+            if (!value || value.startsWith('-')) throw new Error(`--stack needs a value (${Object.keys(STACKS).join(', ')})`);
+            options.stack = value;
+        }
         else throw new Error(`Unknown option: ${args[i]}`);
     }
     if (options.stack && !STACKS[options.stack]) throw new Error(`Unknown stack: ${options.stack}`);
@@ -69,11 +77,25 @@ function print(result, interactive) {
     prompter.outro('Done. Run `claude` here, use Plan Mode (Shift+Tab) to discuss, and /brigade-language and /brigade-effort for your own settings.');
 }
 
+const isHelp = (arg) => arg === '--help' || arg === '-h';
+
 export async function main(argv) {
     const [command, ...rest] = argv;
-    if (command !== 'init') {
+    if (command === undefined || command === 'help' || isHelp(command)) {
         console.log(HELP);
-        return command === undefined || command === '--help' ? 0 : 1;
+        return 0;
+    }
+    if (command === '--version' || command === '-v') {
+        console.log(VERSION);
+        return 0;
+    }
+    if (command !== 'init') {
+        console.error(`brigade: Unknown command: ${command}\n\n${HELP}`);
+        return 1;
+    }
+    if (rest.some(isHelp)) {
+        console.log(HELP);
+        return 0;
     }
 
     try {

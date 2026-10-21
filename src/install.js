@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 
 export const MANIFEST = '.claude/brigade.json';
@@ -13,7 +13,8 @@ const APPENDS = {
 // Written once, then the team's own: never updated, never proposed over.
 const WRITE_ONCE = new Set(['.claude/context/decisions.md']);
 
-const sha = (content) => createHash('sha256').update(content).digest('hex');
+// Line endings do not count: a CRLF checkout of a kit file is the same file.
+const sha = (content) => createHash('sha256').update(content.replace(/\r\n/g, '\n')).digest('hex');
 
 function listFiles(dir) {
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -36,58 +37,72 @@ export function render(content, answers) {
     return content.replace(/__([A-Z_]+)__/g, (match, key) => values[key] ?? match);
 }
 
+// A missing manifest means a first install. An unreadable one is an error: guessing would overwrite the install.
 export function readManifest(cwd) {
+    const file = join(cwd, MANIFEST);
+    if (!existsSync(file)) return null;
     try {
-        return JSON.parse(readFileSync(join(cwd, MANIFEST), 'utf8'));
+        const manifest = JSON.parse(readFileSync(file, 'utf8'));
+        if (manifest && typeof manifest === 'object' && !Array.isArray(manifest)) return manifest;
     } catch {
-        return null;
+        // Reported below, same as a valid JSON of the wrong shape.
     }
+    throw new Error(`${MANIFEST} is corrupted. Fix it or delete it to start over (Brigade will then treat this as a first install).`);
 }
 
 // Never overwrites a file that differs from what Brigade last wrote: that one gets a `.proposed` next to it.
+// Everything is planned first (reads only), then written, so an error while planning leaves the project untouched.
 export function installFiles({ cwd, stackDir, answers, previous }) {
     const report = [];
     const hashes = {};
+    const writes = [];
+    const removals = [];
 
     for (const source of listFiles(stackDir)) {
         const path = relative(stackDir, source).split('\\').join('/');
         const target = join(cwd, path);
         const content = render(readFileSync(source, 'utf8'), answers);
         const mode = statSync(source).mode & 0o777;
-
-        const write = (file) => {
-            mkdirSync(dirname(file), { recursive: true });
-            writeFileSync(file, content, { mode });
-            chmodSync(file, mode);
-        };
+        const wanted = sha(content);
+        const proposed = `${target}.proposed`;
+        const write = (file) => writes.push({ file, content, mode });
 
         if (!existsSync(target)) {
             write(target);
-            hashes[path] = sha(content);
+            hashes[path] = wanted;
             report.push({ path, status: 'created' });
             continue;
         }
 
         const current = sha(readFileSync(target, 'utf8'));
         if (WRITE_ONCE.has(path)) {
-            report.push({ path, status: current === sha(content) ? 'unchanged' : 'kept' });
+            report.push({ path, status: current === wanted ? 'unchanged' : 'kept' });
             continue;
         }
-        if (current === sha(content)) {
+        if (current === wanted) {
+            // The target caught up with the kit: an old proposal is stale.
+            if (existsSync(proposed)) removals.push(proposed);
             hashes[path] = current;
             report.push({ path, status: 'unchanged' });
         } else if (previous?.files?.[path] === current) {
             write(target);
-            hashes[path] = sha(content);
+            if (existsSync(proposed)) removals.push(proposed);
+            hashes[path] = wanted;
             report.push({ path, status: 'updated' });
         } else {
-            const proposed = `${target}.proposed`;
-            const same = existsSync(proposed) && sha(readFileSync(proposed, 'utf8')) === sha(content);
+            const same = existsSync(proposed) && sha(readFileSync(proposed, 'utf8')) === wanted;
             if (!same) write(proposed);
             if (previous?.files?.[path]) hashes[path] = previous.files[path];
             report.push({ path, status: 'proposed' });
         }
     }
+
+    for (const { file, content, mode } of writes) {
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(file, content, { mode });
+        chmodSync(file, mode);
+    }
+    for (const file of removals) rmSync(file, { force: true });
 
     return { report, hashes };
 }
@@ -98,14 +113,16 @@ export function appendMissingLines(cwd) {
     return Object.entries(APPENDS).map(([path, lines]) => {
         const file = join(cwd, path);
         const existing = existsSync(file) ? readFileSync(file, 'utf8') : '';
-        const known = new Set(existing.split('\n').map(normalize));
+        const known = new Set(existing.split(/\r?\n/).map(normalize));
         const missing = lines.filter((line) => !known.has(normalize(line)));
 
         if (missing.length === 0) return { path, status: 'unchanged' };
 
-        const separator = existing === '' || existing.endsWith('\n') ? '' : '\n';
-        const heading = existing === '' ? '' : '\n';
-        writeFileSync(file, `${existing}${separator}${heading}## Claude\n${missing.join('\n')}\n`);
+        // Keep the file's own line endings.
+        const eol = existing.includes('\r\n') ? '\r\n' : '\n';
+        const separator = existing === '' || existing.endsWith('\n') ? '' : eol;
+        const heading = existing === '' ? '' : eol;
+        writeFileSync(file, `${existing}${separator}${heading}## Claude${eol}${missing.join(eol)}${eol}`);
         return { path, status: 'updated', added: missing };
     });
 }

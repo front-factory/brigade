@@ -48,9 +48,10 @@ async function ask({ cwd, prompter, previous = {} }) {
         )
     );
 
+    const detectedConvention = previous.commitConvention || detectCommitConvention(cwd) || 'conventional';
     const conventionKey = await validate(
         'Commit convention',
-        previous.commitConvention || detectCommitConvention(cwd) || 'conventional',
+        detectedConvention,
         () => choose(
             'Commit convention',
             [
@@ -59,7 +60,7 @@ async function ask({ cwd, prompter, previous = {} }) {
             ],
             { other: false }
         ),
-        CONVENTIONS[previous.commitConvention || detectCommitConvention(cwd) || 'conventional']?.label
+        CONVENTIONS[detectedConvention]?.label
     );
     const commitFormat = conventionKey === 'custom'
         ? await text('Describe your commit format in one sentence', previous.commitFormat)

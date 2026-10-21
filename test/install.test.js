@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { runInit } from '../src/init.js';
-import { writeLocalSettings } from '../src/install.js';
+import { appendMissingLines, readManifest, writeLocalSettings } from '../src/install.js';
 import { compareVersions } from '../src/version.js';
 
 function project() {
@@ -218,4 +218,67 @@ test('without a terminal an older install is updated, as before', async () => {
     const result = await runInit({ cwd, yes: true, version: '2.0.0' });
     assert.equal(result.kept, undefined);
     assert.equal(JSON.parse(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8')).version, '2.0.0');
+});
+
+test('an error while planning leaves the project untouched', async () => {
+    const cwd = project();
+    const stackDir = mkdtempSync(join(tmpdir(), 'brigade-kit-'));
+    writeFileSync(join(stackDir, 'a.md'), 'a\n');
+    symlinkSync(join(stackDir, 'missing'), join(stackDir, 'z.md'));
+
+    await assert.rejects(runInit({ cwd, yes: true, stackDir }));
+    assert.ok(!existsSync(join(cwd, 'a.md')));
+    assert.ok(!existsSync(join(cwd, '.claude/brigade.json')));
+});
+
+test('a corrupted manifest is an error, a missing one is a first install', async () => {
+    const cwd = project();
+    assert.equal(readManifest(cwd), null);
+
+    mkdirSync(join(cwd, '.claude'));
+    for (const bad of ['{ broken', '[]', 'null', '']) {
+        writeFileSync(join(cwd, '.claude/brigade.json'), bad);
+        assert.throws(() => readManifest(cwd), /corrupted/);
+        await assert.rejects(runInit({ cwd, yes: true }), /corrupted/);
+    }
+    assert.ok(!existsSync(join(cwd, RULES)));
+    assert.equal(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8'), '');
+});
+
+test('a stale .proposed is removed once the target matches the kit', async () => {
+    const cwd = project();
+    const stackDir = mkdtempSync(join(tmpdir(), 'brigade-kit-'));
+    writeFileSync(join(stackDir, 'rule.md'), 'v1\n');
+    await runInit({ cwd, yes: true, stackDir });
+
+    writeFileSync(join(cwd, 'rule.md'), 'mine\n');
+    await runInit({ cwd, yes: true, stackDir });
+    assert.ok(existsSync(join(cwd, 'rule.md.proposed')));
+
+    writeFileSync(join(cwd, 'rule.md'), 'v1\n');
+    const result = await runInit({ cwd, yes: true, stackDir });
+    assert.equal(statuses(result)['rule.md'], 'unchanged');
+    assert.ok(!existsSync(join(cwd, 'rule.md.proposed')));
+});
+
+test('a file that differs from the kit only by line endings is unchanged', async () => {
+    const cwd = project();
+    const stackDir = mkdtempSync(join(tmpdir(), 'brigade-kit-'));
+    writeFileSync(join(stackDir, 'rule.md'), 'a\nb\n');
+    await runInit({ cwd, yes: true, stackDir });
+
+    writeFileSync(join(cwd, 'rule.md'), 'a\r\nb\r\n');
+    const result = await runInit({ cwd, yes: true, stackDir });
+    assert.equal(statuses(result)['rule.md'], 'unchanged');
+    assert.ok(!existsSync(join(cwd, 'rule.md.proposed')));
+});
+
+test('CRLF ignore files are read and extended with CRLF', () => {
+    const cwd = project();
+    writeFileSync(join(cwd, '.gitignore'), 'node_modules\r\nCLAUDE.local.md\r\n');
+    const result = appendMissingLines(cwd);
+
+    assert.deepEqual(result.find(({ path }) => path === '.gitignore').added, ['.claude/settings.local.json']);
+    assert.equal(readFileSync(join(cwd, '.gitignore'), 'utf8'), 'node_modules\r\nCLAUDE.local.md\r\n\r\n## Claude\r\n.claude/settings.local.json\r\n');
+    assert.ok(appendMissingLines(cwd).every(({ status }) => status === 'unchanged'));
 });
