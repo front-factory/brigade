@@ -325,8 +325,18 @@ test('CRLF ignore files are read and extended with CRLF', () => {
     const result = appendMissingLines(cwd);
 
     assert.deepEqual(result.find(({ path }) => path === '.gitignore').added, ['.claude/settings.local.json']);
-    assert.equal(readFileSync(join(cwd, '.gitignore'), 'utf8'), 'node_modules\r\nCLAUDE.local.md\r\n\r\n## Claude\r\n.claude/settings.local.json\r\n');
+    assert.equal(readFileSync(join(cwd, '.gitignore'), 'utf8'), 'node_modules\r\nCLAUDE.local.md\r\n\r\n.claude/settings.local.json\r\n');
     assert.ok(appendMissingLines(cwd).every(({ status }) => status === 'unchanged'));
+});
+
+test('an existing "## Claude" block is left as is and not duplicated', () => {
+    const cwd = project();
+    const content = 'node_modules\n\n## Claude\n.claude/settings.local.json\nCLAUDE.local.md\n';
+    writeFileSync(join(cwd, '.gitignore'), content);
+    const result = appendMissingLines(cwd);
+
+    assert.equal(result.find(({ path }) => path === '.gitignore').status, 'unchanged');
+    assert.equal(readFileSync(join(cwd, '.gitignore'), 'utf8'), content);
 });
 
 const MANIFEST_FILE = '.claude/brigade.json';

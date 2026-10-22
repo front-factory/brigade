@@ -161,8 +161,8 @@ export function appendMissingLines(cwd) {
         // Keep the file's own line endings.
         const eol = existing.includes('\r\n') ? '\r\n' : '\n';
         const separator = existing === '' || existing.endsWith('\n') ? '' : eol;
-        const heading = existing === '' ? '' : eol;
-        writeFileSync(file, `${existing}${separator}${heading}## Claude${eol}${missing.join(eol)}${eol}`);
+        const gap = existing === '' ? '' : eol;
+        writeFileSync(file, `${existing}${separator}${gap}${missing.join(eol)}${eol}`);
         return { path, status: 'updated', added: missing };
     });
 }
