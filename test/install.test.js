@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import './git-env.js';
 import { runInit } from '../src/init.js';
 import { appendMissingLines, readManifest, render, sha, writeLocalSettings } from '../src/install.js';
 import { OPTIONS } from '../src/options.js';

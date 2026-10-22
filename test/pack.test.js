@@ -3,8 +3,9 @@ import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 function listFiles(dir) {
     return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>

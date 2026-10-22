@@ -4,9 +4,10 @@ import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { VERSION } from '../src/version.js';
 
-const BIN = new URL('../bin/brigade.js', import.meta.url).pathname;
+const BIN = fileURLToPath(new URL('../bin/brigade.js', import.meta.url));
 
 function brigade(args, cwd = mkdtempSync(join(tmpdir(), 'brigade-cli-'))) {
     const result = spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: 'utf8', stdin: 'ignore' });

@@ -47,6 +47,7 @@ Status: open
 | T2 | - | test/ | `detect.js` only partly covered (commit convention); `prompt.js` and `summary` rendering untested. | open | |
 | T3 | - | test/ | No coverage measurement (`node --test --experimental-test-coverage`). Measured 2026-10-22: 72 tests pass, 93.7% lines / 87.7% branches / 85.7% functions. | open | |
 | T4 | low | test/install.test.js | Uses `rm` via `execFileSync` (not portable to Windows); use `rmSync`. | fixed | `rm` replaced by `rmSync`. |
+| T5 | low | test/ | Tests depended on the machine's git config (`init.defaultBranch`); made hermetic with GIT_CONFIG_GLOBAL/GIT_CONFIG_NOSYSTEM. | fixed | Empty temp gitconfig used instead of the null device, which git cannot open on Windows. |
 | R1 | - | CI | The matrix has a single Node (24) while the comment promises every `engines` version. | open | |
 | R2 | - | repo | No lint/format tooling (only `.editorconfig`). | open | |
 | R3 | low | CI | Dotfiles ARE packaged (`npm pack --dry-run`: 29 files, 24.7 kB, all `templates/web/.claude/**` present); only a CI guard (`npm pack --dry-run` check) is missing. | fixed | Added test/pack.test.js: `npm pack --dry-run --json` must list bin, src and every templates/web file (dotfiles included). |
