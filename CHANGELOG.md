@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.2.1](https://github.com/front-factory/brigade/compare/v1.2.0...v1.2.1) (2026-10-22)
+
+### Bug Fixes
+
+* **cli:** append ignore lines without a heading ([ca78cb6](https://github.com/front-factory/brigade/commit/ca78cb6f9de622379b560964634fcf5b3e5d575a))
+* **hooks:** analyse nested git commands in the guard ([5c7d3f0](https://github.com/front-factory/brigade/commit/5c7d3f05e08f5cc9b00a15b33e66ecd81a21354d))
+* **hooks:** ask when the guard payload is unreadable ([65c6222](https://github.com/front-factory/brigade/commit/65c6222976bed0f05e2d69d96662204c0241bdf7))
+* **hooks:** ask when the protected branches are unknown ([72189f7](https://github.com/front-factory/brigade/commit/72189f70b1d7c8136ed736b658669041422bfd8d))
+* **hooks:** skip git global options in the guard ([5ceb1e2](https://github.com/front-factory/brigade/commit/5ceb1e21fbc53ac0c8cacfbfe193ada5e53f35d9))
+* **kit:** deny reading the Bun lockfiles ([817be0d](https://github.com/front-factory/brigade/commit/817be0d4ba52872493acf3971f3dcffb56505069))
+* **version:** compare pre-release tags in compareVersions ([fc498fb](https://github.com/front-factory/brigade/commit/fc498fbcc2a4ab17ea5687143f945d2abe3bbc1a))
+
 ## [1.2.0](https://github.com/front-factory/brigade/compare/v1.1.1...v1.2.0) (2026-10-21)
 
 ### Features
