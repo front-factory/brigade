@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.2.2](https://github.com/front-factory/brigade/compare/v1.2.1...v1.2.2) (2026-10-22)
+
+### Bug Fixes
+
+* **cli:** refuse a blank custom commit format ([9aaf62e](https://github.com/front-factory/brigade/commit/9aaf62e54fba97f36ec47495989d3067c7659254))
+
 ## [1.2.1](https://github.com/front-factory/brigade/compare/v1.2.0...v1.2.1) (2026-10-22)
 
 ### Bug Fixes
