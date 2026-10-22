@@ -12,8 +12,8 @@ Close the git guard blind spots found by the project review: global options (G1,
 
 - [x] G1/G2: skip global options before the subcommand
 - [x] G3: analyse `$(...)`, backticks, `sh -c`, `eval`, `xargs git`; deny `checkout --`/`.`/`-f`, `restore` (worktree), `switch --discard-changes`, `stash drop|clear`
-- [ ] G6: `protectedBranches()` returns `null` when brigade.json is unreadable; git-operator is asked on protected-branch commands
-- [ ] Tests in test/guard.test.js, hook mirrored, brigade.json hash updated
+- [x] G6: `protectedBranches()` returns `null` when brigade.json is unreadable; git-operator is asked on protected-branch commands
+- [x] Tests in test/guard.test.js, hook mirrored, brigade.json hash updated
 - [ ] Commit
 
 ## Decisions and open questions
@@ -28,4 +28,4 @@ Close the git guard blind spots found by the project review: global options (G1,
 ## Active audit
 
 Path: .claude/context/audits/2026-10-21-project-review.md
-Open IDs: G4, G5, G6
+Open IDs: G4, G5

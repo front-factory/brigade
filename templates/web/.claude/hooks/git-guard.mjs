@@ -98,6 +98,8 @@ export function decide({ command, agent, branch, protectedBranches }) {
             raise('ask', 'Nested git command that cannot be analysed: confirm.');
         } else if (ASK.has(git.sub)) {
             raise('ask', `git ${git.sub} always needs the user's confirmation.`);
+        } else if (ON_PROTECTED.has(git.sub) && protectedBranches === null) {
+            raise('ask', 'Protected branches unknown (.claude/brigade.json missing or invalid): confirm.');
         } else if (ON_PROTECTED.has(git.sub) && protectedBranches.includes(branch)) {
             raise('ask', `"${branch}" is a protected branch: confirm before writing on it.`);
         } else {
@@ -120,7 +122,7 @@ function protectedBranches(root) {
         const { answers } = JSON.parse(readFileSync(join(root, '.claude', 'brigade.json'), 'utf8'));
         return [answers.defaultBranch, answers.baseBranch].filter(Boolean);
     } catch {
-        return [];
+        return null;
     }
 }
 

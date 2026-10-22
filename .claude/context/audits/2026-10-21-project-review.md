@@ -14,8 +14,8 @@ Status: open
 | G2 | - | git guard | False positive: `git -C . status` is denied for the main session. Confirmed still reproducible 2026-10-22. | fixed | Reads behind global options no longer count as writes; tests added. |
 | G3 | - | git guard | Blind spots: `$(git ...)`, `bash -c "git ..."`, backticks, `xargs git`; `git checkout -- .` and `git restore` are allowed for git-operator though they destroy uncommitted work. Confirmed still reproducible 2026-10-22 (`git checkout -- .`, `git restore .` allowed for git-operator; `bash -c "git commit"` returns no decision). | fixed | Nested forms (`$(...)`, backticks, `sh -c`, `eval`, `xargs git`) analysed, work-destroying commands denied for git-operator; tests added. |
 | G4 | - | git guard | Hook is fail-open when the stdin JSON is invalid (a crash lets the command through); it should deny/ask. | open | |
-| G5 | - | git guard tests | No guard tests for global options, subshells, `checkout --`, invalid payload. | open | Guard tests added for G1/G2/G3 only; invalid payload still untested. |
-| G6 | medium | git-guard.mjs `protectedBranches()` | Fail-open: when `.claude/brigade.json` is missing or corrupted it returns `[]`, so branch protection is silently off. Should ask/deny or warn. | open |  |
+| G5 | - | git guard tests | No guard tests for global options, subshells, `checkout --`, invalid payload. | open | Guard tests added for G1/G2/G3/G6 only; invalid payload still untested. |
+| G6 | medium | git-guard.mjs `protectedBranches()` | Fail-open: when `.claude/brigade.json` is missing or corrupted it returns `[]`, so branch protection is silently off. Should ask/deny or warn. | fixed | `protectedBranches()` returns null when brigade.json is unreadable and git-operator is asked on protected-branch commands; tests added. |
 | K1 | - | kit | No check that `.claude/` is the rendered copy of `templates/web/`. | fixed | d3ff822: `test/dogfood.test.js` |
 | K2 | - | .claude/brigade.json | Tracked with version 0.0.0. | fixed | d3ff822: untracked and ignored |
 | K3 | - | .claude/context/features | Stale feature file `chore-restart-v2.md`. | fixed | d3ff822: removed |

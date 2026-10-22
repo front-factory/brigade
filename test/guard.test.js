@@ -87,3 +87,10 @@ test('commands that destroy uncommitted work are denied for git-operator', () =>
     assert.equal(run('git restore --staged src/a.js'), 'allow');
     assert.equal(run('git stash'), 'allow');
 });
+
+test('git-operator is asked when the protected branches are unknown', () => {
+    const unknown = (command, branch = 'feat/x') => decide({ command, agent: 'git-operator', branch, protectedBranches: null }).permissionDecision;
+    assert.equal(unknown('git commit -m "x"'), 'ask');
+    assert.equal(unknown('git add a'), 'allow');
+    assert.equal(unknown('git push --force'), 'deny');
+});
