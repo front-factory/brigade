@@ -42,7 +42,7 @@ Status: open
 | I2 | low | src/install.js | Writes are not atomic (no temp file + rename); extends C5b. | open | |
 | P1 | low | src/prompt.js `text` | A custom commit format can be empty: `brigade-options.md` gets a blank "Commit format:" line. Add validation. | open | |
 | P2 | low | src/cli.js | `interactive` depends on `stdin.isTTY` only; stdout piped still prompts. | open | |
-| K6 | low | templates/web/.claude/settings.json | Lockfile deny list lacks `bun.lock`/`bun.lockb`; `Bash(<pm> run:*)` allows any script. | open | |
+| K6 | low | templates/web/.claude/settings.json | Lockfile deny list lacks `bun.lock`/`bun.lockb`; `Bash(<pm> run:*)` allows any script. | fixed | Bun lockfiles added to the deny list; `<pm> run:*` kept on purpose (project scripts). |
 | T1 | - | test/ | CLI untested. | fixed | 1eec657: `test/cli.test.js` |
 | T2 | - | test/ | `detect.js` only partly covered (commit convention); `prompt.js` and `summary` rendering untested. | open | |
 | T3 | - | test/ | No coverage measurement (`node --test --experimental-test-coverage`). Measured 2026-10-22: 72 tests pass, 93.7% lines / 87.7% branches / 85.7% functions. | open | |

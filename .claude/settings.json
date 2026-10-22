@@ -31,6 +31,8 @@
             "Read(./package-lock.json)",
             "Read(./pnpm-lock.yaml)",
             "Read(./yarn.lock)",
+            "Read(./bun.lock)",
+            "Read(./bun.lockb)",
             "Read(./dist/**)",
             "Read(./build/**)"
         ]

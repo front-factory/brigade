@@ -23,8 +23,8 @@ Close the git guard blind spots found by the project review: global options (G1,
 
 ## Notes
 
-- V1, R8, R9 and T4 of the audit were also handled on this branch.
-- `npm test` passes (78 tests).
+- V1, R8, R9, T4 and K6 of the audit were also handled on this branch.
+- `npm test` passes (79 tests).
 
 ## Active audit
 

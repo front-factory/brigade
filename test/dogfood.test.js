@@ -67,3 +67,10 @@ test('brigade.md has no placeholder and brigade-options.md is generated from the
     const manifest = JSON.parse(readFileSync(join(ROOT, '.claude', 'brigade.json'), 'utf8'));
     assert.equal(manifest.files[OPTIONS_FILE], undefined);
 });
+
+test('the settings deny the lockfiles of every supported package manager', () => {
+    const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
+    for (const lock of ['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock', 'bun.lock', 'bun.lockb']) {
+        assert.ok(settings.permissions.deny.includes(`Read(./${lock})`), `${lock} is not denied`);
+    }
+});
