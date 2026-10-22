@@ -10,6 +10,8 @@ const LOCKFILES = {
     'package-lock.json': 'npm'
 };
 
+export const PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'];
+
 const LANGUAGES = {
     en: 'English',
     fr: 'French',
@@ -54,10 +56,12 @@ export function detectDefaultBranch(cwd) {
     return git(cwd, 'symbolic-ref', '--short', 'HEAD');
 }
 
-// `packageManager` wins; several lockfiles are a leftover, so `value` stays empty and the candidates are listed.
+// `packageManager` wins when it names a known manager; several lockfiles are a leftover, so `value` stays empty and the candidates are listed.
 export function detectPackageManager(cwd) {
-    const declared = readJson(join(cwd, 'package.json'))?.packageManager?.split('@')[0];
-    if (declared) return { value: declared, candidates: [declared] };
+    const field = readJson(join(cwd, 'package.json'))?.packageManager;
+    // Anything but a known manager is ignored: the value ends up in settings.json permission rules.
+    const declared = typeof field === 'string' ? field.split('@')[0] : '';
+    if (PACKAGE_MANAGERS.includes(declared)) return { value: declared, candidates: [declared] };
 
     const candidates = [...new Set(
         Object.entries(LOCKFILES).filter(([file]) => existsSync(join(cwd, file))).map(([, name]) => name)

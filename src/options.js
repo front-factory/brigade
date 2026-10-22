@@ -1,5 +1,6 @@
 import { CONVENTIONS } from './conventions.js';
 import {
+    PACKAGE_MANAGERS,
     detectCommitConvention,
     detectDefaultBranch,
     detectLanguage,
@@ -7,11 +8,13 @@ import {
     localBranches
 } from './detect.js';
 
-const PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'];
 const LANGUAGES = ['English', 'French'];
 const ENGLISH = LANGUAGES[0];
 const DIFFERENT = '__different__';
 const LANGUAGE_KEYS = ['replyLanguage', 'codeLanguage', 'docsLanguage'];
+
+// A stored manager that is not a known one (hand-edited manifest) counts as not stored.
+const storedManager = (previous) => (PACKAGE_MANAGERS.includes(previous.packageManager) ? previous.packageManager : '');
 
 const languages = (current) => [...new Set([current, ...LANGUAGES].filter(Boolean))].map((value) => ({ value, label: value }));
 
@@ -59,7 +62,7 @@ export const OPTIONS = [
     {
         keys: ['packageManager'],
         detect: ({ cwd, previous }) => {
-            const packageManager = previous.packageManager || detectPackageManager(cwd).value;
+            const packageManager = storedManager(previous) || detectPackageManager(cwd).value;
             return packageManager ? { packageManager } : null;
         },
         ask: async ({ cwd, prompter: { validate, choose }, previous, current }) => {
@@ -68,7 +71,7 @@ export const OPTIONS = [
             return {
                 packageManager: await validate(
                     'Package manager',
-                    previous.packageManager || manager.value,
+                    storedManager(previous) || manager.value,
                     () => choose(
                         'Package manager',
                         managers.map((value) => ({ value, label: value, hint: manager.candidates.includes(value) ? 'found in the project' : undefined })),
@@ -198,7 +201,7 @@ export function recapRows(answers) {
 }
 
 // `previous`: the stored answers. Returns the options (groups of keys) that have no stored value yet.
-export const missingOptions = (previous = {}) => OPTIONS.filter(({ keys }) => keys.some((key) => previous[key] === undefined));
+export const missingOptions = (previous = {}) => OPTIONS.filter(({ keys }) => keys.some((key) => previous[key] === undefined) || (keys.includes('packageManager') && !storedManager(previous)));
 
 // What each option would be without asking. The ones that cannot be told are left out of the state.
 function propose(ctx) {

@@ -33,7 +33,8 @@ export function hasKitFiles({ cwd, stackDir }) {
     return listFiles(stackDir).some((source) => existsSync(join(cwd, relative(stackDir, source))));
 }
 
-export function render(content, answers) {
+// `json`: the values go inside JSON strings, so quotes, backslashes and control characters are escaped.
+export function render(content, answers, json = false) {
     const values = {
         DEFAULT_BRANCH: answers.defaultBranch,
         BASE_BRANCH: answers.baseBranch,
@@ -43,7 +44,8 @@ export function render(content, answers) {
         CODE_LANGUAGE: answers.codeLanguage,
         DOCS_LANGUAGE: answers.docsLanguage
     };
-    return content.replace(/__([A-Z_]+)__/g, (match, key) => values[key] ?? match);
+    const escape = (value) => (json ? JSON.stringify(String(value)).slice(1, -1) : value);
+    return content.replace(/__([A-Z_]+)__/g, (match, key) => (values[key] === undefined ? match : escape(values[key])));
 }
 
 // A missing manifest means a first install. An unreadable one is an error: guessing would overwrite the install.
@@ -70,7 +72,7 @@ export function installFiles({ cwd, stackDir, answers, previous }) {
     for (const source of listFiles(stackDir)) {
         const path = relative(stackDir, source).split('\\').join('/');
         const target = join(cwd, path);
-        const content = render(readFileSync(source, 'utf8'), answers);
+        const content = render(readFileSync(source, 'utf8'), answers, path.endsWith('.json'));
         const mode = statSync(source).mode & 0o777;
         const wanted = sha(content);
         const proposed = `${target}.proposed`;
