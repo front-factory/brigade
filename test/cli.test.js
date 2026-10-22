@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -64,4 +64,38 @@ test('a corrupted manifest stops init with a clear error and writes nothing', ()
     const again = brigade(['init', '--yes'], first.cwd);
     assert.equal(again.code, 1);
     assert.match(again.err, /brigade\.json is corrupted/);
+});
+
+test('the plain summary lists the files, the recap and the next step', () => {
+    const { code, out } = brigade(['init', '--yes']);
+    assert.equal(code, 0);
+    assert.match(out, /^Brigade installed \(stack: web\)\./);
+    assert.match(out, /^added +\.claude\/rules\/brigade\.md$/m);
+    assert.match(out, /^lines added +\.gitignore \(.*CLAUDE\.local\.md\)$/m);
+    assert.match(out, new RegExp(`^Brigade {10}${VERSION}$`, 'm'));
+    assert.match(out, /^Replies for you {2}project default$/m);
+    assert.match(out, /Commit \.claude\/ including \.claude\/brigade\.json/);
+    assert.doesNotMatch(out, /New options/);
+});
+
+test('the plain summary shows a kept file and its proposal', () => {
+    const first = brigade(['init', '--yes']);
+    writeFileSync(join(first.cwd, '.claude/rules/brigade.md'), 'mine\n');
+    const { code, out, cwd } = brigade(['init', '--yes'], first.cwd);
+    assert.equal(code, 0);
+    assert.match(out, /^yours kept, proposal written +\.claude\/rules\/brigade\.md\.proposed$/m);
+    assert.match(out, /^already up to date +\.claude\/settings\.json$/m);
+    assert.equal(readFileSync(join(cwd, '.claude/rules/brigade.md'), 'utf8'), 'mine\n');
+});
+
+test('the plain summary names the options added by an update', () => {
+    const first = brigade(['init', '--yes']);
+    const file = join(first.cwd, '.claude/brigade.json');
+    const manifest = JSON.parse(readFileSync(file, 'utf8'));
+    manifest.version = '0.0.1';
+    delete manifest.answers.docsLanguage;
+    writeFileSync(file, JSON.stringify(manifest));
+    const { code, out } = brigade(['init', '--yes'], first.cwd);
+    assert.equal(code, 0);
+    assert.match(out, /^New options, default used: .*docsLanguage: English$/m);
 });
