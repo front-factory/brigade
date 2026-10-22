@@ -19,13 +19,13 @@ Close the git guard blind spots found by the project review: global options (G1,
 ## Decisions and open questions
 
 - Nested forms nested deeper than 3 levels that contain `git` are treated as a write (ask for git-operator).
-- G4 (invalid stdin payload) is out of scope.
+- G4: an invalid, empty or non-object stdin payload makes the hook ask ("Hook payload unreadable: confirm.") instead of crashing; G5 tests spawn the hook as a child process.
 
 ## Notes
 
-- `npm test` passes (77 tests).
+- `npm test` passes (78 tests).
 
 ## Active audit
 
 Path: .claude/context/audits/2026-10-21-project-review.md
-Open IDs: G4, G5
+Open IDs: none (guard)

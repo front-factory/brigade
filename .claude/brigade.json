@@ -19,7 +19,7 @@
         ".claude/context/audits/_template.md": "027b0ceb32d0a111435950f851c83a93ed34200df820a55f9d22c724605b5e28",
         ".claude/context/features/_template.md": "8fb4f614cb6118b0f43d84668e78929a7fb4c2e1f5d3370caaf44be3a05986f1",
         ".claude/context/local-template.md": "d4343856652dbbab46d5d45b31832f4b66f6b5528ea4926a2ed23eac7c201b35",
-        ".claude/hooks/git-guard.mjs": "cd021a0c29eceaa0749de80643435bd1cb8c9f8d1ab52f9b6cbc7bbe5ad3e441",
+        ".claude/hooks/git-guard.mjs": "1af46f5a16d3fff76b6d57dd8dcad64b4494822aed4a12702c55ad2ea3e7aa1d",
         ".claude/rules/brigade.md": "5117c4d0213c4ab0a50114099ebfcfff1940abda1d71ea1321be607719609385",
         ".claude/settings.json": "a084b265193950f7f6d21b905677eb10465972460c01d4ad68cede40f7fa65be",
         ".claude/skills/audit/SKILL.md": "322ad4c763e0e3ec588934e1098a7e990205799c4966e6324f74d1dc8b74c2f6",

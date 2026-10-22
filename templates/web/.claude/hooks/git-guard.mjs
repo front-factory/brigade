@@ -127,15 +127,25 @@ function protectedBranches(root) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-    const input = JSON.parse(readFileSync(0, 'utf8'));
+    let input;
+    try {
+        input = JSON.parse(readFileSync(0, 'utf8'));
+    } catch {
+        input = null;
+    }
+    const valid = input !== null && typeof input === 'object' && !Array.isArray(input);
+    if (!valid) input = {};
     const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
 
-    const decision = decide({
-        command: input.tool_input?.command ?? '',
-        agent: input.agent_type ?? '',
-        branch: currentBranch(input.cwd || root),
-        protectedBranches: protectedBranches(root)
-    });
+    // An unreadable payload must not crash the hook (exit 1 lets the command through).
+    const decision = valid
+        ? decide({
+            command: input.tool_input?.command ?? '',
+            agent: input.agent_type ?? '',
+            branch: currentBranch(input.cwd || root),
+            protectedBranches: protectedBranches(root)
+        })
+        : { permissionDecision: 'ask', reason: 'Hook payload unreadable: confirm.' };
 
     if (decision) {
         process.stdout.write(JSON.stringify({

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { decide } from '../templates/web/.claude/hooks/git-guard.mjs';
 
@@ -93,4 +95,16 @@ test('git-operator is asked when the protected branches are unknown', () => {
     assert.equal(unknown('git commit -m "x"'), 'ask');
     assert.equal(unknown('git add a'), 'allow');
     assert.equal(unknown('git push --force'), 'deny');
+});
+
+test('an unreadable hook payload asks and exits cleanly', () => {
+    const hook = fileURLToPath(new URL('../templates/web/.claude/hooks/git-guard.mjs', import.meta.url));
+    for (const input of ['{bad', '', '[]', '"x"', 'null']) {
+        const result = spawnSync(process.execPath, [hook], { input, encoding: 'utf8' });
+        assert.equal(result.status, 0, `exit code for ${JSON.stringify(input)}`);
+        const { hookSpecificOutput } = JSON.parse(result.stdout);
+        assert.equal(hookSpecificOutput.hookEventName, 'PreToolUse');
+        assert.equal(hookSpecificOutput.permissionDecision, 'ask');
+        assert.match(hookSpecificOutput.permissionDecisionReason, /unreadable/);
+    }
 });
