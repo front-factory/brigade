@@ -36,7 +36,7 @@ Status: open
 | C12 | - | src/detect.js | No monorepo / pnpm workspace detection. | deferred | |
 | C13 | low | src/stacks.js | Single stack with a trivial `match`. | wontfix (low value) | The mechanism is intentionally ready for more stacks. |
 | C14 | low | `.gitignore` / `.gitattributes` append | The `## Claude` heading appended is unconventional (works as a comment). | open | |
-| V1 | medium | src/version.js | `compareVersions` ignores pre-release tags: `1.2.0-beta.1` vs `1.2.0` compares equal, so a beta to stable switch is reported "already up to date" (the repo publishes a `beta` channel). | open | |
+| V1 | medium | src/version.js | `compareVersions` ignores pre-release tags: `1.2.0-beta.1` vs `1.2.0` compares equal, so a beta to stable switch is reported "already up to date" (the repo publishes a `beta` channel). | fixed | pre-release precedence implemented in `compareVersions`, tests added. |
 | V2 | low | bin/brigade.js | No runtime Node check: on Node < 24 `styleText`/`parseArgs` fail with a cryptic error; `engines` only warns. Add an explicit message. | open | |
 | I1 | low | src/install.js `writeManifest` | `localeCompare` makes the key order locale-dependent; use a plain comparison for a stable manifest. | open | |
 | I2 | low | src/install.js | Writes are not atomic (no temp file + rename); extends C5b. | open | |
@@ -46,7 +46,7 @@ Status: open
 | T1 | - | test/ | CLI untested. | fixed | 1eec657: `test/cli.test.js` |
 | T2 | - | test/ | `detect.js` only partly covered (commit convention); `prompt.js` and `summary` rendering untested. | open | |
 | T3 | - | test/ | No coverage measurement (`node --test --experimental-test-coverage`). Measured 2026-10-22: 72 tests pass, 93.7% lines / 87.7% branches / 85.7% functions. | open | |
-| T4 | low | test/install.test.js | Uses `rm` via `execFileSync` (not portable to Windows); use `rmSync`. | open | |
+| T4 | low | test/install.test.js | Uses `rm` via `execFileSync` (not portable to Windows); use `rmSync`. | fixed | `rm` replaced by `rmSync`. |
 | R1 | - | CI | The matrix has a single Node (24) while the comment promises every `engines` version. | open | |
 | R2 | - | repo | No lint/format tooling (only `.editorconfig`). | open | |
 | R3 | low | CI | Dotfiles ARE packaged (`npm pack --dry-run`: 29 files, 24.7 kB, all `templates/web/.claude/**` present); only a CI guard (`npm pack --dry-run` check) is missing. | open | |
@@ -54,8 +54,8 @@ Status: open
 | R5 | low | Dependabot | Add `groups` and a `commit-message` prefix compatible with commitlint. `reviewers` in dependabot.yml is deprecated by GitHub: use a CODEOWNERS file. | open | |
 | R6 | low | .gitignore | Lacks `.DS_Store`, `.env*`, `coverage/`; ignoring `*.map` is debatable. | open | |
 | R7 | low | hooks | No `pre-push` hook running `npm test`. | open | |
-| R8 | medium | .github/workflows/ci.yml | Actions not pinned by SHA in the `publish` job (has `id-token: write`); no `concurrency`, no `timeout-minutes`; `actions: read` unused. | open | |
-| R9 | medium | .github/workflows/ci.yml | Tests only on ubuntu; the CLI runs on dev machines (macOS/Windows). Add an OS matrix (relates to T4). | open | |
+| R8 | medium | .github/workflows/ci.yml | Actions not pinned by SHA in the `publish` job (has `id-token: write`); no `concurrency`, no `timeout-minutes`; `actions: read` unused. | fixed | actions pinned by SHA, `concurrency` and `timeout-minutes` added, `actions: read` removed. |
+| R9 | medium | .github/workflows/ci.yml | Tests only on ubuntu; the CLI runs on dev machines (macOS/Windows). Add an OS matrix (relates to T4). | fixed | test job runs on ubuntu, macOS and Windows (Node 24, `fail-fast: false`); Windows/macOS runs not verified locally. |
 | R10 | low | CI | Commit format only enforced by the local husky hook (bypassable with `--no-verify`); semantic-release silently ignores non-conforming commits. Add commitlint in CI. | open | |
 | D1 | - | README.md | Gained Update, Troubleshooting and git guard security-model sections. | fixed | 2afea10 |
 | D2 | - | CONTRIBUTING.md, SECURITY.md | Not written. | wontfix | The user declined them. |

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -88,7 +88,8 @@ test('an existing file identical to the kit produces no .proposed', async () => 
     const cwd = project();
     await runInit({ cwd, yes: true });
     const kit = readFileSync(join(cwd, RULES), 'utf8');
-    execFileSync('rm', [join(cwd, '.claude/brigade.json'), join(cwd, RULES)]);
+    rmSync(join(cwd, '.claude/brigade.json'));
+    rmSync(join(cwd, RULES));
     writeFileSync(join(cwd, RULES), kit);
 
     const result = await runInit({ cwd, yes: true });
@@ -440,7 +441,7 @@ const lostManifest = (message) => /brigade\.json is missing/.test(message);
 test('a missing manifest with kit files already there warns and still installs', async () => {
     const cwd = project();
     await runInit({ cwd, yes: true });
-    execFileSync('rm', [join(cwd, MANIFEST_FILE)]);
+    rmSync(join(cwd, MANIFEST_FILE));
 
     const { prompter, seen } = warnings();
     const result = await runInit({ cwd, interactive: true, prompter });
