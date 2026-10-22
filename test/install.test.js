@@ -751,3 +751,29 @@ test('cancelling at the first choice or at the recap leaves the project untouche
         assert.ok(!existsSync(join(cwd, '.claude')));
     }
 });
+
+test('a blank custom commit format never reaches the options file', async () => {
+    const commit = OPTIONS.find(({ keys }) => keys.includes('commitFormat'));
+    const prompter = (typed) => ({
+        validate: async (_, detected) => detected,
+        choose: async () => 'custom',
+        text: async (_, __, options) => {
+            assert.equal(options.required, true);
+            return typed.trim();
+        }
+    });
+    const ask = (typed) => commit.ask({ cwd: project(), prompter: prompter(typed), previous: { commitConvention: 'custom' }, current: {} });
+
+    assert.equal((await ask('Gitmoji, one line')).commitFormat, 'Gitmoji, one line');
+    for (const blank of ['', '   ']) {
+        const answers = await ask(blank);
+        assert.equal(answers.commitConvention, 'conventional');
+        assert.match(answers.commitFormat, /^Conventional Commits/);
+    }
+
+    // No terminal: a stored custom convention without a format is not kept as blank.
+    const cwd = project();
+    const result = await runInit({ cwd, yes: true });
+    assert.match(readFileSync(join(cwd, OPTIONS_PATH), 'utf8'), /^- Commit format: \S.*$/m);
+    assert.match(result.answers.commitFormat, /\S/);
+});

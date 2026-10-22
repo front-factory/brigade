@@ -100,10 +100,13 @@ export const OPTIONS = [
                 ),
                 CONVENTIONS[start]?.label
             );
-            const commitFormat = commitConvention === 'custom'
-                ? await text('Describe your commit format in one sentence', previous.commitFormat || current.commitFormat)
-                : CONVENTIONS[commitConvention].format;
-            return { commitConvention, commitFormat };
+            const custom = commitConvention === 'custom'
+                ? await text('Describe your commit format in one sentence', previous.commitFormat || current.commitFormat, { required: true })
+                : '';
+            // A blank custom format (no terminal) falls back to the default convention, never to an empty line.
+            if (commitConvention === 'custom' && custom) return { commitConvention, commitFormat: custom };
+            const convention = CONVENTIONS[commitConvention] ? commitConvention : 'conventional';
+            return { commitConvention: convention, commitFormat: CONVENTIONS[convention].format };
         }
     },
     {

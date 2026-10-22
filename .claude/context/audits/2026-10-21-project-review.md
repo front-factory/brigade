@@ -40,7 +40,7 @@ Status: open
 | V2 | low | bin/brigade.js | No runtime Node check: on Node < 24 `styleText`/`parseArgs` fail with a cryptic error; `engines` only warns. Add an explicit message. | open | |
 | I1 | low | src/install.js `writeManifest` | `localeCompare` makes the key order locale-dependent; use a plain comparison for a stable manifest. | open | |
 | I2 | low | src/install.js | Writes are not atomic (no temp file + rename); extends C5b. | open | |
-| P1 | low | src/prompt.js `text` | A custom commit format can be empty: `brigade-options.md` gets a blank "Commit format:" line. Add validation. | open | |
+| P1 | low | src/prompt.js `text` | A custom commit format can be empty: `brigade-options.md` gets a blank "Commit format:" line. Add validation. | fixed | The custom commit format is required in the prompt; a blank one without a terminal falls back to Conventional Commits; tests added. |
 | P2 | low | src/cli.js | `interactive` depends on `stdin.isTTY` only; stdout piped still prompts. | open | |
 | K6 | low | templates/web/.claude/settings.json | Lockfile deny list lacks `bun.lock`/`bun.lockb`; `Bash(<pm> run:*)` allows any script. | fixed | Bun lockfiles added to the deny list; `<pm> run:*` kept on purpose (project scripts). |
 | T1 | - | test/ | CLI untested. | fixed | 1eec657: `test/cli.test.js` |

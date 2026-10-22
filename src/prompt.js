@@ -18,9 +18,11 @@ export function createPrompter({ interactive }) {
         return value;
     };
 
-    async function text(message, fallback = '') {
+    // `required`: a blank answer is refused, unless the fallback gives Enter something to keep.
+    async function text(message, fallback = '', { required = false } = {}) {
         if (!interactive) return fallback;
-        return (await answer(p.text({ message, placeholder: fallback, defaultValue: fallback }))).trim();
+        const validate = required && !fallback.trim() ? (value) => (value?.trim() ? undefined : 'Please type something.') : undefined;
+        return (await answer(p.text({ message, placeholder: fallback, defaultValue: fallback, validate }))).trim();
     }
 
     // `options`: [{ value, label, hint? }]. The first one is preselected.
