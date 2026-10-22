@@ -48,7 +48,7 @@ Status: open
 | T3 | - | test/ | No coverage measurement (`node --test --experimental-test-coverage`). | fixed | Script `npm run test:coverage` added. Measured 2026-10-22: 96 tests pass, 95.5% lines / 91.4% branches / 94.5% functions (before T2: 95.3% / 87.9% / 86.2%). Least covered: `prompt.js` 80.0% lines, `git-guard.mjs` 86.8%, `cli.js` 87.1% (interactive paths). |
 | T4 | low | test/install.test.js | Uses `rm` via `execFileSync` (not portable to Windows); use `rmSync`. | fixed | `rm` replaced by `rmSync`. |
 | T5 | low | test/ | Tests depended on the machine's git config (`init.defaultBranch`); made hermetic with GIT_CONFIG_GLOBAL/GIT_CONFIG_NOSYSTEM. | fixed | Empty temp gitconfig used instead of the null device, which git cannot open on Windows. |
-| R1 | - | CI | The matrix has a single Node (24) while the comment promises every `engines` version. | open | |
+| R1 | - | CI | The matrix has a single Node (24) while the comment promises every `engines` version. | fixed | Matrix: Node 24 on ubuntu, macOS and Windows, plus the latest Node on ubuntu. |
 | R2 | - | repo | No lint/format tooling (only `.editorconfig`). | open | |
 | R3 | low | CI | Dotfiles ARE packaged (`npm pack --dry-run`: 29 files, 24.7 kB, all `templates/web/.claude/**` present); only a CI guard (`npm pack --dry-run` check) is missing. | fixed | Added test/pack.test.js: `npm pack --dry-run --json` must list bin, src and every templates/web file (dotfiles included). |
 | R4 | - | release | Publish with npm Trusted Publishing (OIDC) instead of `NPM_TOKEN`. | open | |
