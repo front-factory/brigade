@@ -60,3 +60,30 @@ test('reads behind global options are not writes', () => {
     assert.equal(run('git -c core.pager=cat --no-pager log -3', { agent: '' }), null);
     assert.equal(run('git --version', { agent: '' }), null);
 });
+
+test('nested git commands are analysed', () => {
+    assert.equal(run('echo $(git commit -m "x")', { agent: '' }), 'deny');
+    assert.equal(run('echo `git add a`', { agent: '' }), 'deny');
+    assert.equal(run('bash -c "git commit -m x"', { agent: '' }), 'deny');
+    assert.equal(run("sh -c 'git push --force'"), 'deny');
+    assert.equal(run('eval "git clean -fd"'), 'deny');
+    assert.equal(run('git ls-files | xargs git rm', { agent: '' }), 'deny');
+    assert.equal(run('bash -c "git add a"'), 'allow');
+    assert.equal(run('echo $(git status)', { agent: '' }), null);
+    assert.equal(run('bash -c "npm test"', { agent: '' }), null);
+    assert.equal(run('echo $(echo $(echo $(echo $(git status))))', { agent: '' }), 'deny');
+});
+
+test('commands that destroy uncommitted work are denied for git-operator', () => {
+    assert.equal(run('git checkout -- src/a.js'), 'deny');
+    assert.equal(run('git checkout .'), 'deny');
+    assert.equal(run('git checkout -f develop'), 'deny');
+    assert.equal(run('git restore src/a.js'), 'deny');
+    assert.equal(run('git switch --discard-changes develop'), 'deny');
+    assert.equal(run('git stash drop'), 'deny');
+    assert.equal(run('git stash clear'), 'deny');
+    assert.equal(run('git checkout develop'), 'allow');
+    assert.equal(run('git checkout -b feat/y'), 'allow');
+    assert.equal(run('git restore --staged src/a.js'), 'allow');
+    assert.equal(run('git stash'), 'allow');
+});

@@ -14,7 +14,28 @@ const RANK = { allow: 0, ask: 1, deny: 2 };
 // Quoted text (commit messages) must not be read as commands.
 const strip = (command) => command.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, '""');
 
+const UNKNOWN = { sub: '?', rest: '' };
+const MAX_DEPTH = 3;
 const VALUED_OPTIONS = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--super-prefix', '--config-env']);
+const SHELL_ARG = '("(?:[^"\\\\]|\\\\.)*"|\'[^\']*\'|[^;&|\\n]+)';
+
+// Text run by `$(...)`, backticks, `sh -c` and `eval`, taken before strip() blanks quotes.
+function nestedTexts(command) {
+    const texts = [];
+    const unquote = (arg) => (/^["']/.test(arg) ? arg.slice(1, -1).replace(/\\"/g, '"') : arg);
+    const bare = command.replace(/'[^']*'/g, "''");
+
+    for (let at = bare.indexOf('$('); at !== -1; at = bare.indexOf('$(', at + 2)) {
+        let depth = 1;
+        let end = at + 2;
+        for (; end < bare.length && depth > 0; end++) depth += bare[end] === '(' ? 1 : bare[end] === ')' ? -1 : 0;
+        texts.push(bare.slice(at + 2, depth === 0 ? end - 1 : end));
+    }
+    for (const [, inner] of bare.matchAll(/`([^`]*)`/g)) texts.push(inner);
+    for (const [, arg] of command.matchAll(new RegExp(`\\b(?:ba|z|da)?sh\\s+(?:-\\w+\\s+)*-\\w*c\\s+${SHELL_ARG}`, 'g'))) texts.push(unquote(arg));
+    for (const [, arg] of command.matchAll(new RegExp(`\\beval\\s+${SHELL_ARG}`, 'g'))) texts.push(unquote(arg));
+    return texts;
+}
 
 // Skips the global options (`-C <path>`, `-c k=v`, `--no-pager`...) to find the subcommand.
 function parseGit(text) {
@@ -25,13 +46,16 @@ function parseGit(text) {
     return { sub: tokens[i], rest: tokens.slice(i + 1).join(' ') };
 }
 
-function gitCommands(command) {
-    return strip(command)
+function gitCommands(command, depth = 0) {
+    if (depth > MAX_DEPTH) return /\bgit\b/.test(command) ? [UNKNOWN] : [];
+    const nested = nestedTexts(command).flatMap((text) => gitCommands(text, depth + 1));
+    const direct = strip(command)
         .split(/&&|\|\||;|\||\n/)
-        .map((segment) => segment.trim().match(/^(?:\w+=\S+\s+)*git(?:\s+(.*))?$/))
+        .map((segment) => segment.trim().match(/^(?:\w+=\S+\s+)*(?:xargs\s+(?:\S+\s+)*?)?git(?:\s+(.*))?$/))
         .filter(Boolean)
         .map(([, text]) => parseGit(text ?? ''))
         .filter(Boolean);
+    return [...direct, ...nested];
 }
 
 // `git branch` and `git remote` only read when given no mutating flag.
@@ -48,7 +72,12 @@ function destructive({ sub, rest }) {
     return (sub === 'reset' && /--hard/.test(rest))
         || (sub === 'push' && /(^|\s)(--force|--force-with-lease|-f)\b/.test(rest))
         || (sub === 'clean' && /(^|\s)-\w*f/.test(rest))
-        || (sub === 'branch' && /(^|\s)-D\b/.test(rest));
+        || (sub === 'branch' && /(^|\s)-D\b/.test(rest))
+        // Commands that destroy uncommitted work.
+        || (sub === 'checkout' && /(^|\s)(--|-f|--force|\.)(\s|$)/.test(rest))
+        || (sub === 'restore' && (!/(^|\s)(--staged|-S)(\s|$)/.test(rest) || /(^|\s)(--worktree|-W)(\s|$)/.test(rest)))
+        || (sub === 'switch' && /(^|\s)(--discard-changes|-f|--force)(\s|$)/.test(rest))
+        || (sub === 'stash' && /^(drop|clear)\b/.test(rest));
 }
 
 export function decide({ command, agent, branch, protectedBranches }) {
@@ -65,6 +94,8 @@ export function decide({ command, agent, branch, protectedBranches }) {
             raise('deny', 'Only git-operator writes to git: delegate to it, after the user\'s go.');
         } else if (destructive(git)) {
             raise('deny', `git ${git.sub}: destructive command, not allowed.`);
+        } else if (git.sub === '?') {
+            raise('ask', 'Nested git command that cannot be analysed: confirm.');
         } else if (ASK.has(git.sub)) {
             raise('ask', `git ${git.sub} always needs the user's confirmation.`);
         } else if (ON_PROTECTED.has(git.sub) && protectedBranches.includes(branch)) {
