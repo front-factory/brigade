@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { stripVTControlCharacters } from 'node:util';
 
 import { createPrompter } from '../src/prompt.js';
 
@@ -15,7 +16,8 @@ async function printed(fn) {
     } finally {
         console.log = log;
     }
-    return lines.join('\n');
+    // Strip ANSI codes so assertions do not depend on the terminal colors.
+    return stripVTControlCharacters(lines.join('\n'));
 }
 
 test('without a terminal every question resolves to its default', async () => {
