@@ -42,16 +42,27 @@ function parseGit(text) {
     const tokens = text.trim().split(/\s+/).filter(Boolean);
     let i = 0;
     while (i < tokens.length && tokens[i].startsWith('-')) i += VALUED_OPTIONS.has(tokens[i]) ? 2 : 1;
+    // A subcommand built at run time (`$(...)`, `$SUB`, backticks) cannot be analysed.
+    if (/^[$`]/.test(tokens[i] ?? '')) return UNKNOWN;
     if (!/^[\w-]+$/.test(tokens[i] ?? '')) return null;
     return { sub: tokens[i], rest: tokens.slice(i + 1).join(' ') };
+}
+
+// Grouping, keywords and wrapper commands that may come before `git` in a segment.
+const LEADING = /^(?:[(!]|\{(?=\s)|(?:then|else|elif|do|if|while|until)\b|env\s+(?:(?:-u\s+\S+|-\S+|\w+=\S+)\s+)*|(?:command|exec|time|nohup|nice|sudo)\s+(?:(?:-n\s+\d+|-\S+)\s+)*|\w+=\S+\s+)\s*/;
+
+function gitSegment(segment) {
+    let text = segment.trim();
+    for (let rest = text.replace(LEADING, ''); rest !== text; rest = text.replace(LEADING, '')) text = rest;
+    return text.match(/^(?:xargs\s+(?:\S+\s+)*?)?(?:\S*\/)?git(?:\s+(.*))?$/);
 }
 
 function gitCommands(command, depth = 0) {
     if (depth > MAX_DEPTH) return /\bgit\b/.test(command) ? [UNKNOWN] : [];
     const nested = nestedTexts(command).flatMap((text) => gitCommands(text, depth + 1));
     const direct = strip(command)
-        .split(/&&|\|\||;|\||\n/)
-        .map((segment) => segment.trim().match(/^(?:\w+=\S+\s+)*(?:xargs\s+(?:\S+\s+)*?)?git(?:\s+(.*))?$/))
+        .split(/&&|\|\||;|\||\n|[()]/)
+        .map(gitSegment)
         .filter(Boolean)
         .map(([, text]) => parseGit(text ?? ''))
         .filter(Boolean);

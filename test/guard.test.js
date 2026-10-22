@@ -108,3 +108,39 @@ test('an unreadable hook payload asks and exits cleanly', () => {
         assert.match(hookSpecificOutput.permissionDecisionReason, /unreadable/);
     }
 });
+
+const WRAPPED = [
+    'env git commit -m x',
+    'env -i FOO=1 git commit -m x',
+    'command git commit',
+    '/usr/bin/git commit',
+    './git commit',
+    '(git commit -m x)',
+    '{ git commit -m x; }',
+    'if true; then git commit -m x; fi',
+    'for i in 1; do git commit -m x; done',
+    'time git commit',
+    'sudo git commit',
+    'nice -n 5 nohup git commit'
+];
+
+test('wrapped git writes are decided like plain ones', () => {
+    for (const command of WRAPPED) {
+        assert.equal(run(command, { branch: 'develop' }), 'ask', command);
+        assert.equal(run(command), 'allow', command);
+        assert.equal(run(command, { agent: '' }), 'deny', command);
+    }
+});
+
+test('a dynamic subcommand cannot be analysed', () => {
+    for (const command of ['git $(echo commit)', 'git $SUB', 'git `echo commit`']) {
+        assert.equal(run(command), 'ask', command);
+        assert.equal(run(command, { agent: '' }), 'deny', command);
+    }
+});
+
+test('wrapped reads and mere mentions of git are not touched', () => {
+    for (const command of ['(git status)', 'env git log', '{ git diff; }', 'sudo git show', 'echo git commit', 'grep git file']) {
+        assert.equal(run(command, { agent: '' }), null, command);
+    }
+});
