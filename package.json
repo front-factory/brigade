@@ -6,6 +6,7 @@
     "scripts": {
         "prepare": "husky",
         "test": "node --test \"test/*.test.js\"",
+        "test:coverage": "node --test --experimental-test-coverage \"test/*.test.js\"",
         "release": "semantic-release"
     },
     "engines": {

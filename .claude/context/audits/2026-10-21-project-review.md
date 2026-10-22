@@ -44,8 +44,8 @@ Status: open
 | P2 | low | src/cli.js | `interactive` depends on `stdin.isTTY` only; stdout piped still prompts. | open | |
 | K6 | low | templates/web/.claude/settings.json | Lockfile deny list lacks `bun.lock`/`bun.lockb`; `Bash(<pm> run:*)` allows any script. | fixed | Bun lockfiles added to the deny list; `<pm> run:*` kept on purpose (project scripts). |
 | T1 | - | test/ | CLI untested. | fixed | 1eec657: `test/cli.test.js` |
-| T2 | - | test/ | `detect.js` only partly covered (commit convention); `prompt.js` and `summary` rendering untested. | open | |
-| T3 | - | test/ | No coverage measurement (`node --test --experimental-test-coverage`). Measured 2026-10-22: 72 tests pass, 93.7% lines / 87.7% branches / 85.7% functions. | open | |
+| T2 | - | test/ | `detect.js` only partly covered (commit convention); `prompt.js` and `summary` rendering untested. | fixed | `detect.js` fully covered (`detect.test.js`); `prompt.js` non-interactive paths and display helpers tested (`prompt.test.js`); plain `summary` covered through the CLI (`cli.test.js`). Left untested: the clack prompts (`text`, `choose`, `validate`, `multi` with a TTY), the cancel path (see C9) and the interactive `print` (needs a TTY). |
+| T3 | - | test/ | No coverage measurement (`node --test --experimental-test-coverage`). | fixed | Script `npm run test:coverage` added. Measured 2026-10-22: 96 tests pass, 95.5% lines / 91.4% branches / 94.5% functions (before T2: 95.3% / 87.9% / 86.2%). Least covered: `prompt.js` 80.0% lines, `git-guard.mjs` 86.8%, `cli.js` 87.1% (interactive paths). |
 | T4 | low | test/install.test.js | Uses `rm` via `execFileSync` (not portable to Windows); use `rmSync`. | fixed | `rm` replaced by `rmSync`. |
 | T5 | low | test/ | Tests depended on the machine's git config (`init.defaultBranch`); made hermetic with GIT_CONFIG_GLOBAL/GIT_CONFIG_NOSYSTEM. | fixed | Empty temp gitconfig used instead of the null device, which git cannot open on Windows. |
 | R1 | - | CI | The matrix has a single Node (24) while the comment promises every `engines` version. | open | |
