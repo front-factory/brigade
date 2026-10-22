@@ -45,3 +45,18 @@ test('quoted text is not read as a command', () => {
 test('the strictest decision of a compound command wins', () => {
     assert.equal(run('git add a && git push'), 'ask');
 });
+
+test('global options before the subcommand are skipped', () => {
+    assert.equal(run('git -C . push --force'), 'deny');
+    assert.equal(run('git -c user.name=x push -f'), 'deny');
+    assert.equal(run('git --git-dir=.git --no-pager reset --hard'), 'deny');
+    assert.equal(run('git --work-tree . -C app commit -m "x"', { branch: 'develop' }), 'ask');
+    assert.equal(run('git -C app add a.js'), 'allow');
+    assert.equal(run('git -C app commit -m "x"', { agent: '' }), 'deny');
+});
+
+test('reads behind global options are not writes', () => {
+    assert.equal(run('git -C . status', { agent: '' }), null);
+    assert.equal(run('git -c core.pager=cat --no-pager log -3', { agent: '' }), null);
+    assert.equal(run('git --version', { agent: '' }), null);
+});

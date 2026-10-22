@@ -14,12 +14,24 @@ const RANK = { allow: 0, ask: 1, deny: 2 };
 // Quoted text (commit messages) must not be read as commands.
 const strip = (command) => command.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, '""');
 
+const VALUED_OPTIONS = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--super-prefix', '--config-env']);
+
+// Skips the global options (`-C <path>`, `-c k=v`, `--no-pager`...) to find the subcommand.
+function parseGit(text) {
+    const tokens = text.trim().split(/\s+/).filter(Boolean);
+    let i = 0;
+    while (i < tokens.length && tokens[i].startsWith('-')) i += VALUED_OPTIONS.has(tokens[i]) ? 2 : 1;
+    if (!/^[\w-]+$/.test(tokens[i] ?? '')) return null;
+    return { sub: tokens[i], rest: tokens.slice(i + 1).join(' ') };
+}
+
 function gitCommands(command) {
     return strip(command)
         .split(/&&|\|\||;|\||\n/)
-        .map((segment) => segment.trim().match(/^(?:\w+=\S+\s+)*git\s+((?:-\S+\s+)*)([\w-]+)\s*(.*)$/))
+        .map((segment) => segment.trim().match(/^(?:\w+=\S+\s+)*git(?:\s+(.*))?$/))
         .filter(Boolean)
-        .map(([, , sub, rest]) => ({ sub, rest }));
+        .map(([, text]) => parseGit(text ?? ''))
+        .filter(Boolean);
 }
 
 // `git branch` and `git remote` only read when given no mutating flag.
