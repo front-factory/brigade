@@ -31,11 +31,15 @@ The rest of the kit, all under `.claude/`:
 
 - Skills: `session-start` (where things stand before the first task), `feature` (branch + state file for multi-step
   work), `audit` (keep an audit file between sessions).
-- Commands: `/brigade-effort` (your effort per role) and `/brigade-language` (your reply language), both local and
+- Commands: `/brigade-effort` (your effort per role), `/brigade-language` (your reply language) and
+  `/brigade-reference-branch` (lift the git guard's protection of the reference branch for you only), all local and
   not committed.
 - Shared context in `context/`: `decisions.md` (team decisions), `architecture.md` (optional, read on demand), one
   state file per feature in `context/features/`, audits in `context/audits/`.
-- A git guard hook (`hooks/git-guard.mjs`) and the permissions in `settings.json`.
+- A git guard hook (`hooks/git-guard.mjs`) and the permissions in `settings.json`. The guard protects the default branch
+  and the reference branch. To lift the latter for yourself only, run `/brigade-reference-branch`: it sets
+  `BRIGADE_UNPROTECT_REFERENCE_BRANCH=1` under `env` in `.claude/settings.local.json` (git-ignored). Restart the session
+  after the change. The default branch stays protected, and push, merge, rebase and destructive commands are unchanged.
 - A status line (`hooks/statusline.mjs`) showing `Brigade v<version> · <branch>`, and a `SessionStart` hook
   (`hooks/session-start.mjs`) that tells the session which Brigade version manages the project. Both only read
   `.claude/brigade.json` and `.git/HEAD`.
