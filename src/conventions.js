@@ -14,12 +14,22 @@ export const CONVENTIONS = {
     angular: {
         label: 'Angular',
         example: 'fix(core): handle empty list',
-        format: 'Angular: `type(scope): description` with the types `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `test`, imperative mood, ' + LIMIT
+        format: 'Angular: `type(scope): summary` with the types `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `test`; '
+            + 'type and summary are required, the scope is optional and names the package affected as a changelog reader would see it (empty for a change across packages); '
+            + 'the summary is in imperative present tense, not capitalized, with no period at the end; '
+            + 'the body is required for every type except `docs`, at least 20 characters, in imperative present tense, explaining why (previous behavior against new behavior); '
+            + 'footers come after a blank line: `BREAKING CHANGE: <short summary>`, a blank line, then the description with migration instructions; '
+            + '`DEPRECATED: <short description>`, a blank line, then the recommended update path; issue references (`Fixes #<issue>`, `Closes #<pr>`); '
+            + 'a revert uses the header `revert: <header of the reverted commit>` and a body with `This reverts commit <SHA>.` and the reason; '
+            + 'header ' + LIMIT
     },
     gitmoji: {
         label: 'Gitmoji',
         example: '✨ Add login form',
-        format: 'Gitmoji: `<emoji> Description` (e.g. `✨ Add login form`), imperative mood, ' + LIMIT
+        format: 'Gitmoji: `<emoji> (scope)[:] Message` (e.g. `✨ Add login form`, `♻️ (components): Transform classes to hooks`); '
+            + 'the emoji comes from the official gitmoji list, as unicode (`✨`, shorter) or as a shortcode (`:sparkles:`); '
+            + 'the scope is optional, in parentheses, and the colon after it is optional; the message is a brief explanation; '
+            + 'imperative mood, ' + LIMIT
     },
     imperative: {
         label: 'Simple imperative',

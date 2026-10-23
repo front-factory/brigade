@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import './git-env.js';
 import { CONVENTIONS } from '../src/conventions.js';
 import { detectCommitConvention, detectDefaultBranch, detectLanguage, detectPackageManager, isGitRepo, localBranches } from '../src/detect.js';
+import { render } from '../src/install.js';
 
 const temp = () => mkdtempSync(join(tmpdir(), 'brigade-detect-'));
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: 'ignore' });
@@ -134,4 +135,39 @@ test('the conventional format states the Conventional Commits 1.0.0 rules', () =
     assert.match(format, /body starts after one blank line/);
     assert.match(format, /footers come after a blank line/);
     assert.match(format, /72 characters max\./);
+});
+
+test('the angular format states the Angular commit message rules', () => {
+    const { format } = CONVENTIONS.angular;
+    for (const type of ['build', 'ci', 'docs', 'feat', 'fix', 'perf', 'refactor', 'test']) {
+        assert.ok(format.includes(`\`${type}\``), `${type} is missing`);
+    }
+    assert.match(format, /not capitalized, with no period at the end/);
+    assert.match(format, /body is required for every type except `docs`/);
+    assert.match(format, /BREAKING CHANGE: <short summary>/);
+    assert.match(format, /DEPRECATED: <short description>/);
+    assert.match(format, /Fixes #<issue>/);
+    assert.match(format, /revert: <header of the reverted commit>/);
+    assert.match(format, /This reverts commit <SHA>\./);
+    assert.match(format, /72 characters max\./);
+});
+
+test('the gitmoji format states the gitmoji specification', () => {
+    const { format } = CONVENTIONS.gitmoji;
+    assert.match(format, /unicode/);
+    assert.match(format, /shortcode \(`:sparkles:`\)/);
+    assert.match(format, /scope is optional/);
+    assert.match(format, /`<emoji> \(scope\)\[:\] Message`/);
+    assert.match(format, /colon after it is optional/);
+    assert.match(format, /72 characters max\./);
+});
+
+test('the generic body sentence is left out only when the convention has its own body rule', () => {
+    const answers = (commitConvention) => ({ commitConvention, commitFormat: CONVENTIONS[commitConvention]?.format ?? 'My format.' });
+    const sentence = 'Add a body when the "why" is not obvious.';
+    const template = '__COMMIT_FORMAT__';
+    for (const name of ['conventional', 'gitmoji', 'imperative', 'custom']) {
+        assert.ok(render(template, answers(name)).endsWith(sentence), name);
+    }
+    assert.equal(render(template, answers('angular')), CONVENTIONS.angular.format);
 });

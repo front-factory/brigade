@@ -36,13 +36,16 @@ export function hasKitFiles({ cwd, stackDir }) {
     return listFiles(stackDir).some((source) => existsSync(join(cwd, relative(stackDir, source))));
 }
 
+// Angular states its own body rule (required except for `docs`); every other format leaves the body optional.
+const bodyRule = ({ commitConvention }) => (commitConvention === 'angular' ? '' : ' Add a body when the "why" is not obvious.');
+
 // `json`: the values go inside JSON strings, so quotes, backslashes and control characters are escaped.
 export function render(content, answers, json = false) {
     const values = {
         DEFAULT_BRANCH: answers.defaultBranch,
         BASE_BRANCH: answers.baseBranch,
         PACKAGE_MANAGER: answers.packageManager,
-        COMMIT_FORMAT: answers.commitFormat,
+        COMMIT_FORMAT: answers.commitFormat + bodyRule(answers),
         REPLY_LANGUAGE: answers.replyLanguage,
         CODE_LANGUAGE: answers.codeLanguage,
         DOCS_LANGUAGE: answers.docsLanguage
