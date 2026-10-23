@@ -144,3 +144,27 @@ test('wrapped reads and mere mentions of git are not touched', () => {
         assert.equal(run(command, { agent: '' }), null, command);
     }
 });
+
+test('BRIGADE_UNPROTECT_REFERENCE_BRANCH=1 lifts the reference branch only', async () => {
+    const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join } = await import('node:path');
+    const { protectedBranches: read } = await import('../templates/web/.claude/hooks/git-guard.mjs');
+    const root = mkdtempSync(join(tmpdir(), 'brigade-guard-'));
+    try {
+        mkdirSync(join(root, '.claude'));
+        writeFileSync(join(root, '.claude', 'brigade.json'), JSON.stringify({ answers: { defaultBranch: 'main', baseBranch: 'develop' } }));
+        const on = (command, branch, env) => decide({ command, agent: 'git-operator', branch, protectedBranches: read(root, env) }).permissionDecision;
+        const commit = 'git commit -m "x"';
+
+        assert.equal(on(commit, 'develop', { BRIGADE_UNPROTECT_REFERENCE_BRANCH: '1' }), 'allow');
+        assert.equal(on(commit, 'main', { BRIGADE_UNPROTECT_REFERENCE_BRANCH: '1' }), 'ask');
+        assert.equal(on('git push origin develop', 'develop', { BRIGADE_UNPROTECT_REFERENCE_BRANCH: '1' }), 'ask');
+        assert.equal(on('git reset --hard', 'develop', { BRIGADE_UNPROTECT_REFERENCE_BRANCH: '1' }), 'deny');
+        assert.equal(on(commit, 'develop', {}), 'ask');
+        assert.equal(on(commit, 'develop', { BRIGADE_UNPROTECT_REFERENCE_BRANCH: '0' }), 'ask');
+        assert.equal(read(join(root, 'missing'), { BRIGADE_UNPROTECT_REFERENCE_BRANCH: '1' }), null);
+    } finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});

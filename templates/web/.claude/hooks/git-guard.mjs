@@ -128,10 +128,12 @@ function currentBranch(cwd) {
     }
 }
 
-function protectedBranches(root) {
+// BRIGADE_UNPROTECT_REFERENCE_BRANCH=1 (personal, in .claude/settings.local.json) lifts the reference branch only.
+export function protectedBranches(root, env = process.env) {
     try {
         const { answers } = JSON.parse(readFileSync(join(root, '.claude', 'brigade.json'), 'utf8'));
-        return [answers.defaultBranch, answers.baseBranch].filter(Boolean);
+        const lifted = env.BRIGADE_UNPROTECT_REFERENCE_BRANCH === '1';
+        return [answers.defaultBranch, lifted ? null : answers.baseBranch].filter(Boolean);
     } catch {
         return null;
     }
