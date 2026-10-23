@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.3.0](https://github.com/front-factory/brigade/compare/v1.2.2...v1.3.0) (2026-10-23)
+
+### Features
+
+* **cli:** preview the update and add --dry-run ([898d44e](https://github.com/front-factory/brigade/commit/898d44e78529ffd9e07218b7e27e7d9add3a6eab))
+* **install:** merge edited kit files from a stored base copy ([fe60047](https://github.com/front-factory/brigade/commit/fe60047309d017e9dc47c4d5971bf14b59cbf5d1))
+* **install:** remove obsolete kit files and merge settings.json ([9e9c19d](https://github.com/front-factory/brigade/commit/9e9c19d11b4dce42bcb58876ba25de54ebd27cd7))
+* **merge:** add a line-based three-way merge ([5ed1c76](https://github.com/front-factory/brigade/commit/5ed1c76fe41589245d192fa87bf4190b06295db7))
+
+### Bug Fixes
+
+* **guard:** catch git behind wrappers, groups and dynamic subcommands ([032c9db](https://github.com/front-factory/brigade/commit/032c9dbdb8d70e9992747303dfc7575953b49f9c))
+* **install:** reject unknown package managers and escape JSON values ([7a15406](https://github.com/front-factory/brigade/commit/7a1540699d2f819848b4d2c4e6b298d391c26ade))
+
 ## [1.2.2](https://github.com/front-factory/brigade/compare/v1.2.1...v1.2.2) (2026-10-22)
 
 ### Bug Fixes
