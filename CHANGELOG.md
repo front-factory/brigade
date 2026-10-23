@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.5.1](https://github.com/front-factory/brigade/compare/v1.5.0...v1.5.1) (2026-10-23)
+
+### Bug Fixes
+
+* **conventions:** align angular and gitmoji formats with their specs ([9470991](https://github.com/front-factory/brigade/commit/9470991b5139120b1d3f02f5a3813af680746a7c))
+* **conventions:** align the conventional format with the 1.0.0 spec ([9ff840e](https://github.com/front-factory/brigade/commit/9ff840e5ac1fa8930da095c871a9b13f2ee11dba))
+
 ## [1.5.0](https://github.com/front-factory/brigade/compare/v1.4.0...v1.5.0) (2026-10-23)
 
 ### Features
