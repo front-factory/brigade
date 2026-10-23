@@ -20,6 +20,7 @@ One command, `/brigade-settings`, shows and changes all personal settings (reply
 ## Decisions and open questions
 
 - Legacy commands keep their behavior; only a one-line pointer was added.
+- Lifting the reference branch protection only matters when it differs from the default branch; documented in the two commands and brigade.md (wording only).
 
 ## Notes
 

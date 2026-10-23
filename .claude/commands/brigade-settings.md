@@ -14,7 +14,7 @@ Ask the developer one multi-select question: which of these settings do they wan
 
 - **Language**: keep the project language, or use their own (then ask which)?
 - **Effort**: which role (main session, `implementer` or `git-operator`) and which level (`low`, `medium`, `high`)?
-- **Reference branch**: keep it protected as the project does, or lift its protection for them only? The default branch stays protected either way.
+- **Reference branch**: keep it protected as the project does, or lift its protection for them only? The default branch stays protected either way. This only applies when the reference branch differs from the default branch; if they are the same branch, it stays protected as the default branch and the setting has no effect.
 
 Then write everything in one pass per file. Read each file first and keep every other key, including the other entries of `env`. Create the file if it does not exist. Only change the chosen settings:
 

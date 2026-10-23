@@ -12,7 +12,7 @@ A brief to a subagent states the goal, the branch, the relevant files, the const
 
 ## Git
 
-- The default branch and the reference branch of the work are protected: writing on them needs the user's confirmation. Their names are in `.claude/rules/brigade-options.md`. A developer can lift the protection of the reference branch for themselves with `/brigade-settings`.
+- The default branch and the reference branch of the work are protected: writing on them needs the user's confirmation. Their names are in `.claude/rules/brigade-options.md`. A developer can lift the protection of the reference branch for themselves with `/brigade-settings`, only when it differs from the default branch.
 - Check the current branch before any code.
 - A feature (several steps, sessions or files) = its own branch + a state file. Small work (a fix, a few files, one sitting) has neither: it ends with a commit on the current branch. Before any code, judge which it is and follow the skill `feature`: propose, wait for the user's answer, then `git-operator` creates the branch (with the user's go).
 - When the work is finished and its open questions are settled, propose the commit in one sentence. Never call `git-operator` without the user's go. The user can ask for a commit at any moment.
