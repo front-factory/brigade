@@ -36,6 +36,9 @@ The rest of the kit, all under `.claude/`:
 - Shared context in `context/`: `decisions.md` (team decisions), `architecture.md` (optional, read on demand), one
   state file per feature in `context/features/`, audits in `context/audits/`.
 - A git guard hook (`hooks/git-guard.mjs`) and the permissions in `settings.json`.
+- A status line (`hooks/statusline.mjs`) showing `Brigade v<version> · <branch>`, and a `SessionStart` hook
+  (`hooks/session-start.mjs`) that tells the session which Brigade version manages the project. Both only read
+  `.claude/brigade.json` and `.git/HEAD`.
 
 ## Install
 
