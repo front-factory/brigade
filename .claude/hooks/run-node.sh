@@ -41,7 +41,7 @@ find_node() {
     latest_in "$home/.fnm/node-versions/v*/installation/bin" && return 0
     oldIFS=$IFS
     IFS=:
-    for dir in ${BRIGADE_SYSTEM_DIRS-/opt/homebrew/bin:/usr/local/bin:/usr/bin}; do
+    for dir in ${BRIGADE_SYSTEM_DIRS-/opt/homebrew/bin:/usr/local/bin:/usr/bin:/c/Program Files/nodejs}; do
         IFS=$oldIFS
         node_in "$dir" && return 0
         IFS=:

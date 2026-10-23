@@ -1,13 +1,30 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const LAUNCHER = fileURLToPath(new URL('../templates/web/.claude/hooks/run-node.sh', import.meta.url));
-const SYSTEM_PATH = '/usr/bin:/bin';
+const WINDOWS = process.platform === 'win32';
+
+// Git Bash (MSYS) takes a Windows PATH (`;` separated) and turns it into a POSIX one; its path arguments and the
+// directories read by the launcher must be POSIX (`/c/Users/...`).
+const posix = (path) => (WINDOWS ? path.replace(/^([A-Za-z]):/, (_, drive) => `/${drive.toLowerCase()}`).replaceAll('\\', '/') : path);
+const PATH_SEPARATOR = WINDOWS ? ';' : ':';
+
+// The shell to run and the directories holding the basic tools (ls, sort, basename, cat) the launcher needs.
+function findShell() {
+    if (!WINDOWS) return { shell: 'sh', systemPath: '/usr/bin:/bin' };
+    const candidates = (process.env.PATH ?? '').split(';').map((dir) => join(dir, 'sh.exe'));
+    candidates.push('C:\\Program Files\\Git\\bin\\sh.exe');
+    const shell = candidates.find((candidate) => existsSync(candidate)) ?? 'sh';
+    const gitRoot = dirname(dirname(shell));
+    return { shell, systemPath: [join(gitRoot, 'usr', 'bin'), join(gitRoot, 'bin')].join(';') };
+}
+
+const { shell: SHELL, systemPath: SYSTEM_PATH } = findShell();
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'brigade-run-node-'));
 
@@ -21,17 +38,17 @@ function fakeNode(dir, label) {
 // Runs the launcher with a controlled environment: an empty home and no system location unless given.
 function launch(env = {}, input = '') {
     const home = tmp();
-    return spawnSync('sh', [LAUNCHER, 'script.mjs', 'arg'], {
+    return spawnSync(SHELL, [posix(LAUNCHER), 'script.mjs', 'arg'], {
         input,
         encoding: 'utf8',
-        env: { PATH: SYSTEM_PATH, HOME: home, BRIGADE_SYSTEM_DIRS: '', ...env }
+        env: { ...(WINDOWS && { SystemRoot: process.env.SystemRoot }), PATH: SYSTEM_PATH, HOME: home, BRIGADE_SYSTEM_DIRS: '', ...env }
     });
 }
 
 test('the launcher uses the node of the PATH and forwards the arguments and stdin', () => {
     const bin = tmp();
     fakeNode(bin, 'path');
-    const result = launch({ PATH: `${bin}:${SYSTEM_PATH}` }, '{"a":1}');
+    const result = launch({ PATH: `${bin}${PATH_SEPARATOR}${SYSTEM_PATH}` }, '{"a":1}');
     assert.equal(result.status, 0);
     assert.equal(result.stdout.trim(), 'path script.mjs arg {"a":1}');
 });
@@ -51,7 +68,7 @@ test('the launcher falls back to volta, then to the system locations', () => {
 
     const system = tmp();
     fakeNode(system, 'system');
-    assert.equal(launch({ BRIGADE_SYSTEM_DIRS: `/nowhere:${system}` }).stdout.trim(), 'system script.mjs arg');
+    assert.equal(launch({ BRIGADE_SYSTEM_DIRS: `/nowhere:${posix(system)}` }).stdout.trim(), 'system script.mjs arg');
 });
 
 test('the launcher exits 0 with one line on stderr when node is nowhere', () => {
