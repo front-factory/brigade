@@ -4,7 +4,7 @@ import { askOptions } from './options.js';
 import { createPrompter } from './prompt.js';
 import { DEFAULT_STACK, STACKS, detectStack } from './stacks.js';
 import { VERSION, compareVersions } from './version.js';
-import { CHANGING, PREVIEW_WORDS } from './words.js';
+import { CHANGING, PREVIEW_WORDS, PROPOSALS } from './words.js';
 
 // Asked whenever Brigade is already installed. The first option is the answer when nothing can be asked.
 async function chooseVersion({ prompter, installed, version }) {
@@ -34,11 +34,11 @@ async function chooseVersion({ prompter, installed, version }) {
 
 // Lists the files that change and asks to go on. Nothing to change: nothing to ask.
 async function confirmChanges({ prompter, report }) {
-    const changes = report.filter(({ status }) => CHANGING.has(status) || status === 'proposed' || status === 'obsolete');
+    const changes = report.filter(({ status }) => CHANGING.has(status) || PROPOSALS.has(status) || status === 'obsolete');
     prompter.info('What this update will do:');
     prompter.files(changes.map(({ path, status }) => ({
         done: CHANGING.has(status),
-        label: `${path}${status === 'proposed' ? '.proposed' : ''}`,
+        label: `${path}${PROPOSALS.has(status) ? '.proposed' : ''}`,
         detail: PREVIEW_WORDS[status]
     })));
     const untouched = report.length - changes.length;
@@ -67,7 +67,7 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
         prompter.warn('No git repository here. Brigade will not create one: run `git init` when you are ready. The branch names below are kept for then.');
     }
     if (!previous && hasKitFiles({ cwd, stackDir: dir })) {
-        prompter.warn(`${MANIFEST} is missing but Brigade files already exist here. Nothing is overwritten: files identical to the kit are adopted and files that differ get a .proposed. If the manifest exists in your team's repo, restore it from git first.`);
+        prompter.warn(`${MANIFEST} is missing but Brigade files already exist here. Nothing is overwritten: files identical to the kit are adopted and files that differ are kept, and get a .proposed or a merge only when the kit changed them. If the manifest exists in your team's repo, restore it from git first.`);
     }
     // A version change replays the kit with the stored answers and only asks the missing options. Otherwise (first
     // install, same version) every question is asked.
