@@ -1279,6 +1279,57 @@ test('an error while planning leaves the project and its bases untouched', async
     assert.equal(baseText(cwd, 'a.md'), 'a1\n');
 });
 
+test('a kit file deleted by the developer is recreated, with its base and manifest entry intact', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a1\n', 'b.md': 'b1\n' });
+    rmSync(join(cwd, 'a.md'));
+
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)['a.md'], 'created');
+    assert.equal(statuses(result)['b.md'], 'unchanged');
+    assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'a1\n');
+    assert.equal(baseText(cwd, 'a.md'), 'a1\n');
+    assert.equal(manifestOf(cwd).files['a.md'], sha('a1\n'));
+});
+
+test('a kit file deleted by the developer comes back with the new kit content when the kit changed', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a1\n' });
+    rmSync(join(cwd, 'a.md'));
+    writeFileSync(join(stackDir, 'a.md'), 'a2\n');
+
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)['a.md'], 'created');
+    assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'a2\n');
+    assert.equal(baseText(cwd, 'a.md'), 'a2\n');
+    assert.equal(manifestOf(cwd).files['a.md'], sha('a2\n'));
+});
+
+test('an error while writing leaves the earlier writes, the old manifest, and a re-run converges', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a1\n' });
+    writeFileSync(join(stackDir, 'a.md'), 'a2\n');
+    // z/new.md cannot be written: `z` is a file in the project. It comes after a.md in the plan.
+    mkdirSync(join(stackDir, 'z'));
+    writeFileSync(join(stackDir, 'z', 'new.md'), 'n\n');
+    writeFileSync(join(cwd, 'z'), 'a file in the way\n');
+    const manifestBefore = readFileSync(join(cwd, '.claude/brigade.json'), 'utf8');
+
+    await assert.rejects(runInit({ cwd, yes: true, stackDir, version: '2.0.0' }));
+    // Not atomic: what was written before the failure stays, together with its base.
+    assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'a2\n');
+    assert.equal(baseText(cwd, 'a.md'), 'a2\n');
+    // The manifest is written last: it still describes the previous install.
+    assert.equal(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8'), manifestBefore);
+    assert.equal(manifestOf(cwd).files['a.md'], sha('a1\n'));
+
+    // Once the obstacle is gone, a re-run finishes the update without proposals or conflicts.
+    rmSync(join(cwd, 'z'));
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)['a.md'], 'unchanged');
+    assert.equal(statuses(result)['z/new.md'], 'created');
+    assert.equal(manifestOf(cwd).files['a.md'], sha('a2\n'));
+    assert.equal(manifestOf(cwd).files['z/new.md'], sha('n\n'));
+    assert.ok(!existsSync(join(cwd, 'a.md.proposed')));
+});
+
 test('mergeSettings drops what the kit dropped when the developer did not change it', () => {
     const base = { permissions: { allow: ['a', 'old'], deny: ['x'] }, hooks: { Pre: [{ command: 'v1' }] }, gone: { k: 1 }, changed: { k: 1 } };
     const kit = { permissions: { allow: ['a', 'new'] }, hooks: { Pre: [{ command: 'v2' }] } };
