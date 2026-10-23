@@ -70,8 +70,8 @@ at launch like a `CLAUDE.md`.
 An existing file is never overwritten silently:
 
 - A file Brigade wrote and nobody touched is updated.
-- If you edited a file and the kit changed it since your last install, the two are merged (see Update): clean merges
-  are applied, conflicts are written to a `.proposed` next to your file.
+- If you edited a file and the kit changed it since your last install, your file is kept and the kit's version is
+  written to a `.proposed` next to it (see Update).
 - If the kit did not change the file, nothing happens.
 - `.gitignore` and `.gitattributes` only get the lines they miss.
 - `.claude/context/decisions.md` and `.claude/context/architecture.md` are written once and then belong to the
@@ -83,7 +83,7 @@ Re-run `npx @frontfactory/brigade init`.
 
 When Brigade is already installed, `init` asks whether to keep the installed version or update to the one you run.
 Without a terminal, it updates. In a terminal, an update first lists what it will do (files added, updated, merged,
-removed, kept with a proposal or a conflict) and asks you to confirm before anything is written. Declining writes
+removed, kept with a proposal) and asks you to confirm before anything is written. Declining writes
 nothing.
 
 - Updating does not repeat the setup: your answers stored in `.claude/brigade.json` are reused and only the options
@@ -94,39 +94,25 @@ nothing.
 
 ### What happens to your files
 
-Kit files you never touched are updated. A file you edited is merged with the kit's changes, line by line, from three
-versions: the kit file as Brigade last installed it, your file, and the new kit file.
+Kit files you never touched are updated. A file you edited is never overwritten.
 
-- Your edits and the kit's changes touch different lines: the merge is applied to your file ("merged, your edits
-  kept"). Line endings and file mode stay yours.
-- They touch the same lines: your file is never touched. A `<file>.proposed` is written with both versions between
-  `<<<<<<< yours`, `=======` and `>>>>>>> kit` markers, and the summary warns you. Resolve the markers, copy the
-  result into your file, then delete the `.proposed`. The proposal is written once per kit change: Brigade then counts
-  that kit version as seen, so the next updates stay silent, do not rewrite the `.proposed` and do not recreate it if
-  you delete it. It stays on disk as a reminder until you delete it, and is refreshed only if the kit changes the file
-  again.
-- The kit did not change the file: your file is left alone and nothing is proposed.
+- The kit did not change the file since your last install: your file is left alone and nothing is proposed.
+- The kit changed the file: your file is kept as it is, and the whole new kit file is written to `<file>.proposed`. Diff
+  the two, take what you want, then delete the `.proposed`. There is no merge and no conflict marker. The proposal is
+  written once per kit change: Brigade then counts that kit version as seen, so the next updates stay silent, do not
+  rewrite the `.proposed` and do not recreate it if you delete it. It stays on disk as a reminder until you delete it,
+  and is refreshed only if the kit changes the file again.
 - You deleted a kit file: it is recreated at the next update, as the entries of `settings.json` are.
 
 A file the kit no longer ships is reported. If it is still exactly what Brigade wrote, it is removed (and the
 directories it leaves empty); if you edited it, it is kept and reported again at each update until you delete it.
 Brigade only ever removes files recorded in `.claude/brigade.json`.
 
-### Base copies
+### Old base copies
 
-The kit file as last installed is kept in `.claude/brigade-base/`. It is the common ancestor of the merge.
-
-- There is one copy per file Brigade manages, under its path without the leading `.claude/`, e.g.
-  `.claude/brigade-base/rules/brigade.md`, so that no nested `.claude` folder exists.
-- Commit it with the rest of `.claude/`: it is shared like the install, and the merge gives the same result on every
-  machine.
-- Do not edit it by hand: it is rewritten by every update and removed with a file the kit drops.
-- Files written once (`decisions.md`, `architecture.md`) and the generated options file have none.
-
-Installs made before the base copies existed have no base yet. For those, the first update falls back to a whole-file
-`<file>.proposed` for an edited file the kit changed (diff it, merge what you want, delete the `.proposed`), and
-stores the new kit version as the base, so the next updates merge (and the proposal is not written again until the kit
-changes). A base that is missing or unreadable is treated the same way.
+Brigade 1.3.0 kept a copy of each kit file in `.claude/brigade-base/`. Nothing uses it anymore: every update removes
+that folder if it exists (the update preview and `--dry-run` list it as removed, a dry run leaves it in place). Only
+that exact folder is removed. If you committed it, commit its removal.
 
 ### Older installs
 
@@ -137,15 +123,14 @@ your edits and re-run.
 
 ### settings.json
 
-`.claude/settings.json` is merged by keys instead of being merged by lines:
+`.claude/settings.json` is merged by keys instead of being proposed as a whole file:
 
 - Your additions stay, and your own values win.
 - The entries the kit adds (permissions, hooks) are appended, and nothing is duplicated.
-- An entry the kit removed or changed (a hook command, for instance) is removed from your file if you did not change
-  it, so a changed hook is replaced instead of duplicated. An entry you changed stays.
+- An entry the kit removed or changed (a hook command, for instance) is not removed from your file: a changed hook
+  command is added next to the old one. Remove the old entry yourself.
 - An entry you deleted on purpose comes back at the next update.
 - If the file is not valid JSON, a `settings.json.proposed` is written as for any other file.
-- Without a base (older install), entries the kit removed or changed are not removed from your file.
 
 ### Changing your options and the manifest
 
@@ -162,10 +147,8 @@ That is how it tells an untouched file from an edited one. Do not edit it by han
 - `.proposed` files keep coming back: a proposal is written once per kit change, then stays until you delete it. Later
   updates neither rewrite nor recreate it unless the kit changes that file again. Once you have merged what you want,
   delete the `.proposed`.
-- Conflict markers (`<<<<<<< yours`) in a `.proposed`: your edits and the kit changed the same lines. Resolve them,
-  copy the result into your file and delete the `.proposed`. Never leave markers in the file itself.
-- `.claude/brigade-base/` is missing or was not committed: nothing breaks, the update falls back to a whole-file
-  `.proposed` for edited files and recreates the base. Commit it so the team merges the same way.
+- `.claude/brigade-base/` disappeared after an update: that is the cleanup of the folder Brigade 1.3.0 used. Commit the
+  removal.
 - No terminal (CI, pipe): nothing is asked. `init` behaves like `--yes`: a new install accepts every detected answer, an
   existing install is updated with its stored answers, and a new option gets its detected or default value. The run
   prints one line naming the new options and the value used; it never fails for that.
