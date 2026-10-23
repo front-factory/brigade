@@ -1108,7 +1108,10 @@ test('an edited file and a changed kit file are merged, the developer\'s edits k
     const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
     assert.equal(statuses(result)[RULE], 'merged');
     assert.equal(readFileSync(join(cwd, RULE), 'utf8'), 'A\nb\nc\nd\nE\n');
-    assert.equal(statSync(join(cwd, RULE)).mode & 0o777, 0o750);
+    // Windows has no POSIX permission bits
+    if (process.platform !== 'win32') {
+        assert.equal(statSync(join(cwd, RULE)).mode & 0o777, 0o750);
+    }
     assert.ok(!existsSync(join(cwd, `${RULE}.proposed`)));
     assert.equal(manifestOf(cwd).files[RULE], sha(RULE_V2));
     assert.equal(baseText(cwd, RULE), RULE_V2);
