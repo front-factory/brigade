@@ -55,17 +55,13 @@ function summary({ version, answers, report, ignored, repo, personal, local, dry
     }
 
     const notes = report.filter(({ note }) => note).map(({ path, note }) => `${path}: ${note}`);
-    const conflicts = report.filter(({ status }) => status === 'conflict').map(({ path }) => `${path}.proposed`);
-    const conflict = conflicts.length
-        ? `${dryRun ? 'Conflicts expected' : 'Conflicts'} between your edits and the kit: ${conflicts.join(', ')}. Resolve the <<<<<<< markers in each, copy the result into your file, then delete the .proposed.`
-        : '';
     const rows = [
         ['Brigade', version],
         ...recapRows(answers),
         ['Replies for you', personal.language && local?.status === 'written' ? `${personal.language} (your machine only)` : 'project default']
     ];
     const added = asked.flat().map((key) => `${key}: ${answers[key]}`).join(', ');
-    return { files, notes, conflict, rows, added, kept: report.some(({ status }) => status === 'proposed'), repo };
+    return { files, notes, rows, added, kept: report.some(({ status }) => status === 'proposed'), repo };
 }
 
 const plainFiles = (files, notes) => [...files.map(({ plain }) => plain), ...(notes.length ? ['', ...notes] : [])].join('\n');
@@ -78,8 +74,7 @@ function print(result, interactive) {
         return;
     }
 
-    const { files, notes: migration, conflict, rows, added, kept, repo } = summary(result);
-    const notes = conflict ? [...migration, conflict] : migration;
+    const { files, notes, rows, added, kept, repo } = summary(result);
 
     if (result.dryRun) {
         const news = added ? `\n\nNew options, default used: ${added}` : '';
@@ -95,8 +90,7 @@ function print(result, interactive) {
 
     prompter.step(3, 3, 'Installation');
     prompter.files(files);
-    for (const note of migration) prompter.info(note);
-    if (conflict) prompter.warn(conflict);
+    for (const note of notes) prompter.info(note);
     prompter.card('Your setup', rows);
     if (added) prompter.info(`New options set up: ${added}`);
     if (kept) prompter.warn('Some files of yours differ from the kit: they were kept. Merge the .proposed version if you want it.');

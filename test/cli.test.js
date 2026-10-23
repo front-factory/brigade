@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -81,7 +81,6 @@ test('the plain summary lists the files, the recap and the next step', () => {
 
 test('the plain summary shows a kept file and its proposal', () => {
     const first = brigade(['init', '--yes']);
-    rmSync(join(first.cwd, '.claude/brigade-base'), { recursive: true });
     writeFileSync(join(first.cwd, '.claude/rules/brigade.md'), 'mine\n');
     const file = join(first.cwd, '.claude/brigade.json');
     const manifest = JSON.parse(readFileSync(file, 'utf8'));
@@ -131,32 +130,28 @@ test('the plain summary reports a file removed from the kit', () => {
     assert.ok(!existsSync(join(first.cwd, 'old.md')));
 });
 
-test('the plain summary warns about a conflict and says how to resolve it', () => {
+test('the plain summary shows a proposal once, then keeps quiet', () => {
     const rule = '.claude/rules/brigade.md';
     const first = brigade(['init', '--yes']);
     const kit = readFileSync(join(first.cwd, rule), 'utf8');
-    // The developer edits the first line, the "kit" of the previous install had another one.
     const manifestFile = join(first.cwd, '.claude/brigade.json');
     const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
     manifest.files[rule] = 'an older kit version';
     writeFileSync(manifestFile, JSON.stringify(manifest));
-    writeFileSync(join(first.cwd, '.claude/brigade-base/rules/brigade.md'), kit.replace('# Brigade', '# Brigade, old'));
     writeFileSync(join(first.cwd, rule), kit.replace('# Brigade', '# Brigade, mine'));
 
     const { code, out, cwd } = brigade(['init', '--yes'], first.cwd);
     assert.equal(code, 0);
-    assert.match(out, /^conflict, proposal with markers written +\.claude\/rules\/brigade\.md\.proposed$/m);
-    assert.match(out, /^Conflicts between your edits and the kit: \.claude\/rules\/brigade\.md\.proposed\. Resolve the <<<<<<< markers.*delete the \.proposed\.$/m);
-    assert.match(readFileSync(join(cwd, `${rule}.proposed`), 'utf8'), /^<<<<<<< yours$/m);
+    assert.match(out, /^yours kept, proposal written +\.claude\/rules\/brigade\.md\.proposed$/m);
+    assert.equal(readFileSync(join(cwd, `${rule}.proposed`), 'utf8'), kit);
 
     // Delivered once: the next run is quiet and the proposal stays as the reminder.
     const next = brigade(['init', '--yes'], cwd);
-    assert.doesNotMatch(next.out, /conflict/i);
     assert.match(next.out, /^yours kept +\.claude\/rules\/brigade\.md$/m);
     assert.ok(existsSync(join(cwd, `${rule}.proposed`)));
 });
 
-test('the dry run shows merged and conflict files with the "would be" wording', () => {
+test('the dry run shows a proposal with the "would be" wording and writes nothing', () => {
     const rule = '.claude/rules/brigade.md';
     const first = brigade(['init', '--yes']);
     const kit = readFileSync(join(first.cwd, rule), 'utf8');
@@ -164,11 +159,23 @@ test('the dry run shows merged and conflict files with the "would be" wording', 
     const manifest = JSON.parse(readFileSync(manifestFile, 'utf8'));
     manifest.files[rule] = 'an older kit version';
     writeFileSync(manifestFile, JSON.stringify(manifest));
-    writeFileSync(join(first.cwd, '.claude/brigade-base/rules/brigade.md'), kit.replace('# Brigade', '# Brigade, old'));
     writeFileSync(join(first.cwd, rule), kit.replace('# Brigade', '# Brigade, mine'));
 
     const { out, cwd } = brigade(['init', '--dry-run'], first.cwd);
-    assert.match(out, /^conflict, proposal with markers would be written +\.claude\/rules\/brigade\.md\.proposed$/m);
-    assert.match(out, /^Conflicts expected /m);
+    assert.match(out, /^yours kept, proposal would be written +\.claude\/rules\/brigade\.md\.proposed$/m);
     assert.ok(!existsSync(join(cwd, `${rule}.proposed`)));
+});
+
+test('an update removes the old .claude/brigade-base/ folder, the dry run only lists it', () => {
+    const first = brigade(['init', '--yes']);
+    mkdirSync(join(first.cwd, '.claude/brigade-base/rules'), { recursive: true });
+    writeFileSync(join(first.cwd, '.claude/brigade-base/rules/brigade.md'), 'old base\n');
+
+    const preview = brigade(['init', '--dry-run'], first.cwd);
+    assert.match(preview.out, /^would be removed, no longer in the kit +\.claude\/brigade-base\/$/m);
+    assert.ok(existsSync(join(first.cwd, '.claude/brigade-base')));
+
+    const { out } = brigade(['init', '--yes'], first.cwd);
+    assert.match(out, /^removed, no longer in the kit +\.claude\/brigade-base\/$/m);
+    assert.ok(!existsSync(join(first.cwd, '.claude/brigade-base')));
 });

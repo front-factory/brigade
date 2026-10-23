@@ -6,7 +6,6 @@ export const WORDS = {
     unchanged: 'already up to date',
     kept: 'yours kept',
     proposed: 'yours kept, proposal written',
-    conflict: 'conflict, proposal with markers written',
     removed: 'removed, no longer in the kit',
     obsolete: 'yours kept, no longer in the kit'
 };
@@ -17,7 +16,6 @@ export const PREVIEW_WORDS = {
     updated: 'would be updated',
     merged: 'would be merged, your edits kept',
     proposed: 'yours kept, proposal would be written',
-    conflict: 'conflict, proposal with markers would be written',
     removed: 'would be removed, no longer in the kit'
 };
 
@@ -25,4 +23,4 @@ export const PREVIEW_WORDS = {
 export const CHANGING = new Set(['created', 'updated', 'merged', 'removed']);
 
 // Statuses that leave a `<file>.proposed` next to the developer's file.
-export const PROPOSALS = new Set(['proposed', 'conflict']);
+export const PROPOSALS = new Set(['proposed']);

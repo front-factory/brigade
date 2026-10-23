@@ -67,7 +67,7 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
         prompter.warn('No git repository here. Brigade will not create one: run `git init` when you are ready. The branch names below are kept for then.');
     }
     if (!previous && hasKitFiles({ cwd, stackDir: dir })) {
-        prompter.warn(`${MANIFEST} is missing but Brigade files already exist here. Nothing is overwritten: files identical to the kit are adopted and files that differ are kept, and get a .proposed or a merge only when the kit changed them. If the manifest exists in your team's repo, restore it from git first.`);
+        prompter.warn(`${MANIFEST} is missing but Brigade files already exist here. Nothing is overwritten: files identical to the kit are adopted and files that differ are kept, and get a .proposed only when the kit changed them. If the manifest exists in your team's repo, restore it from git first.`);
     }
     // A version change replays the kit with the stored answers and only asks the missing options. Otherwise (first
     // install, same version) every question is asked.

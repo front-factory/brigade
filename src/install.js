@@ -2,12 +2,10 @@ import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, rmdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
-import { merge3 } from './merge.js';
-
 export const MANIFEST = '.claude/brigade.json';
 export const OPTIONS_FILE = '.claude/rules/brigade-options.md';
-// The kit content as last installed, one file per managed kit file: the common ancestor of the three-way merge.
-export const BASE_DIR = '.claude/brigade-base';
+// Folder of base copies left by Brigade 1.3.0, removed at every update.
+export const LEGACY_BASE_DIR = '.claude/brigade-base';
 
 // Lines Brigade appends to the project files when missing. Existing lines are never touched or duplicated.
 const APPENDS = {
@@ -72,66 +70,26 @@ const isSame = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // The developer's settings plus what the kit adds. Objects merge by key, arrays are a union (the developer's entries
 // first, the kit's missing ones after, compared by value), any other value stays the developer's.
-// `base` is the kit as last installed: what it had and the kit dropped is removed, if the developer did not change it.
-export function mergeSettings(mine, kit, base) {
+export function mergeSettings(mine, kit) {
     if (Array.isArray(mine) && Array.isArray(kit)) {
-        const dropped = Array.isArray(base) ? base.filter((item) => !kit.some((other) => isSame(item, other))) : [];
-        const kept = mine.filter((item) => !dropped.some((old) => isSame(item, old)));
-        const known = new Set(kept.map((item) => JSON.stringify(item)));
-        return [...kept, ...kit.filter((item) => !known.has(JSON.stringify(item)))];
+        const known = new Set(mine.map((item) => JSON.stringify(item)));
+        return [...mine, ...kit.filter((item) => !known.has(JSON.stringify(item)))];
     }
     if (isObject(mine) && isObject(kit)) {
         const merged = { ...mine };
-        if (isObject(base)) {
-            for (const [key, old] of Object.entries(base)) {
-                if (!(key in kit) && key in mine && isSame(mine[key], old)) delete merged[key];
-            }
-        }
-        for (const [key, value] of Object.entries(kit)) merged[key] = key in mine ? mergeSettings(mine[key], value, isObject(base) ? base[key] : undefined) : value;
+        for (const [key, value] of Object.entries(kit)) merged[key] = key in mine ? mergeSettings(mine[key], value) : value;
         return merged;
     }
     return mine;
 }
 
 // The merged file content, or null when either side is not a JSON object (the caller falls back to a proposal).
-// A base that is not a JSON object counts as no base.
-function mergedSettings(current, kit, base) {
+function mergedSettings(current, kit) {
     try {
         const mine = JSON.parse(current);
         const theirs = JSON.parse(kit);
         if (!isObject(mine) || !isObject(theirs)) return null;
-        let old;
-        try {
-            old = base === null ? undefined : JSON.parse(base);
-        } catch {
-            old = undefined;
-        }
-        return { merged: mergeSettings(mine, theirs, old), mine };
-    } catch {
-        return null;
-    }
-}
-
-// The path of the base copy of a kit file, relative to the base folder. The leading `.claude/` is dropped so that no
-// `.claude` folder exists inside the base folder: Claude Code could load the skills, agents, rules or settings of a
-// nested one as duplicates. Kit files all start with `.claude/`, so two of them never share a base path; one that does
-// not keeps its full path, which cannot collide with the stripped ones either.
-export function baseRelative(path) {
-    return path.startsWith('.claude/') ? path.slice('.claude/'.length) : path;
-}
-
-// Where the base copy of a kit file lives, or null when the path would leave the base folder.
-function basePath(cwd, path) {
-    const root = resolve(cwd, BASE_DIR);
-    const file = resolve(root, baseRelative(path));
-    return file.startsWith(root + sep) ? file : null;
-}
-
-// The base of a file, or null when there is none or it cannot be read: both mean "no base", never an error.
-function readBase(cwd, path) {
-    const file = basePath(cwd, path);
-    try {
-        return file && statSync(file).isFile() ? readFileSync(file, 'utf8') : null;
+        return { merged: mergeSettings(mine, theirs), mine };
     } catch {
         return null;
     }
@@ -146,9 +104,9 @@ function pruneEmptyDirs(cwd, file) {
     }
 }
 
-// Never overwrites a file that differs from what Brigade last wrote: an edited file gets the kit's changes merged in
-// (three-way, from the base copy of the last kit version), or a `.proposed` next to it when that is not possible.
-// Everything is planned first (reads only), then written, so an error while planning leaves the project untouched.
+// Never overwrites a file that differs from what Brigade last wrote: an edited file gets a `.proposed` next to it when
+// the kit changed it. Everything is planned first (reads only), then written, so an error while planning leaves the
+// project untouched.
 export function planFiles({ cwd, stackDir, answers, previous }) {
     const report = [];
     const kit = new Set();
@@ -166,17 +124,9 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
         const proposed = `${target}.proposed`;
         const write = (file) => writes.push({ file, content, mode });
         const recorded = previous?.files?.[path];
-        // Write-once files are the team's own: they have no base.
-        const base = WRITE_ONCE.has(path) ? null : readBase(cwd, path);
-        const baseFile = WRITE_ONCE.has(path) ? null : basePath(cwd, path);
-        // The base always becomes the kit content just installed or known to be the last one.
-        const storeBase = () => {
-            if (baseFile && base !== content) writes.push({ file: baseFile, content, mode: 0o644 });
-        };
 
         if (!existsSync(target)) {
             write(target);
-            storeBase();
             hashes[path] = wanted;
             report.push({ path, status: 'created' });
             continue;
@@ -184,7 +134,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
 
         const text = readFileSync(target, 'utf8');
         const current = sha(text);
-        const settings = path === SETTINGS_PATH && current !== wanted ? mergedSettings(text, content, base) : null;
+        const settings = path === SETTINGS_PATH && current !== wanted ? mergedSettings(text, content) : null;
         if (WRITE_ONCE.has(path)) {
             report.push({ path, status: current === wanted ? 'unchanged' : 'kept' });
             continue;
@@ -192,12 +142,10 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
         if (current === wanted) {
             // The target caught up with the kit: an old proposal is stale.
             if (existsSync(proposed)) removals.push(proposed);
-            storeBase();
             hashes[path] = current;
             report.push({ path, status: 'unchanged' });
         } else if (recorded === current) {
             write(target);
-            storeBase();
             if (existsSync(proposed)) removals.push(proposed);
             hashes[path] = wanted;
             report.push({ path, status: 'updated' });
@@ -206,7 +154,6 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
             // next update merges again instead of taking the file for an untouched one.
             const { merged, mine } = settings;
             if (recorded) hashes[path] = recorded;
-            storeBase();
             if (existsSync(proposed)) removals.push(proposed);
             if (isSame(merged, mine)) {
                 report.push({ path, status: 'kept' });
@@ -216,55 +163,25 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
             }
         } else if (recorded === wanted) {
             // The kit did not change this file since the last install: nothing new to propose. A proposal left by an
-            // earlier version stays, it is the developer's file now. Kit unchanged also means `wanted` is the base.
-            if (base === null) storeBase();
+            // earlier version stays, it is the developer's file now.
             hashes[path] = wanted;
             report.push({ path, status: 'kept' });
         } else {
-            const merge = base !== null && path !== SETTINGS_PATH ? merge3(base, text, content) : null;
-            if (merge && merge.conflicts === 0) {
-                // The developer's edits and the kit's changes both apply. The kit's hash is recorded, as for any
-                // file the kit changed, and the base moves to this kit version.
-                storeBase();
-                if (existsSync(proposed)) removals.push(proposed);
-                hashes[path] = wanted;
-                if (sha(merge.text) === current) {
-                    report.push({ path, status: 'kept' });
-                } else {
-                    writes.push({ file: target, content: merge.text, mode: statSync(target).mode & 0o777 });
-                    report.push({ path, status: 'merged' });
-                }
-            } else if (merge) {
-                // The developer's file is never touched. The proposal is delivered once: the kit version is now seen,
-                // so its hash is recorded and it becomes the base. The next run finds the kit unchanged (`kept`) and
-                // leaves the `.proposed` alone as a reminder; a later kit change merges against this version.
-                const same = existsSync(proposed) && readFileSync(proposed, 'utf8') === merge.text;
-                if (!same) writes.push({ file: proposed, content: merge.text, mode });
-                storeBase();
-                hashes[path] = wanted;
-                report.push({ path, status: 'conflict' });
-            } else {
-                // No usable base (installs made before the base copies, or a missing or unreadable one): the whole
-                // kit file is proposed, once: `wanted` is recorded and stored as the base. If the developer merges the
-                // proposal, it is exactly the right ancestor; if they keep their file, later kit changes are merged
-                // against `wanted` and what they differ on shows up as a conflict, never as a silent overwrite.
-                const same = existsSync(proposed) && sha(readFileSync(proposed, 'utf8')) === wanted;
-                if (!same) write(proposed);
-                storeBase();
-                hashes[path] = wanted;
-                const entry = { path, status: 'proposed' };
-                if (path === RULES_PATH && !text.includes('brigade-options.md')) entry.note = MIGRATION_NOTE;
-                report.push(entry);
-            }
+            // The developer's file is never touched. The proposal is delivered once: the kit's hash is recorded, so the
+            // next run finds the kit unchanged (`kept`) and leaves the `.proposed` alone as a reminder, even if it was
+            // deleted. It is written again only when the kit changes the file again.
+            const same = existsSync(proposed) && sha(readFileSync(proposed, 'utf8')) === wanted;
+            if (!same) write(proposed);
+            hashes[path] = wanted;
+            const entry = { path, status: 'proposed' };
+            if (path === RULES_PATH && !text.includes('brigade-options.md')) entry.note = MIGRATION_NOTE;
+            report.push(entry);
         }
     }
 
     // Recorded in the manifest but no longer in the kit: removed if untouched, kept and reported if edited.
-    // The base copy goes either way: nothing merges against it anymore.
     for (const [path, recorded] of Object.entries(previous?.files ?? {})) {
         if (kit.has(path) || WRITE_ONCE.has(path)) continue;
-        const baseFile = basePath(cwd, path);
-        if (baseFile && existsSync(baseFile) && statSync(baseFile).isFile()) removals.push(baseFile);
         const target = resolve(cwd, path);
         // Only files inside the project, whatever the manifest says.
         if (!target.startsWith(resolve(cwd) + sep) || !existsSync(target) || !statSync(target).isFile()) continue;
@@ -278,6 +195,13 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
         }
     }
 
+    // The base copies of Brigade 1.3.0 are of no use anymore.
+    const legacy = join(cwd, LEGACY_BASE_DIR);
+    if (existsSync(legacy) && statSync(legacy).isDirectory()) {
+        removals.push(legacy);
+        report.push({ path: `${LEGACY_BASE_DIR}/`, status: 'removed' });
+    }
+
     return { report, hashes, writes, removals };
 }
 
@@ -289,7 +213,7 @@ export function applyPlan(cwd, { writes, removals }) {
         chmodSync(file, mode);
     }
     for (const file of removals) {
-        rmSync(file, { force: true });
+        rmSync(file, { force: true, recursive: true });
         pruneEmptyDirs(cwd, file);
     }
 }

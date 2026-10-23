@@ -32,5 +32,4 @@ test('the package ships bin, src and every template file, dotfiles included', ()
     assert.ok(packed.has('bin/brigade.js'));
     assert.ok([...packed].some((file) => file.startsWith('src/')));
     for (const file of readdirSync(join(ROOT, 'src'))) assert.ok(packed.has(`src/${file}`), `missing from the package: src/${file}`);
-    assert.ok(packed.has('src/merge.js'));
 });
