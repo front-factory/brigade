@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import './git-env.js';
 import { runInit } from '../src/init.js';
-import { appendMissingLines, readManifest, render, sha, writeLocalSettings } from '../src/install.js';
+import { appendMissingLines, mergeSettings, readManifest, render, sha, writeLocalSettings } from '../src/install.js';
 import { OPTIONS } from '../src/options.js';
 import { compareVersions } from '../src/version.js';
 
@@ -74,10 +74,28 @@ test('a second run changes nothing', async () => {
     assert.ok(again.ignored.every(({ status }) => status === 'unchanged'));
 });
 
-test('a modified file is kept and gets a .proposed only when it differs', async () => {
+test('a modified file the kit did not change is kept without a .proposed', async () => {
+    const cwd = project();
+    const stackDir = mkdtempSync(join(tmpdir(), 'brigade-kit-'));
+    writeFileSync(join(stackDir, 'rule.md'), 'v1\n');
+    await runInit({ cwd, yes: true, stackDir });
+    const recorded = readManifest(cwd).files['rule.md'];
+
+    writeFileSync(join(cwd, 'rule.md'), 'mine\n');
+    const result = await runInit({ cwd, yes: true, stackDir });
+    assert.equal(statuses(result)['rule.md'], 'kept');
+    assert.equal(readFileSync(join(cwd, 'rule.md'), 'utf8'), 'mine\n');
+    assert.ok(!existsSync(join(cwd, 'rule.md.proposed')));
+    assert.equal(readManifest(cwd).files['rule.md'], recorded);
+});
+
+test('a modified file the kit changed gets a .proposed', async () => {
     const cwd = project();
     await runInit({ cwd, yes: true });
     writeFileSync(join(cwd, RULES), 'mine\n');
+    const manifest = readManifest(cwd);
+    manifest.files[RULES] = sha('an older kit version\n');
+    writeFileSync(join(cwd, '.claude/brigade.json'), `${JSON.stringify(manifest, null, 4)}\n`);
 
     const result = await runInit({ cwd, yes: true });
     assert.equal(statuses(result)[RULES], 'proposed');
@@ -200,8 +218,9 @@ const CODE_DOCS = 'Language of the code, comments, commit messages and documenta
 const CHANGE = 'What do you want to change?';
 const CANCEL = '__cancel__';
 
-const asking = (answer, script = {}) => {
+const asking = (answer, script = {}, apply = true) => {
     const asked = [];
+    const shown = [];
     const cards = [];
     const queues = Object.fromEntries(Object.entries(script).map(([question, values]) => [question, [...[].concat(values)]]));
     const next = (message) => {
@@ -211,8 +230,13 @@ const asking = (answer, script = {}) => {
     const noop = () => {};
     const prompter = {
         interactive: true,
-        banner: noop, step: noop, files: noop, info: noop, warn: noop, outro: noop, done: noop, close: noop,
+        banner: noop, step: noop, info: noop, warn: noop, outro: noop, done: noop, close: noop,
         card: (title, rows) => cards.push({ title, rows }),
+        files: (items) => shown.push(...items),
+        confirm: async (message) => {
+            asked.push(message);
+            return apply;
+        },
         text: async (_, fallback = '') => fallback,
         validate: async (message, detected, pick) => {
             asked.push(message);
@@ -230,7 +254,7 @@ const asking = (answer, script = {}) => {
             return next(message) ?? [options[0].value];
         }
     };
-    return { prompter, asked, cards };
+    return { prompter, asked, cards, shown };
 };
 
 test('versions are compared numerically', () => {
@@ -336,10 +360,11 @@ test('a stale .proposed is removed once the target matches the kit', async () =>
     await runInit({ cwd, yes: true, stackDir });
 
     writeFileSync(join(cwd, 'rule.md'), 'mine\n');
+    writeFileSync(join(stackDir, 'rule.md'), 'v2\n');
     await runInit({ cwd, yes: true, stackDir });
     assert.ok(existsSync(join(cwd, 'rule.md.proposed')));
 
-    writeFileSync(join(cwd, 'rule.md'), 'v1\n');
+    writeFileSync(join(cwd, 'rule.md'), 'v2\n');
     const result = await runInit({ cwd, yes: true, stackDir });
     assert.equal(statuses(result)['rule.md'], 'unchanged');
     assert.ok(!existsSync(join(cwd, 'rule.md.proposed')));
@@ -597,6 +622,9 @@ test('a proposed brigade.md that already mentions the options file gets no note'
     const cwd = project();
     await runInit({ cwd, yes: true });
     writeFileSync(join(cwd, RULES), 'mine, see brigade-options.md\n');
+    const manifest = readManifest(cwd);
+    manifest.files[RULES] = sha('an older kit version\n');
+    writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
     const result = await runInit({ cwd, yes: true });
     assert.equal(statuses(result)[RULES], 'proposed');
     assert.equal(result.report.find(({ path }) => path === RULES).note, undefined);
@@ -813,4 +841,190 @@ test('a blank custom commit format never reaches the options file', async () => 
     const result = await runInit({ cwd, yes: true });
     assert.match(readFileSync(join(cwd, OPTIONS_PATH), 'utf8'), /^- Commit format: \S.*$/m);
     assert.match(result.answers.commitFormat, /\S/);
+});
+
+// A kit folder with the given files, installed at 1.0.0 in a fresh project.
+async function installed(files) {
+    const cwd = project();
+    const stackDir = mkdtempSync(join(tmpdir(), 'brigade-kit-'));
+    for (const [path, content] of Object.entries(files)) {
+        mkdirSync(dirname(join(stackDir, path)), { recursive: true });
+        writeFileSync(join(stackDir, path), content);
+    }
+    await runInit({ cwd, yes: true, stackDir, version: '1.0.0' });
+    return { cwd, stackDir };
+}
+const manifestOf = (cwd) => JSON.parse(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8'));
+
+test('an interactive update lists the changes and writes them once confirmed', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a1\n', 'b.md': 'b1\n' });
+    writeFileSync(join(cwd, 'b.md'), 'mine\n');
+    writeFileSync(join(stackDir, 'a.md'), 'a2\n');
+    writeFileSync(join(stackDir, 'b.md'), 'b2\n');
+    writeFileSync(join(stackDir, 'c.md'), 'c\n');
+
+    const { prompter, asked, shown } = asking('update');
+    await runInit({ cwd, stackDir, version: '2.0.0', interactive: true, prompter });
+    assert.ok(asked.includes('Apply these changes?'));
+    assert.deepEqual(shown.map(({ label }) => label).sort(), ['a.md', 'b.md.proposed', 'c.md']);
+    assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'a2\n');
+});
+
+test('declining the preview writes nothing', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a1\n' });
+    const manifest = readFileSync(join(cwd, '.claude/brigade.json'), 'utf8');
+    writeFileSync(join(stackDir, 'a.md'), 'a2\n');
+    writeFileSync(join(stackDir, 'c.md'), 'c\n');
+
+    const result = await runInit({ cwd, stackDir, version: '2.0.0', interactive: true, prompter: asking('update', {}, false).prompter });
+    assert.equal(result.kept, '1.0.0');
+    assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'a1\n');
+    assert.ok(!existsSync(join(cwd, 'c.md')));
+    assert.equal(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8'), manifest);
+});
+
+test('a first install shows no preview and asks no confirmation', async () => {
+    const { prompter, asked } = asking('update');
+    await runInit({ cwd: project(), interactive: true, prompter });
+    assert.ok(!asked.includes('Apply these changes?'));
+});
+
+test('a dry run reports what would change and writes nothing, not even the manifest', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a1\n', 'gone.md': 'g\n' });
+    const manifest = readFileSync(join(cwd, '.claude/brigade.json'), 'utf8');
+    writeFileSync(join(stackDir, 'a.md'), 'a2\n');
+    writeFileSync(join(stackDir, 'c.md'), 'c\n');
+    rmSync(join(stackDir, 'gone.md'));
+
+    const result = await runInit({ cwd, stackDir, version: '2.0.0', dryRun: true });
+    assert.equal(result.dryRun, true);
+    assert.equal(statuses(result)['a.md'], 'updated');
+    assert.equal(statuses(result)['c.md'], 'created');
+    assert.equal(statuses(result)['gone.md'], 'removed');
+    assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'a1\n');
+    assert.ok(!existsSync(join(cwd, 'c.md')));
+    assert.ok(existsSync(join(cwd, 'gone.md')));
+    assert.equal(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8'), manifest);
+});
+
+test('a dry run lists the ignore lines it would add and writes nothing', async () => {
+    const cwd = project();
+    writeFileSync(join(cwd, '.gitignore'), 'node_modules\n');
+    const result = await runInit({ cwd, dryRun: true });
+
+    assert.deepEqual(result.ignored.find(({ path }) => path === '.gitignore').added, ['.claude/settings.local.json', 'CLAUDE.local.md']);
+    assert.deepEqual(result.ignored.find(({ path }) => path === '.gitattributes').added, ['.claude/hooks/* text eol=lf']);
+    assert.equal(readFileSync(join(cwd, '.gitignore'), 'utf8'), 'node_modules\n');
+    assert.ok(!existsSync(join(cwd, '.gitattributes')));
+});
+
+test('a dry run lists no ignore lines when they are already there', async () => {
+    const cwd = project();
+    writeFileSync(join(cwd, '.gitignore'), '.claude/settings.local.json\nCLAUDE.local.md\n');
+    writeFileSync(join(cwd, '.gitattributes'), '.claude/hooks/* text eol=lf\n');
+    const result = await runInit({ cwd, dryRun: true });
+
+    assert.ok(result.ignored.every(({ status }) => status === 'unchanged'));
+});
+
+test('a dry run on an empty project creates nothing', async () => {
+    const cwd = project();
+    const result = await runInit({ cwd, dryRun: true });
+    assert.ok(result.report.every(({ status }) => status === 'created'));
+    assert.ok(!existsSync(join(cwd, '.claude')));
+});
+
+test('a file removed from the kit and untouched is deleted, with its empty folders', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a\n', 'old/deep/x.md': 'x\n' });
+    rmSync(join(stackDir, 'old'), { recursive: true });
+
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)['old/deep/x.md'], 'removed');
+    assert.ok(!existsSync(join(cwd, 'old')));
+    assert.equal(manifestOf(cwd).files['old/deep/x.md'], undefined);
+});
+
+test('a file removed from the kit but edited is kept, reported and still recorded', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a\n', 'old.md': 'o\n' });
+    writeFileSync(join(cwd, 'old.md'), 'mine\n');
+    rmSync(join(stackDir, 'old.md'));
+
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)['old.md'], 'obsolete');
+    assert.equal(readFileSync(join(cwd, 'old.md'), 'utf8'), 'mine\n');
+    assert.equal(manifestOf(cwd).files['old.md'], sha('o\n'));
+});
+
+test('a file the manifest does not record is never removed, nor one outside the project', async () => {
+    const { cwd, stackDir } = await installed({ 'a.md': 'a\n' });
+    writeFileSync(join(cwd, 'mine.md'), 'mine\n');
+    const outside = join(cwd, '..', `outside-${Date.now()}.md`);
+    writeFileSync(outside, 'x\n');
+    const manifest = manifestOf(cwd);
+    manifest.files[`../${outside.split('/').pop()}`] = sha('x\n');
+    writeFileSync(join(cwd, '.claude/brigade.json'), JSON.stringify(manifest));
+
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)['mine.md'], undefined);
+    assert.ok(existsSync(join(cwd, 'mine.md')));
+    assert.ok(existsSync(outside));
+    assert.equal(result.report.filter(({ status }) => status === 'removed').length, 0);
+    rmSync(outside);
+});
+
+test('mergeSettings keeps the developer\'s entries, adds the kit\'s and never duplicates', () => {
+    const mine = { language: 'French', permissions: { allow: ['mine', 'shared'] }, extra: 1 };
+    const kit = { language: 'English', permissions: { allow: ['shared', 'new'], deny: ['d'] }, hooks: { A: [{ m: 1 }] } };
+    assert.deepEqual(mergeSettings(mine, kit), {
+        language: 'French',
+        permissions: { allow: ['mine', 'shared', 'new'], deny: ['d'] },
+        extra: 1,
+        hooks: { A: [{ m: 1 }] }
+    });
+    assert.deepEqual(mergeSettings(mergeSettings(mine, kit), kit), mergeSettings(mine, kit));
+});
+
+const SETTINGS = '.claude/settings.json';
+const settingsKit = (allow) => JSON.stringify({ permissions: { allow } });
+
+test('an edited settings.json is merged by keys, not proposed', async () => {
+    const { cwd, stackDir } = await installed({ [SETTINGS]: settingsKit(['a']) });
+    writeFileSync(join(cwd, SETTINGS), JSON.stringify({ permissions: { allow: ['a', 'mine'] }, model: 'x' }));
+    writeFileSync(join(stackDir, SETTINGS), settingsKit(['a', 'b']));
+
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)[SETTINGS], 'merged');
+    assert.deepEqual(JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')), { permissions: { allow: ['a', 'mine', 'b'] }, model: 'x' });
+    assert.ok(!existsSync(join(cwd, `${SETTINGS}.proposed`)));
+    assert.equal(manifestOf(cwd).files[SETTINGS], sha(settingsKit(['a'])));
+});
+
+test('a merged settings.json is stable on the next run', async () => {
+    const { cwd, stackDir } = await installed({ [SETTINGS]: settingsKit(['a']) });
+    writeFileSync(join(cwd, SETTINGS), JSON.stringify({ permissions: { allow: ['a', 'mine'] } }));
+    writeFileSync(join(stackDir, SETTINGS), settingsKit(['a', 'b']));
+    await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    const merged = readFileSync(join(cwd, SETTINGS), 'utf8');
+
+    const again = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(again)[SETTINGS], 'kept');
+    assert.equal(readFileSync(join(cwd, SETTINGS), 'utf8'), merged);
+});
+
+test('an untouched settings.json is still updated in place', async () => {
+    const { cwd, stackDir } = await installed({ [SETTINGS]: settingsKit(['a']) });
+    writeFileSync(join(stackDir, SETTINGS), settingsKit(['a', 'b']));
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)[SETTINGS], 'updated');
+});
+
+test('a settings.json that is not valid JSON falls back to a proposal', async () => {
+    const { cwd, stackDir } = await installed({ [SETTINGS]: settingsKit(['a']) });
+    writeFileSync(join(cwd, SETTINGS), '{ broken');
+    writeFileSync(join(stackDir, SETTINGS), settingsKit(['a', 'b']));
+
+    const result = await runInit({ cwd, yes: true, stackDir, version: '2.0.0' });
+    assert.equal(statuses(result)[SETTINGS], 'proposed');
+    assert.equal(readFileSync(join(cwd, SETTINGS), 'utf8'), '{ broken');
+    assert.ok(existsSync(join(cwd, `${SETTINGS}.proposed`)));
 });

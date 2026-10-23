@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, rmdirSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 
 export const MANIFEST = '.claude/brigade.json';
 export const OPTIONS_FILE = '.claude/rules/brigade-options.md';
@@ -12,6 +12,7 @@ const APPENDS = {
 };
 
 const RULES_PATH = '.claude/rules/brigade.md';
+const SETTINGS_PATH = '.claude/settings.json';
 const MIGRATION_NOTE = "The kit's brigade.md no longer holds your options: they moved to .claude/rules/brigade-options.md. Merge brigade.md.proposed into your file, or delete your file's edits and re-run to take the new one.";
 
 // Written once, then the team's own: never updated, never proposed over.
@@ -61,16 +62,58 @@ export function readManifest(cwd) {
     throw new Error(`${MANIFEST} is corrupted. Fix it or delete it to start over (Brigade will then treat this as a first install).`);
 }
 
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+// The developer's settings plus what the kit adds. Objects merge by key, arrays are a union (the developer's entries
+// first, the kit's missing ones after, compared by value), any other value stays the developer's.
+export function mergeSettings(mine, kit) {
+    if (Array.isArray(mine) && Array.isArray(kit)) {
+        const known = new Set(mine.map((item) => JSON.stringify(item)));
+        return [...mine, ...kit.filter((item) => !known.has(JSON.stringify(item)))];
+    }
+    if (isObject(mine) && isObject(kit)) {
+        const merged = { ...mine };
+        for (const [key, value] of Object.entries(kit)) merged[key] = key in mine ? mergeSettings(mine[key], value) : value;
+        return merged;
+    }
+    return mine;
+}
+
+// The merged file content, or null when either side is not a JSON object (the caller falls back to a proposal).
+function mergedSettings(current, kit) {
+    try {
+        const mine = JSON.parse(current);
+        const theirs = JSON.parse(kit);
+        if (!isObject(mine) || !isObject(theirs)) return null;
+        return { merged: mergeSettings(mine, theirs), mine };
+    } catch {
+        return null;
+    }
+}
+
+const isSame = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// Walks up from a removed file and drops the directories it left empty, never going above the project.
+function pruneEmptyDirs(cwd, file) {
+    const root = resolve(cwd);
+    for (let dir = dirname(resolve(file)); dir.startsWith(root + sep); dir = dirname(dir)) {
+        if (!existsSync(dir) || readdirSync(dir).length > 0) return;
+        rmdirSync(dir);
+    }
+}
+
 // Never overwrites a file that differs from what Brigade last wrote: that one gets a `.proposed` next to it.
 // Everything is planned first (reads only), then written, so an error while planning leaves the project untouched.
-export function installFiles({ cwd, stackDir, answers, previous }) {
+export function planFiles({ cwd, stackDir, answers, previous }) {
     const report = [];
+    const kit = new Set();
     const hashes = {};
     const writes = [];
     const removals = [];
 
     for (const source of listFiles(stackDir)) {
         const path = relative(stackDir, source).split('\\').join('/');
+        kit.add(path);
         const target = join(cwd, path);
         const content = render(readFileSync(source, 'utf8'), answers, path.endsWith('.json'));
         const mode = statSync(source).mode & 0o777;
@@ -85,7 +128,9 @@ export function installFiles({ cwd, stackDir, answers, previous }) {
             continue;
         }
 
-        const current = sha(readFileSync(target, 'utf8'));
+        const text = readFileSync(target, 'utf8');
+        const current = sha(text);
+        const settings = path === SETTINGS_PATH && current !== wanted ? mergedSettings(text, content) : null;
         if (WRITE_ONCE.has(path)) {
             report.push({ path, status: current === wanted ? 'unchanged' : 'kept' });
             continue;
@@ -100,6 +145,23 @@ export function installFiles({ cwd, stackDir, answers, previous }) {
             if (existsSync(proposed)) removals.push(proposed);
             hashes[path] = wanted;
             report.push({ path, status: 'updated' });
+        } else if (settings) {
+            // The developer's entries stay, the kit's new ones are added. The recorded hash stays the kit's, so the
+            // next update merges again instead of taking the file for an untouched one.
+            const { merged, mine } = settings;
+            if (previous?.files?.[path]) hashes[path] = previous.files[path];
+            if (existsSync(proposed)) removals.push(proposed);
+            if (isSame(merged, mine)) {
+                report.push({ path, status: 'kept' });
+            } else {
+                writes.push({ file: target, content: `${JSON.stringify(merged, null, 4)}\n`, mode });
+                report.push({ path, status: 'merged' });
+            }
+        } else if (previous?.files?.[path] === wanted) {
+            // The kit did not change this file since the last install: nothing new to propose. A proposal left by an
+            // earlier version stays, it is the developer's file now.
+            hashes[path] = wanted;
+            report.push({ path, status: 'kept' });
         } else {
             const same = existsSync(proposed) && sha(readFileSync(proposed, 'utf8')) === wanted;
             if (!same) write(proposed);
@@ -110,14 +172,42 @@ export function installFiles({ cwd, stackDir, answers, previous }) {
         }
     }
 
+    // Recorded in the manifest but no longer in the kit: removed if untouched, kept and reported if edited.
+    for (const [path, recorded] of Object.entries(previous?.files ?? {})) {
+        if (kit.has(path) || WRITE_ONCE.has(path)) continue;
+        const target = resolve(cwd, path);
+        // Only files inside the project, whatever the manifest says.
+        if (!target.startsWith(resolve(cwd) + sep) || !existsSync(target) || !statSync(target).isFile()) continue;
+
+        if (sha(readFileSync(target, 'utf8')) === recorded) {
+            removals.push(target);
+            report.push({ path, status: 'removed' });
+        } else {
+            hashes[path] = recorded;
+            report.push({ path, status: 'obsolete' });
+        }
+    }
+
+    return { report, hashes, writes, removals };
+}
+
+// The only step that writes. Directories left empty by a removal are cleaned.
+export function applyPlan(cwd, { writes, removals }) {
     for (const { file, content, mode } of writes) {
         mkdirSync(dirname(file), { recursive: true });
         writeFileSync(file, content, { mode });
         chmodSync(file, mode);
     }
-    for (const file of removals) rmSync(file, { force: true });
+    for (const file of removals) {
+        rmSync(file, { force: true });
+        pruneEmptyDirs(cwd, file);
+    }
+}
 
-    return { report, hashes };
+export function installFiles(options) {
+    const plan = planFiles(options);
+    applyPlan(options.cwd, plan);
+    return { report: plan.report, hashes: plan.hashes };
 }
 
 // The project's answers in plain English. Not a kit file: generated from the answers at every install, always overwritten.
@@ -138,20 +228,23 @@ Options of this project, referred to by \`.claude/rules/brigade.md\`.
 `;
 }
 
-export function writeOptionsFile({ cwd, answers }) {
+export function writeOptionsFile({ cwd, answers, dryRun = false }) {
     const file = join(cwd, OPTIONS_FILE);
     const content = renderOptions(answers);
     const exists = existsSync(file);
     if (exists && sha(readFileSync(file, 'utf8')) === sha(content)) return { path: OPTIONS_FILE, status: 'unchanged' };
 
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, content);
+    if (!dryRun) {
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(file, content);
+    }
     return { path: OPTIONS_FILE, status: exists ? 'updated' : 'created' };
 }
 
 const normalize = (line) => line.trim().replace(/^\//, '');
 
-export function appendMissingLines(cwd) {
+// `dryRun`: the missing lines are reported but nothing is written.
+export function appendMissingLines(cwd, dryRun = false) {
     return Object.entries(APPENDS).map(([path, lines]) => {
         const file = join(cwd, path);
         const existing = existsSync(file) ? readFileSync(file, 'utf8') : '';
@@ -161,10 +254,12 @@ export function appendMissingLines(cwd) {
         if (missing.length === 0) return { path, status: 'unchanged' };
 
         // Keep the file's own line endings.
-        const eol = existing.includes('\r\n') ? '\r\n' : '\n';
-        const separator = existing === '' || existing.endsWith('\n') ? '' : eol;
-        const gap = existing === '' ? '' : eol;
-        writeFileSync(file, `${existing}${separator}${gap}${missing.join(eol)}${eol}`);
+        if (!dryRun) {
+            const eol = existing.includes('\r\n') ? '\r\n' : '\n';
+            const separator = existing === '' || existing.endsWith('\n') ? '' : eol;
+            const gap = existing === '' ? '' : eol;
+            writeFileSync(file, `${existing}${separator}${gap}${missing.join(eol)}${eol}`);
+        }
         return { path, status: 'updated', added: missing };
     });
 }
