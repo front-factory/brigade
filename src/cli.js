@@ -98,7 +98,7 @@ function print(result, interactive) {
     prompter.done('Done. Brigade is ready.', [
         'Commit `.claude/` (with `brigade.json`) to share the install.',
         'Run `claude` here, Shift+Tab for Plan Mode.',
-        '/brigade-language, /brigade-effort and /brigade-reference-branch set your own preferences.'
+        '/brigade-settings sets your own preferences (language, effort, reference branch).'
     ]);
 }
 

@@ -12,7 +12,7 @@ A brief to a subagent states the goal, the branch, the relevant files, the const
 
 ## Git
 
-- The default branch and the reference branch of the work are protected: writing on them needs the user's confirmation. Their names are in `.claude/rules/brigade-options.md`. A developer can lift the protection of the reference branch for themselves with `/brigade-reference-branch`.
+- The default branch and the reference branch of the work are protected: writing on them needs the user's confirmation. Their names are in `.claude/rules/brigade-options.md`. A developer can lift the protection of the reference branch for themselves with `/brigade-settings`.
 - Check the current branch before any code.
 - A feature (several steps, sessions or files) = its own branch + a state file. Small work (a fix, a few files, one sitting) has neither: it ends with a commit on the current branch. Before any code, judge which it is and follow the skill `feature`: propose, wait for the user's answer, then `git-operator` creates the branch (with the user's go).
 - When the work is finished and its open questions are settled, propose the commit in one sentence. Never call `git-operator` without the user's go. The user can ask for a commit at any moment.
@@ -34,8 +34,8 @@ A brief to a subagent states the goal, the branch, the relevant files, the const
 ## Languages
 
 - Code, comments, commit messages and documentation: the languages in `.claude/rules/brigade-options.md`.
-- Replies: set by the `language` setting. The project default is in `.claude/rules/brigade-options.md`; each developer can use their own with `/brigade-language`.
+- Replies: set by the `language` setting. The project default is in `.claude/rules/brigade-options.md`; each developer can use their own with `/brigade-settings`.
 
 ## Local effort
 
-If `CLAUDE.local.md` gives an effort for a role (`implementer` or `git-operator`), pass it as the `effort` parameter when you delegate to that role. Change it with `/brigade-effort`.
+If `CLAUDE.local.md` gives an effort for a role (`implementer` or `git-operator`), pass it as the `effort` parameter when you delegate to that role. Change it with `/brigade-settings`.

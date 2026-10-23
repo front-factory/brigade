@@ -25,19 +25,19 @@ Three roles, each limited to its mission:
 | `git-operator` | Haiku (low)                | Git, nothing else, once the work is done.                                                     |
 
 Plus base rules for work, security and efficiency, adapted to the stack (web for now). The setup is shared with the
-project and committed with it. Each developer can override their own effort locally with `/brigade-effort`.
+project and committed with it. Each developer can override their own effort locally with `/brigade-settings`.
 
 The rest of the kit, all under `.claude/`:
 
 - Skills: `session-start` (where things stand before the first task), `feature` (branch + state file for multi-step
   work), `audit` (keep an audit file between sessions).
-- Commands: `/brigade-effort` (your effort per role), `/brigade-language` (your reply language) and
-  `/brigade-reference-branch` (lift the git guard's protection of the reference branch for you only), all local and
-  not committed.
+- Commands: `/brigade-settings` (your reply language, your effort per role and the git guard's protection of the
+  reference branch, in one command), all local and not committed. The older `/brigade-effort`, `/brigade-language` and
+  `/brigade-reference-branch` are still available.
 - Shared context in `context/`: `decisions.md` (team decisions), `architecture.md` (optional, read on demand), one
   state file per feature in `context/features/`, audits in `context/audits/`.
 - A git guard hook (`hooks/git-guard.mjs`) and the permissions in `settings.json`. The guard protects the default branch
-  and the reference branch. To lift the latter for yourself only, run `/brigade-reference-branch`: it sets
+  and the reference branch. To lift the latter for yourself only, run `/brigade-settings`: it sets
   `BRIGADE_UNPROTECT_REFERENCE_BRANCH=1` under `env` in `.claude/settings.local.json` (git-ignored). Restart the session
   after the change. The default branch stays protected, and push, merge, rebase and destructive commands are unchanged.
 - A status line (`hooks/statusline.mjs`) showing `Brigade v<version> · <branch>`, and a `SessionStart` hook

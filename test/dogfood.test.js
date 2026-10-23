@@ -81,3 +81,12 @@ test('the settings wire the status line and the session start hook to scripts of
     assert.match(settings.hooks.SessionStart[0].hooks[0].command, /run-node\.sh.*\.claude\/hooks\/session-start\.mjs/);
     assert.match(settings.hooks.PreToolUse[0].hooks[0].command, /run-node\.sh.*\.claude\/hooks\/git-guard\.mjs/);
 });
+
+test('the kit ships /brigade-settings next to the three legacy personal-option commands', () => {
+    const manifest = JSON.parse(readFileSync(join(ROOT, '.claude', 'brigade.json'), 'utf8'));
+    for (const name of ['settings', 'effort', 'language', 'reference-branch']) {
+        const path = `.claude/commands/brigade-${name}.md`;
+        assert.ok(manifest.files[path], `${path} is not in brigade.json`);
+        assert.match(readFileSync(join(TEMPLATES, path), 'utf8'), /^allowed-tools: Read, Write, Edit$/m);
+    }
+});

@@ -3,6 +3,8 @@ description: Lift or restore the git guard's protection of the reference branch 
 allowed-tools: Read, Write, Edit
 ---
 
+`/brigade-settings` now covers all personal settings in one command; this command stays available.
+
 The project protects its default branch and its reference branch (both named in `.claude/rules/brigade-options.md`). Ask the developer one question: keep the reference branch protected as the project does, or lift its protection for them only? The default branch stays protected either way.
 
 - **Keep**: remove `BRIGADE_UNPROTECT_REFERENCE_BRANCH` from the `env` key of `.claude/settings.local.json` if it is there (drop `env` if it ends up empty).

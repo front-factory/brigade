@@ -3,6 +3,8 @@ description: Set your own effort for the main session and the subagents (local, 
 allowed-tools: Read, Write, Edit
 ---
 
+`/brigade-settings` now covers all personal settings in one command; this command stays available.
+
 Ask the developer, in one question, which role and which level they want (`low`, `medium`, `high`):
 
 - **main session**: set `effortLevel` in `.claude/settings.local.json`.
