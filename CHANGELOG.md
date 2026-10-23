@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.4.0](https://github.com/front-factory/brigade/compare/v1.3.0...v1.4.0) (2026-10-23)
+
+### Features
+
+* **hooks:** show Brigade version in status line and session start ([ce8502c](https://github.com/front-factory/brigade/commit/ce8502c3b6dff0b202f1f44550ecca1cc303f460))
+
 ## [1.3.0](https://github.com/front-factory/brigade/compare/v1.2.2...v1.3.0) (2026-10-23)
 
 ### Features

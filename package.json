@@ -1,6 +1,6 @@
 {
     "name": "@frontfactory/brigade",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "description": "Claude Code, organized like a kitchen brigade.",
     "type": "module",
     "scripts": {
