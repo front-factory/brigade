@@ -39,6 +39,8 @@ The rest of the kit, all under `.claude/`:
 - A status line (`hooks/statusline.mjs`) showing `Brigade v<version> · <branch>`, and a `SessionStart` hook
   (`hooks/session-start.mjs`) that tells the session which Brigade version manages the project. Both only read
   `.claude/brigade.json` and `.git/HEAD`.
+- A launcher (`hooks/run-node.sh`) that runs the hooks even when `node` is not on the PATH of the non-interactive shell
+  (nvm, fnm, volta, asdf). If node is nowhere to be found, the hook is skipped with a message and the session goes on.
 
 ## Install
 

@@ -39,7 +39,7 @@
     },
     "statusLine": {
         "type": "command",
-        "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/statusline.mjs\""
+        "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/run-node.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/statusline.mjs\""
     },
     "hooks": {
         "SessionStart": [
@@ -47,7 +47,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.mjs\""
+                        "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/run-node.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.mjs\""
                     }
                 ]
             }
@@ -58,7 +58,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-guard.mjs\""
+                        "command": "sh \"$CLAUDE_PROJECT_DIR/.claude/hooks/run-node.sh\" \"$CLAUDE_PROJECT_DIR/.claude/hooks/git-guard.mjs\""
                     }
                 ]
             }
