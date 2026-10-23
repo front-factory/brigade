@@ -30,8 +30,7 @@ project and committed with it. Each developer can override their own effort loca
 The rest of the kit, all under `.claude/`:
 
 - Skills: `session-start` (where things stand before the first task), `feature` (branch + state file for multi-step
-  work),
-  `audit` (keep an audit file between sessions).
+  work), `audit` (keep an audit file between sessions).
 - Commands: `/brigade-effort` (your effort per role) and `/brigade-language` (your reply language), both local and
   not committed.
 - Shared context in `context/`: `decisions.md` (team decisions), `architecture.md` (optional, read on demand), one
@@ -40,86 +39,123 @@ The rest of the kit, all under `.claude/`:
 
 ## Install
 
-`init` detects the default branch, the package manager, the commit convention and the language, then shows what will
-be set up in one card. Choose "Install as is" (the default) or "Customize" to answer every option one by one. An option
-that cannot be detected is asked even in the express path. After "Customize", or when something had to be asked, a recap
-is shown before anything is written: "Everything is right" installs, "Change something" lets you pick the groups to
-redo (branches, package manager, commit format, languages) and shows the recap again. There are two language
-questions: the language of Claude's replies, then the language of code and docs together, or "Different for code and
-docs" to choose each apart. Customize also asks your own reply language, which stays on your machine. Cancelling writes
-nothing. `--yes` (or `-y`) accepts everything detected. `--stack <name>` forces the stack instead of detecting it (only
-`web` for now). `--dry-run` prints what an install or update would do, asks nothing and writes nothing (not even
-`.claude/brigade.json`), and lists the lines it would add to `.gitignore` and `.gitattributes`.
+Run `npx @frontfactory/brigade init` in your project. Here is what happens:
+
+1. `init` detects the default branch, the package manager, the commit convention and the language, then shows what
+   will be set up in one card.
+2. You choose "Install as is" (the default) or "Customize" to answer every option one by one. An option that cannot
+   be detected is asked even in the express path.
+3. After "Customize", or when something had to be asked, a recap is shown before anything is written. "Everything is
+   right" installs. "Change something" lets you pick the groups to redo (branches, package manager, commit format,
+   languages) and shows the recap again.
+4. Cancelling writes nothing.
+
+There are two language questions: the language of Claude's replies, then the language of code and docs together, or
+"Different for code and docs" to choose each apart. Customize also asks your own reply language, which stays on your
+machine.
+
+Options:
+
+- `--yes` (or `-y`) accepts everything detected.
+- `--stack <name>` forces the stack instead of detecting it (only `web` for now).
+- `--dry-run` prints what an install or update would do, asks nothing and writes nothing (not even
+  `.claude/brigade.json`). It also lists the lines it would add to `.gitignore` and `.gitattributes`.
 
 Brigade never touches your `CLAUDE.md`: its instructions live in `.claude/rules/brigade.md`, which Claude Code loads
 at launch like a `CLAUDE.md`.
 
-When Brigade is already installed, `init` asks whether to keep the installed version or update to the one you run.
-Updating does not repeat the setup: your answers stored in `.claude/brigade.json` are reused and only the options the
-new version added are asked (your personal reply language is not one of them). A downgrade does the same and keeps the
-answers the older version does not know. On the same version it offers to change your options (every question is asked
-again, files only change if an answer does) or to leave everything as it is. Without a terminal, it updates. In a
-terminal, an update first lists what it will do (files added, updated, merged, removed, kept with a proposal or a conflict) and asks
-you to confirm before anything is written. Declining writes nothing.
+An existing file is never overwritten silently:
 
-An existing file is never overwritten silently. If you edited a file and the kit changed it since your last install, the
-two are merged (see Update): clean merges are applied, conflicts are written to a `.proposed` next to your file. If the kit
-did not change the file, nothing happens. A file Brigade wrote and nobody touched is updated. `.gitignore` and
-`.gitattributes` only get the lines they miss. `.claude/context/decisions.md` and `.claude/context/architecture.md` are
-written once and then belong to the project: they are never updated nor proposed over.
+- A file Brigade wrote and nobody touched is updated.
+- If you edited a file and the kit changed it since your last install, the two are merged (see Update): clean merges
+  are applied, conflicts are written to a `.proposed` next to your file.
+- If the kit did not change the file, nothing happens.
+- `.gitignore` and `.gitattributes` only get the lines they miss.
+- `.claude/context/decisions.md` and `.claude/context/architecture.md` are written once and then belong to the
+  project: they are never updated nor proposed over.
 
 ## Update
 
-Re-run `npx @frontfactory/brigade init`. Kit files you never touched are updated. A file you edited is merged with
-the kit's changes, line by line, from three versions: the kit file as Brigade last installed it, your file, and the new
-kit file.
+Re-run `npx @frontfactory/brigade init`.
 
-- Your edits and the kit's changes touch different lines: the merge is applied to your file ("merged, your edits kept").
-  Line endings and file mode stay yours.
+When Brigade is already installed, `init` asks whether to keep the installed version or update to the one you run.
+Without a terminal, it updates. In a terminal, an update first lists what it will do (files added, updated, merged,
+removed, kept with a proposal or a conflict) and asks you to confirm before anything is written. Declining writes
+nothing.
+
+- Updating does not repeat the setup: your answers stored in `.claude/brigade.json` are reused and only the options
+  the new version added are asked (your personal reply language is not one of them).
+- A downgrade does the same and keeps the answers the older version does not know.
+- On the same version, `init` offers to change your options (every question is asked again, files only change if an
+  answer does) or to leave everything as it is.
+
+### What happens to your files
+
+Kit files you never touched are updated. A file you edited is merged with the kit's changes, line by line, from three
+versions: the kit file as Brigade last installed it, your file, and the new kit file.
+
+- Your edits and the kit's changes touch different lines: the merge is applied to your file ("merged, your edits
+  kept"). Line endings and file mode stay yours.
 - They touch the same lines: your file is never touched. A `<file>.proposed` is written with both versions between
-  `<<<<<<< yours`, `=======` and `>>>>>>> kit` markers, and the summary warns you. Resolve the markers, copy the result
-  into your file, then delete the `.proposed`. The proposal is written once per kit change: Brigade then counts that kit
-  version as seen, so the next updates stay silent, do not rewrite the `.proposed` and do not recreate it if you delete
-  it. It stays on disk as a reminder until you delete it, and is refreshed only if the kit changes the file again.
+  `<<<<<<< yours`, `=======` and `>>>>>>> kit` markers, and the summary warns you. Resolve the markers, copy the
+  result into your file, then delete the `.proposed`. The proposal is written once per kit change: Brigade then counts
+  that kit version as seen, so the next updates stay silent, do not rewrite the `.proposed` and do not recreate it if
+  you delete it. It stays on disk as a reminder until you delete it, and is refreshed only if the kit changes the file
+  again.
 - The kit did not change the file: your file is left alone and nothing is proposed.
+- You deleted a kit file: it is recreated at the next update, as the entries of `settings.json` are.
 
-The kit file as last installed is kept in `.claude/brigade-base/` (one copy per file Brigade manages, under its path
-without the leading `.claude/`, e.g. `.claude/brigade-base/rules/brigade.md`, so that no nested `.claude` folder exists). It is the common ancestor of the merge. Commit it with the rest of `.claude/`: it is shared like the
-install, and the merge gives the same result on every machine. Do not edit it by hand; it is rewritten by every update
-and removed with a file the kit drops. Files written once (`decisions.md`, `architecture.md`) and the generated options
-file have none.
+A file the kit no longer ships is reported. If it is still exactly what Brigade wrote, it is removed (and the
+directories it leaves empty); if you edited it, it is kept and reported again at each update until you delete it.
+Brigade only ever removes files recorded in `.claude/brigade.json`.
+
+### Base copies
+
+The kit file as last installed is kept in `.claude/brigade-base/`. It is the common ancestor of the merge.
+
+- There is one copy per file Brigade manages, under its path without the leading `.claude/`, e.g.
+  `.claude/brigade-base/rules/brigade.md`, so that no nested `.claude` folder exists.
+- Commit it with the rest of `.claude/`: it is shared like the install, and the merge gives the same result on every
+  machine.
+- Do not edit it by hand: it is rewritten by every update and removed with a file the kit drops.
+- Files written once (`decisions.md`, `architecture.md`) and the generated options file have none.
 
 Installs made before the base copies existed have no base yet. For those, the first update falls back to a whole-file
-`<file>.proposed` for an edited file the kit changed (diff it, merge what you want, delete the `.proposed`), and stores
-the new kit version as the base, so the next updates merge (and the proposal is not written again until the kit changes). A base that is missing or unreadable is treated the same way.
+`<file>.proposed` for an edited file the kit changed (diff it, merge what you want, delete the `.proposed`), and
+stores the new kit version as the base, so the next updates merge (and the proposal is not written again until the kit
+changes). A base that is missing or unreadable is treated the same way.
+
+### Older installs
 
 Older installs had your options written inside `.claude/rules/brigade.md`. They now live in the generated
 `.claude/rules/brigade-options.md`, and `brigade.md` is pure kit. If you never edited your `brigade.md`, it is updated
 silently. If you did (or the manifest is lost), a `brigade.md.proposed` is written with a note: merge it, or delete
 your edits and re-run.
 
-A file the kit no longer ships is reported. If it is still exactly what Brigade wrote, it is removed (and the
-directories it leaves empty); if you edited it, it is kept and reported again at each update until you delete it.
-Brigade only ever removes files recorded in `.claude/brigade.json`.
+### settings.json
 
-`.claude/settings.json` is merged by keys instead of being merged by lines: your additions stay, the entries the kit
-adds (permissions, hooks) are appended, nothing is duplicated and your own values win. An entry the kit removed or
-changed (a hook command, for instance) is removed from your file if you did not change it, so a changed hook is
-replaced instead of duplicated; an entry you changed stays. An entry you deleted on purpose comes back at the next
-update. If the file is not valid JSON, a `settings.json.proposed` is written as for any other file. Without a base
-(older install) entries the kit removed or changed are not removed from your file.
+`.claude/settings.json` is merged by keys instead of being merged by lines:
+
+- Your additions stay, and your own values win.
+- The entries the kit adds (permissions, hooks) are appended, and nothing is duplicated.
+- An entry the kit removed or changed (a hook command, for instance) is removed from your file if you did not change
+  it, so a changed hook is replaced instead of duplicated. An entry you changed stays.
+- An entry you deleted on purpose comes back at the next update.
+- If the file is not valid JSON, a `settings.json.proposed` is written as for any other file.
+- Without a base (older install), entries the kit removed or changed are not removed from your file.
+
+### Changing your options and the manifest
 
 To change your options on purpose, run `init` again on the same version and choose "Change my options" (see Install).
 
 Brigade records what it did in `.claude/brigade.json`: its version, your answers and the sha256 of each file it wrote.
 That is how it tells an untouched file from an edited one. Do not edit it by hand. Commit it with the rest of
-`.claude/`:
-the install is shared by the whole team, and anyone can then update it from any machine.
+`.claude/`: the install is shared by the whole team, and anyone can then update it from any machine.
 
 ## Troubleshooting
 
-- `Unknown stack` or `Unknown option` from `init`: only `--yes` (`-y`), `--dry-run` and `--stack <name>` exist, and `web` is the only
-  stack for now. Run `npx @frontfactory/brigade --help` to see the usage.
+- `Unknown stack` or `Unknown option` from `init`: only `--yes` (`-y`), `--dry-run` and `--stack <name>` exist, and
+  `web` is the only stack for now. Run `npx @frontfactory/brigade --help` to see the usage.
 - `.proposed` files keep coming back: a proposal is written once per kit change, then stays until you delete it. Later
   updates neither rewrite nor recreate it unless the kit changes that file again. Once you have merged what you want,
   delete the `.proposed`.
@@ -130,6 +166,9 @@ the install is shared by the whole team, and anyone can then update it from any 
 - No terminal (CI, pipe): nothing is asked. `init` behaves like `--yes`: a new install accepts every detected answer, an
   existing install is updated with its stored answers, and a new option gets its detected or default value. The run
   prints one line naming the new options and the value used; it never fails for that.
+- `init` failed while writing (disk full, a path blocked by a file...): writes are not atomic. The files already
+  written stay, and `.claude/brigade.json` still holds the previous install. Fix the cause and run `init` again: it
+  converges (a file already matching the kit is seen as unchanged and the manifest is corrected).
 - "No git repository" warning: run `git init` yourself. Brigade never creates a repository.
 - A broken `.claude/settings.local.json` (invalid JSON) is left untouched, so your personal language is not written
   there. Fix the file and run `init` again.
@@ -167,5 +206,8 @@ answers reach it through `.claude/rules/brigade-options.md`, which Brigade gener
 `npm test` runs the tests (`node --test`, no dependency). Commits follow Conventional Commits, checked by commitlint.
 Node >= 24 is required.
 
-Releases are automatic: on a push to `main` or `beta`, once the tests pass, the CI runs semantic-release, which
-derives the version from the commits, updates the changelog and publishes `@frontfactory/brigade` to npm.
+The CI runs the tests on every push to `main`, `develop` and `beta`, and on pull requests to these branches.
+
+Releases are automatic: on a push to `main` or `beta` (not `develop`, not pull requests), once the tests pass, the CI
+runs semantic-release, which derives the version from the commits, updates the changelog and publishes
+`@frontfactory/brigade` to npm.

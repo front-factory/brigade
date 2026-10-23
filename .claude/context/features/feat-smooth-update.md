@@ -31,6 +31,7 @@ Make the update between two Brigade versions smooth, non-destructive and effecti
 - Not verified yet: a run over several real published versions in a row; Windows paths/CRLF in the base copy; how Claude Code treats `.claude/brigade-base/` (flat paths chosen to avoid nested `.claude` folders).
 - `installFiles` is split into `planFiles` (reads only) and `applyPlan` (writes); `runInit` inserts the preview between them.
 - A file the developer edited and the kit did not change since the last install is `kept`: no `.proposed`, recorded hash unchanged. A `.proposed` left by an earlier version is left alone (never deleted silently), it is removed only once the target matches the kit.
+- README reworked for readability (Install and Update split into short paragraphs and bullets); added the recreated deleted kit file, the non-atomic write bullet and the exact CI triggers.
 
 ## Step 4: three-way merge
 
