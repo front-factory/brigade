@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -81,6 +82,10 @@ test('the plain summary lists the files, the recap and the next step', () => {
 test('the plain summary shows a kept file and its proposal', () => {
     const first = brigade(['init', '--yes']);
     writeFileSync(join(first.cwd, '.claude/rules/brigade.md'), 'mine\n');
+    const file = join(first.cwd, '.claude/brigade.json');
+    const manifest = JSON.parse(readFileSync(file, 'utf8'));
+    manifest.files['.claude/rules/brigade.md'] = 'an older kit version';
+    writeFileSync(file, JSON.stringify(manifest));
     const { code, out, cwd } = brigade(['init', '--yes'], first.cwd);
     assert.equal(code, 0);
     assert.match(out, /^yours kept, proposal written +\.claude\/rules\/brigade\.md\.proposed$/m);
@@ -98,4 +103,29 @@ test('the plain summary names the options added by an update', () => {
     const { code, out } = brigade(['init', '--yes'], first.cwd);
     assert.equal(code, 0);
     assert.match(out, /^New options, default used: .*docsLanguage: English$/m);
+});
+
+test('--dry-run lists what would be written and writes nothing', () => {
+    const { code, out, cwd } = brigade(['init', '--dry-run']);
+    assert.equal(code, 0);
+    assert.match(out, /^Brigade dry run \(stack: web\)\. Nothing was written\./);
+    assert.match(out, /^would be added +\.claude\/rules\/brigade\.md$/m);
+    assert.match(out, /Run without --dry-run to apply\./);
+    assert.ok(!existsSync(join(cwd, '.claude')));
+});
+
+test('--help documents --dry-run', () => {
+    assert.match(brigade(['--help']).out, /--dry-run/);
+});
+
+test('the plain summary reports a file removed from the kit', () => {
+    const first = brigade(['init', '--yes']);
+    const file = join(first.cwd, '.claude/brigade.json');
+    const manifest = JSON.parse(readFileSync(file, 'utf8'));
+    writeFileSync(join(first.cwd, 'old.md'), 'old\n');
+    manifest.files['old.md'] = createHash('sha256').update('old\n').digest('hex');
+    writeFileSync(file, JSON.stringify(manifest));
+    const { out } = brigade(['init', '--yes'], first.cwd);
+    assert.match(out, /^removed, no longer in the kit +old\.md$/m);
+    assert.ok(!existsSync(join(first.cwd, 'old.md')));
 });

@@ -4,29 +4,23 @@ import { runInit } from './init.js';
 import { recapRows } from './options.js';
 import { STACKS } from './stacks.js';
 import { VERSION } from './version.js';
+import { CHANGING, PREVIEW_WORDS, WORDS } from './words.js';
 
-const HELP = `Usage: brigade init [--yes] [--stack <name>]
+const HELP = `Usage: brigade init [--yes] [--dry-run] [--stack <name>]
        brigade --version
 
   --yes           accept every detected or default answer, ask nothing
                   (an installed project is updated with its stored answers; new options get their default)
+  --dry-run       list what an install or update would do, write nothing, ask nothing
   --stack <name>  force the stack (${Object.keys(STACKS).join(', ')}); detected otherwise
   -h, --help      show this help
   -v, --version   show the version
 `;
 
-const WORDS = {
-    created: 'added',
-    updated: 'updated',
-    unchanged: 'already up to date',
-    kept: 'yours kept',
-    proposed: 'yours kept, proposal written'
-};
-
 function parse(args) {
     let values;
     try {
-        ({ values } = parseArgs({ args, options: { yes: { type: 'boolean', short: 'y' }, stack: { type: 'string' } } }));
+        ({ values } = parseArgs({ args, options: { yes: { type: 'boolean', short: 'y' }, 'dry-run': { type: 'boolean' }, stack: { type: 'string' } } }));
     } catch (error) {
         const arg = /'([^']+)'/.exec(error.message)?.[1];
         if (error.code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE' && arg?.startsWith('--stack')) {
@@ -37,7 +31,7 @@ function parse(args) {
         }
         throw error;
     }
-    const options = { yes: values.yes ?? false, stack: values.stack };
+    const options = { yes: values.yes ?? false, dryRun: values['dry-run'] ?? false, stack: values.stack };
     if (options.stack === '') throw new Error(`--stack needs a value (${Object.keys(STACKS).join(', ')})`);
     if (options.stack && !STACKS[options.stack]) throw new Error(`Unknown stack: ${options.stack}`);
     return options;
@@ -46,15 +40,17 @@ function parse(args) {
 // Plain-text rows, the label padded to a common column.
 const plain = (rows) => rows.map(([label, value]) => `${label.padEnd(17)}${value}`).join('\n');
 
-function summary({ version, answers, report, ignored, repo, personal, local, asked = [] }) {
+function summary({ version, answers, report, ignored, repo, personal, local, dryRun, asked = [] }) {
+    const words = dryRun ? PREVIEW_WORDS : WORDS;
     const files = report.map(({ path, status }) => ({
-        done: status === 'created' || status === 'updated',
+        done: CHANGING.has(status),
         label: `${path}${status === 'proposed' ? '.proposed' : ''}`,
-        detail: WORDS[status],
-        plain: `${WORDS[status].padEnd(28)} ${path}${status === 'proposed' ? '.proposed' : ''}`
+        detail: words[status],
+        plain: `${words[status].padEnd(28)} ${path}${status === 'proposed' ? '.proposed' : ''}`
     }));
     for (const { path, status, added } of ignored) {
-        if (status === 'updated') files.push({ done: true, label: path, detail: `lines added (${added.join(', ')})`, plain: `${'lines added'.padEnd(28)} ${path} (${added.join(', ')})` });
+        const wording = dryRun ? 'lines would be added' : 'lines added';
+        if (status === 'updated') files.push({ done: true, label: path, detail: `${wording} (${added.join(', ')})`, plain: `${wording.padEnd(28)} ${path} (${added.join(', ')})` });
     }
 
     const notes = report.filter(({ note }) => note).map(({ path, note }) => `${path}: ${note}`);
@@ -78,6 +74,12 @@ function print(result, interactive) {
     }
 
     const { files, notes, rows, added, kept, repo } = summary(result);
+
+    if (result.dryRun) {
+        const news = added ? `\n\nNew options, default used: ${added}` : '';
+        console.log(`Brigade dry run (stack: ${result.stack}). Nothing was written.\n\n${plainFiles(files, notes)}\n\n${plain(rows)}${news}\n\nRun without --dry-run to apply.`);
+        return;
+    }
 
     if (!interactive) {
         const news = added ? `\n\nNew options, default used: ${added}` : '';
@@ -122,7 +124,7 @@ export async function main(argv) {
 
     try {
         const options = parse(rest);
-        const interactive = Boolean(process.stdin.isTTY) && !options.yes;
+        const interactive = Boolean(process.stdin.isTTY) && !options.yes && !options.dryRun;
         print(await runInit({ cwd: process.cwd(), interactive, ...options }), interactive);
         return 0;
     } catch (error) {

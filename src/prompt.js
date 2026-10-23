@@ -45,6 +45,12 @@ export function createPrompter({ interactive }) {
         return keep ? detected : pick();
     }
 
+    // A yes/no question. Nothing is asked without a dev: yes.
+    async function confirm(message) {
+        if (!interactive) return true;
+        return answer(p.confirm({ message, initialValue: true }));
+    }
+
     // Several values among `options` ([{ value, label, hint? }]), at least one. Nothing is asked without a dev.
     async function multi(message, options) {
         if (!interactive) return [];
@@ -57,6 +63,7 @@ export function createPrompter({ interactive }) {
         text,
         interactive,
         choose,
+        confirm,
         multi,
         validate,
         banner: when((version) => console.log(ui.banner(version))),

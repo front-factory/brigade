@@ -1,9 +1,10 @@
 import { isGitRepo } from './detect.js';
-import { appendMissingLines, hasKitFiles, installFiles, MANIFEST, readManifest, writeLocalSettings, writeManifest, writeOptionsFile } from './install.js';
+import { appendMissingLines, applyPlan, hasKitFiles, MANIFEST, planFiles, readManifest, writeLocalSettings, writeManifest, writeOptionsFile } from './install.js';
 import { askOptions } from './options.js';
 import { createPrompter } from './prompt.js';
 import { DEFAULT_STACK, STACKS, detectStack } from './stacks.js';
 import { VERSION, compareVersions } from './version.js';
+import { CHANGING, PREVIEW_WORDS } from './words.js';
 
 // Asked whenever Brigade is already installed. The first option is the answer when nothing can be asked.
 async function chooseVersion({ prompter, installed, version }) {
@@ -31,7 +32,22 @@ async function chooseVersion({ prompter, installed, version }) {
     );
 }
 
-export async function runInit({ cwd, yes = false, stack, stackDir, version = VERSION, interactive = process.stdin.isTTY && !yes, prompter }) {
+// Lists the files that change and asks to go on. Nothing to change: nothing to ask.
+async function confirmChanges({ prompter, report }) {
+    const changes = report.filter(({ status }) => CHANGING.has(status) || status === 'proposed' || status === 'obsolete');
+    prompter.info('What this update will do:');
+    prompter.files(changes.map(({ path, status }) => ({
+        done: CHANGING.has(status),
+        label: `${path}${status === 'proposed' ? '.proposed' : ''}`,
+        detail: PREVIEW_WORDS[status]
+    })));
+    const untouched = report.length - changes.length;
+    prompter.info(`${untouched} other file${untouched === 1 ? '' : 's'} already up to date or yours, left alone.`);
+    return changes.length === 0 || prompter.confirm('Apply these changes?');
+}
+
+// `dryRun`: nothing is asked and nothing is written, the result lists what a real run would do.
+export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDir, version = VERSION, interactive = process.stdin.isTTY && !yes && !dryRun, prompter }) {
     const name = stack ?? detectStack(cwd);
     const dir = stackDir ?? (STACKS[name] ?? STACKS[DEFAULT_STACK]).dir;
     const previous = readManifest(cwd);
@@ -58,7 +74,20 @@ export async function runInit({ cwd, yes = false, stack, stackDir, version = VER
     const update = choice === 'update' && installed !== version;
     const { answers, personal, asked } = await askOptions({ cwd, prompter, previous: previous?.answers ?? {}, full: !update });
 
-    const { report, hashes } = installFiles({ cwd, stackDir: dir, answers, previous });
+    const plan = planFiles({ cwd, stackDir: dir, answers, previous });
+    const { report, hashes } = plan;
+    if (dryRun) {
+        report.push(writeOptionsFile({ cwd, answers, dryRun }));
+        const ignored = appendMissingLines(cwd, dryRun);
+        return { dryRun, version, stack: name, answers, report, ignored, repo, prompter, personal: {}, local: null, asked };
+    }
+
+    // An update shows what it will change before writing anything.
+    if (previous && prompter.interactive && !await confirmChanges({ prompter, report })) {
+        return { kept: installed, stack: previous.stack ?? name, answers: previous.answers, report: [], ignored: [], repo, prompter, personal: {}, local: null };
+    }
+
+    applyPlan(cwd, plan);
     report.push(writeOptionsFile({ cwd, answers }));
     writeManifest({ cwd, version, stack: name, answers, hashes });
     const ignored = appendMissingLines(cwd);

@@ -68,3 +68,7 @@ test('with a terminal the display helpers print', async () => {
         assert.ok(out.includes(text), text);
     }
 });
+
+test('without a terminal a confirmation is a yes', async () => {
+    assert.equal(await createPrompter({ interactive: false }).confirm('Go on?'), true);
+});
