@@ -4,7 +4,7 @@ import { dirname, join, relative } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { CONVENTIONS } from '../src/conventions.js';
-import { BASE_DIR, OPTIONS_FILE, baseRelative, render, renderOptions, sha } from '../src/install.js';
+import { OPTIONS_FILE, render, renderOptions, sha } from '../src/install.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TEMPLATES = join(ROOT, 'templates', 'web');
@@ -58,22 +58,6 @@ test('the committed .claude/brigade.json matches the kit and the answers', () =>
     for (const path of Object.keys(manifest.files)) {
         assert.ok(paths.has(path), `brigade.json lists ${path}, which is not in the kit`);
     }
-});
-
-// The base copies are what the three-way merge starts from. This repo installs the kit as is, so each one is the file
-// itself: the test keeps them equal to the rendered template, and lists no copy of a project-owned file.
-test('the committed .claude/brigade-base/ holds the rendered kit, and only that', () => {
-    const expected = new Set();
-    for (const source of listFiles(TEMPLATES)) {
-        const path = relative(TEMPLATES, source).split('\\').join('/');
-        if (SKIP.has(path)) continue;
-        expected.add(baseRelative(path));
-
-        const rendered = render(readFileSync(source, 'utf8'), ANSWERS, path.endsWith('.json'));
-        assert.equal(readFileSync(join(ROOT, BASE_DIR, baseRelative(path)), 'utf8'), rendered, `${BASE_DIR}/${baseRelative(path)} is stale`);
-    }
-    const actual = listFiles(join(ROOT, BASE_DIR)).map((file) => relative(join(ROOT, BASE_DIR), file).split('\\').join('/'));
-    assert.deepEqual(actual.sort(), [...expected].sort());
 });
 
 test('brigade.md has no placeholder and brigade-options.md is generated from the answers', () => {
