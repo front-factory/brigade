@@ -1,7 +1,7 @@
 # Feature: Smooth update (branch feat/smooth-update)
 
 Date: 2026-10-23
-Last commit: 7461d57
+Last commit: 95a3703
 Base branch: develop
 
 ## Goal
@@ -25,6 +25,10 @@ Make the update between two Brigade versions smooth, non-destructive and effecti
 
 ## Notes
 
+- Tests added in `test/install.test.js`: a kit file deleted by the developer is recreated (base and manifest consistent); a write error midway is not atomic (earlier writes stay) but the manifest keeps the old state and a re-run converges.
+- For later: step 5 (excerpt of CHANGELOG.md between the installed and the new version, shown in the update preview) is not started; deferred by the user.
+- Not pushed yet (6 commits + this note). Push needs the user's confirmation. The branch tracks `origin/develop` (created from it): push with `git push -u origin feat/smooth-update`, never a bare `git push`.
+- Not verified yet: a run over several real published versions in a row; Windows paths/CRLF in the base copy; how Claude Code treats `.claude/brigade-base/` (flat paths chosen to avoid nested `.claude` folders).
 - `installFiles` is split into `planFiles` (reads only) and `applyPlan` (writes); `runInit` inserts the preview between them.
 - A file the developer edited and the kit did not change since the last install is `kept`: no `.proposed`, recorded hash unchanged. A `.proposed` left by an earlier version is left alone (never deleted silently), it is removed only once the target matches the kit.
 
