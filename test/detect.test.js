@@ -123,3 +123,15 @@ test('the language comes from LC_ALL, then LC_MESSAGES, then LANG', () => {
     assert.equal(detectLanguage({ LANG: 'ja_JP.UTF-8' }), '');
     assert.equal(detectLanguage({}), '');
 });
+
+test('the conventional format states the Conventional Commits 1.0.0 rules', () => {
+    const { format } = CONVENTIONS.conventional;
+    for (const type of ['feat', 'fix', 'build', 'chore', 'ci', 'docs', 'perf', 'refactor', 'revert', 'style', 'test']) {
+        assert.ok(format.includes(`\`${type}\``), `${type} is missing`);
+    }
+    assert.match(format, /`!` before the colon/);
+    assert.match(format, /BREAKING CHANGE: <description>/);
+    assert.match(format, /body starts after one blank line/);
+    assert.match(format, /footers come after a blank line/);
+    assert.match(format, /72 characters max\./);
+});

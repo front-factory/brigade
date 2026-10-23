@@ -1,18 +1,18 @@
 {
-    "version": "1.4.0",
+    "version": "1.5.0",
     "stack": "web",
     "answers": {
         "defaultBranch": "main",
         "baseBranch": "develop",
         "packageManager": "npm",
         "commitConvention": "conventional",
-        "commitFormat": "Conventional Commits: `type(scope): description` (`feat`, `fix`, `chore`, `refactor`, `docs`, `test`), imperative mood, 72 characters max.",
+        "commitFormat": "Conventional Commits: `type(scope): description` with the types `feat` (new feature), `fix` (bug fix), `build`, `chore`, `ci`, `docs`, `perf`, `refactor`, `revert`, `style`, `test`; the scope is optional, a noun naming a section of the codebase; breaking change (major): `!` before the colon (`feat(api)!: description`) or a footer `BREAKING CHANGE: <description>`; the body starts after one blank line; footers come after a blank line, each token with `-` instead of spaces (`Refs: #12`); imperative mood, 72 characters max.",
         "replyLanguage": "French",
         "codeLanguage": "English",
         "docsLanguage": "English"
     },
     "files": {
-        ".claude/agents/git-operator.md": "b94194d221da5749c3ff3e836e663d30b4d3c761c2bcebca77083916e784d622",
+        ".claude/agents/git-operator.md": "98fa3c61541131cb2b25e0c13c0d3672025ff261e60d11e297acafed5515d8f4",
         ".claude/agents/implementer.md": "bfe9a58f46757a42f49f762206bbce67a48ad679b2fb6416463adfad4ed7f34f",
         ".claude/commands/brigade-effort.md": "3eb4ff6d78cf0f091f3bbd45bfeb1c448f8c879ee348be1650651b8c1a833a46",
         ".claude/commands/brigade-language.md": "ad8d15e5d80ff36b0a734478e94fc9ed10ff472dd4ed199be0fb8dffcd23983e",
