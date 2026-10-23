@@ -44,6 +44,7 @@ test('installs the skills and the context folder, decisions.md and architecture.
     const cwd = project();
     await runInit({ cwd, yes: true });
     for (const file of [
+        'hooks/git-guard.mjs', 'hooks/statusline.mjs', 'hooks/session-start.mjs',
         'skills/audit/SKILL.md', 'skills/feature/SKILL.md', 'skills/session-start/SKILL.md',
         'context/architecture.md', 'context/decisions.md', 'context/local-template.md', 'context/audits/_template.md',
         'context/features/_template.md'

@@ -90,3 +90,9 @@ test('the settings deny the lockfiles of every supported package manager', () =>
         assert.ok(settings.permissions.deny.includes(`Read(./${lock})`), `${lock} is not denied`);
     }
 });
+
+test('the settings wire the status line and the session start hook to scripts of the kit', () => {
+    const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
+    assert.match(settings.statusLine.command, /\.claude\/hooks\/statusline\.mjs/);
+    assert.match(settings.hooks.SessionStart[0].hooks[0].command, /\.claude\/hooks\/session-start\.mjs/);
+});
