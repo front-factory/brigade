@@ -48,7 +48,8 @@ redo (branches, package manager, commit format, languages) and shows the recap a
 questions: the language of Claude's replies, then the language of code and docs together, or "Different for code and
 docs" to choose each apart. Customize also asks your own reply language, which stays on your machine. Cancelling writes
 nothing. `--yes` (or `-y`) accepts everything detected. `--stack <name>` forces the stack instead of detecting it (only
-`web` for now).
+`web` for now). `--dry-run` prints what an install or update would do, asks nothing and writes nothing (not even
+`.claude/brigade.json`), and lists the lines it would add to `.gitignore` and `.gitattributes`.
 
 Brigade never touches your `CLAUDE.md`: its instructions live in `.claude/rules/brigade.md`, which Claude Code loads
 at launch like a `CLAUDE.md`.
@@ -57,10 +58,12 @@ When Brigade is already installed, `init` asks whether to keep the installed ver
 Updating does not repeat the setup: your answers stored in `.claude/brigade.json` are reused and only the options the
 new version added are asked (your personal reply language is not one of them). A downgrade does the same and keeps the
 answers the older version does not know. On the same version it offers to change your options (every question is asked
-again, files only change if an answer does) or to leave everything as it is. Without a terminal, it updates.
+again, files only change if an answer does) or to leave everything as it is. Without a terminal, it updates. In a
+terminal, an update first lists what it will do (files added, updated, merged, removed, kept with a proposal) and asks
+you to confirm before anything is written. Declining writes nothing.
 
-An existing file is never overwritten. If it differs from the kit, a `.proposed` file is written next to it; if it is
-identical, nothing happens. A file Brigade wrote and nobody touched is updated. `.gitignore` and `.gitattributes` only
+An existing file is never overwritten. If it differs from the kit and the kit changed it since your last install, a
+`.proposed` file is written next to it; if it is identical, or the kit did not change it, nothing happens. A file Brigade wrote and nobody touched is updated. `.gitignore` and `.gitattributes` only
 get the lines they miss. `.claude/context/decisions.md` and `.claude/context/architecture.md` are written once and then
 belong to the
 project: they are never updated nor proposed over.
@@ -68,12 +71,21 @@ project: they are never updated nor proposed over.
 ## Update
 
 Re-run `npx @frontfactory/brigade init`. Kit files you never touched are updated. A file you edited is left as it is
-and a `<file>.proposed` is written next to it: diff it, merge what you want, then delete the `.proposed`.
+and, if the kit changed that file, a `<file>.proposed` is written next to it: diff it, merge what you want, then delete the `.proposed`.
 
 Older installs had your options written inside `.claude/rules/brigade.md`. They now live in the generated
 `.claude/rules/brigade-options.md`, and `brigade.md` is pure kit. If you never edited your `brigade.md`, it is updated
 silently. If you did (or the manifest is lost), a `brigade.md.proposed` is written with a note: merge it, or delete
 your edits and re-run.
+
+A file the kit no longer ships is reported. If it is still exactly what Brigade wrote, it is removed (and the
+directories it leaves empty); if you edited it, it is kept and reported again at each update until you delete it.
+Brigade only ever removes files recorded in `.claude/brigade.json`.
+
+`.claude/settings.json` is merged by keys instead of being proposed: your additions stay, the entries the kit adds
+(permissions, hooks) are appended, nothing is duplicated and your own values win. An entry you deleted on purpose
+comes back at the next update, and an entry the kit removed or changed is not removed from your file. If the file is
+not valid JSON, a `settings.json.proposed` is written as for any other file.
 
 To change your options on purpose, run `init` again on the same version and choose "Change my options" (see Install).
 
@@ -84,7 +96,7 @@ the install is shared by the whole team, and anyone can then update it from any 
 
 ## Troubleshooting
 
-- `Unknown stack` or `Unknown option` from `init`: only `--yes` (`-y`) and `--stack <name>` exist, and `web` is the only
+- `Unknown stack` or `Unknown option` from `init`: only `--yes` (`-y`), `--dry-run` and `--stack <name>` exist, and `web` is the only
   stack for now. Run `npx @frontfactory/brigade --help` to see the usage.
 - `.proposed` files keep coming back: a proposal is rewritten only when the kit changed since the last one. Once you
   have
