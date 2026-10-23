@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.5.0](https://github.com/front-factory/brigade/compare/v1.4.0...v1.5.0) (2026-10-23)
+
+### Features
+
+* **commands:** add /brigade-reference-branch ([09253c1](https://github.com/front-factory/brigade/commit/09253c1a7e622329b41f42e0fcff9eedb02742e4))
+* **hooks:** let a developer lift the reference branch guard ([ff73a87](https://github.com/front-factory/brigade/commit/ff73a878653383f01f740504a04b600d5d5d878d))
+
+### Bug Fixes
+
+* **brigade:** record run-node.sh in the manifest ([0b870fc](https://github.com/front-factory/brigade/commit/0b870fc8a5293103c048f3d08909af6d3aa303d7))
+* **hooks:** find node outside the interactive PATH ([72a62db](https://github.com/front-factory/brigade/commit/72a62db2d71a07f10119f7bf1d3468a465e093d2))
+* **hooks:** run the launcher tests on Windows ([fc8707c](https://github.com/front-factory/brigade/commit/fc8707cd8bf3c6e89c5a28f11d4654e950745433))
+
 ## [1.4.0](https://github.com/front-factory/brigade/compare/v1.3.0...v1.4.0) (2026-10-23)
 
 ### Features
