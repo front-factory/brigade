@@ -34,7 +34,12 @@
             "Read(./bun.lock)",
             "Read(./bun.lockb)",
             "Read(./dist/**)",
-            "Read(./build/**)"
+            "Read(./build/**)",
+            "Read(./.next/**)",
+            "Read(./coverage/**)",
+            "Read(./.git/**)",
+            "Read(./**/*.map)",
+            "Read(./**/*.min.js)"
         ]
     },
     "statusLine": {

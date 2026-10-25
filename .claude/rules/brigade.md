@@ -29,7 +29,6 @@ A brief to a subagent states the goal, the branch, the relevant files, the const
 - Never read or write secrets (`.env*`, keys, tokens).
 - Say so before adding a dependency.
 - Validate input on the server side. Never log sensitive data.
-- Do not read `node_modules`, lockfiles or build output.
 - When you are about to report findings (two or more problems) from reviewing existing code, invoke the skill `audit` and have the audit file written before replying or fixing anything.
 
 ## Languages

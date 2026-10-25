@@ -25,8 +25,8 @@
         ".claude/hooks/run-node.sh": "7cfb164e7fa72107a44f427d78ccd70d1297ae3bc25c2f935c6bc1318d825bba",
         ".claude/hooks/session-start.mjs": "a1ee1275d2cd8317fae2e047c23e90ff1b897e8473c124ccf5a6b99e53af437b",
         ".claude/hooks/statusline.mjs": "aaee922df46149f88ad72c64fc101eacf3744992e61188d29530a916183cb5bb",
-        ".claude/rules/brigade.md": "8e33dc5a81bf69ed664b6fa102d189c7c87111860be4ca64355d194cd5c59fcc",
-        ".claude/settings.json": "37f3a010d3fc1a69ddca982ce9970d1ff3f8b7acb9befb17fad76eece83cec47",
+        ".claude/rules/brigade.md": "f97456a0f649e953bb621ca716466de8905f133d4490eb53639a6a80e8aca3b0",
+        ".claude/settings.json": "db40bae8cd285c09c0a471a0738d98503caa44c30d6551af86f12783b2036d59",
         ".claude/skills/audit/SKILL.md": "96af6da83aa98221bcd05c48b67d05300a062262968cc0b3a0892c3f10cc2167",
         ".claude/skills/feature/SKILL.md": "5faed5be1068fc5bb1578d6b395f4750c4e14a2bb075d9412f896469f7cc19b5",
         ".claude/skills/session-start/SKILL.md": "357c8c673a27e00e47c6f8ee4ba6e22fe6013f682a20c0bebd3ad7fc40c2d83a"
