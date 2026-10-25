@@ -52,8 +52,8 @@ Status: open
 | R2 | - | repo | No lint/format tooling (only `.editorconfig`). | open | |
 | R3 | low | CI | Dotfiles ARE packaged (`npm pack --dry-run`: 29 files, 24.7 kB, all `templates/web/.claude/**` present); only a CI guard (`npm pack --dry-run` check) is missing. | fixed | Added test/pack.test.js: `npm pack --dry-run --json` must list bin, src and every templates/web file (dotfiles included). |
 | R4 | - | release | Publish with npm Trusted Publishing (OIDC) instead of `NPM_TOKEN`. | open | |
-| R5 | low | Dependabot | Add `groups` and a `commit-message` prefix compatible with commitlint. `reviewers` in dependabot.yml is deprecated by GitHub: use a CODEOWNERS file. | open | |
-| R6 | low | .gitignore | Lacks `.DS_Store`, `.env*`, `coverage/`; ignoring `*.map` is debatable. | open | |
+| R5 | low | Dependabot | Add `groups` and a `commit-message` prefix compatible with commitlint. `reviewers` in dependabot.yml is deprecated by GitHub: use a CODEOWNERS file. | fixed | Commit-message prefixes, groups added; reviewers replaced by CODEOWNERS. |
+| R6 | low | .gitignore | Lacks `.DS_Store`, `.env*`, `coverage/`; ignoring `*.map` is debatable. | fixed | `.DS_Store` added, `*.map` removed; `.env*` and `coverage/` deliberately not added. |
 | R7 | low | hooks | No `pre-push` hook running `npm test`. | wontfix (low value) | Tests are fast and CI already runs them on ubuntu, macOS and Windows; a pre-push hook is bypassable with --no-verify and only slows pushes. |
 | R8 | medium | .github/workflows/ci.yml | Actions not pinned by SHA in the `publish` job (has `id-token: write`); no `concurrency`, no `timeout-minutes`; `actions: read` unused. | fixed | actions pinned by SHA, `concurrency` and `timeout-minutes` added, `actions: read` removed. |
 | R9 | medium | .github/workflows/ci.yml | Tests only on ubuntu; the CLI runs on dev machines (macOS/Windows). Add an OS matrix (relates to T4). | fixed | test job runs on ubuntu, macOS and Windows (Node 24, `fail-fast: false`); Windows/macOS runs not verified locally. |
