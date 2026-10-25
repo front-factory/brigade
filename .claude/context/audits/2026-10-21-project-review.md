@@ -51,7 +51,7 @@ Status: open
 | R1 | - | CI | The matrix has a single Node (24) while the comment promises every `engines` version. | fixed | Matrix: Node 24 on ubuntu, macOS and Windows, plus the latest Node on ubuntu. |
 | R2 | - | repo | No lint/format tooling (only `.editorconfig`). | open | |
 | R3 | low | CI | Dotfiles ARE packaged (`npm pack --dry-run`: 29 files, 24.7 kB, all `templates/web/.claude/**` present); only a CI guard (`npm pack --dry-run` check) is missing. | fixed | Added test/pack.test.js: `npm pack --dry-run --json` must list bin, src and every templates/web file (dotfiles included). |
-| R4 | - | release | Publish with npm Trusted Publishing (OIDC) instead of `NPM_TOKEN`. | open | |
+| R4 | - | release | Publish with npm Trusted Publishing (OIDC) instead of `NPM_TOKEN`. | fixed | `NPM_TOKEN` removed from `ci.yml`. The trusted publisher on npmjs.com remains a manual step. |
 | R5 | low | Dependabot | Add `groups` and a `commit-message` prefix compatible with commitlint. `reviewers` in dependabot.yml is deprecated by GitHub: use a CODEOWNERS file. | fixed | Commit-message prefixes, groups added; reviewers replaced by CODEOWNERS. |
 | R6 | low | .gitignore | Lacks `.DS_Store`, `.env*`, `coverage/`; ignoring `*.map` is debatable. | fixed | `.DS_Store` added, `*.map` removed; `.env*` and `coverage/` deliberately not added. |
 | R7 | low | hooks | No `pre-push` hook running `npm test`. | wontfix (low value) | Tests are fast and CI already runs them on ubuntu, macOS and Windows; a pre-push hook is bypassable with --no-verify and only slows pushes. |

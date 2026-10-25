@@ -69,8 +69,8 @@ jobs:
         env:
           HUSKY: 0
 
+      # No npm token: @semantic-release/npm authenticates to the registry through the OIDC id-token.
       - name: Release
         run: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
