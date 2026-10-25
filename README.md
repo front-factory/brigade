@@ -67,8 +67,9 @@ Options:
 
 - `--yes` (or `-y`) accepts everything detected.
 - `--stack <name>` forces the stack instead of detecting it (only `web` for now).
-- `--dry-run` prints what an install or update would do, asks nothing and writes nothing (not even
-  `.claude/brigade.json`). It also lists the lines it would add to `.gitignore` and `.gitattributes`.
+- `--dry-run` prints the install plan (files added, updated, merged, removed, kept with a `.proposed`, and the lines
+  it would add to `.gitignore` and `.gitattributes`), asks nothing and writes nothing (no file, no directory, not even
+  `.claude/brigade.json`). It exits with code 0.
 
 Brigade never touches your `CLAUDE.md`: its instructions live in `.claude/rules/brigade.md`, which Claude Code loads
 at launch like a `CLAUDE.md`.
@@ -158,8 +159,8 @@ That is how it tells an untouched file from an edited one. Do not edit it by han
 - No terminal (CI, pipe): nothing is asked. `init` behaves like `--yes`: a new install accepts every detected answer, an
   existing install is updated with its stored answers, and a new option gets its detected or default value. The run
   prints one line naming the new options and the value used; it never fails for that.
-- `init` failed while writing (disk full, a path blocked by a file...): writes are not atomic. The files already
-  written stay, and `.claude/brigade.json` still holds the previous install. Fix the cause and run `init` again: it
+- `init` failed while writing (disk full, a path blocked by a file...): each file is replaced atomically (written to a
+  temp file, then renamed), but the run as a whole is not. The files already written stay, and `.claude/brigade.json` still holds the previous install. Fix the cause and run `init` again: it
   converges (a file already matching the kit is seen as unchanged and the manifest is corrected).
 - "No git repository" warning: run `git init` yourself. Brigade never creates a repository.
 - A broken `.claude/settings.local.json` (invalid JSON) is left untouched, so your personal language is not written
