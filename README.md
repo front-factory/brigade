@@ -50,7 +50,7 @@ The rest of the kit, all under `.claude/`:
 
 Run `npx @frontfactory/brigade init` in your project. Here is what happens:
 
-1. `init` detects the default branch, the package manager, the commit convention and the language, then shows what
+1. `init` detects the default branch, the package manager, the commit convention, then shows what
    will be set up in one card.
 2. You choose "Install as is" (the default) or "Customize" to answer every option one by one. An option that cannot
    be detected is asked even in the express path.
@@ -59,7 +59,8 @@ Run `npx @frontfactory/brigade init` in your project. Here is what happens:
    languages) and shows the recap again.
 4. Cancelling writes nothing.
 
-There are two language questions: the language of Claude's replies, then the language of code and docs together, or
+There are two language questions: the language of Claude's replies (English unless you choose another; it is not
+guessed from your system locale), then the language of code and docs together, or
 "Different for code and docs" to choose each apart. Customize also asks your own reply language, which stays on your
 machine.
 

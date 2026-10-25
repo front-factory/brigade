@@ -32,7 +32,7 @@ Status: open
 | C8 | - | src/ (hashes, appends) | CRLF handled in hashes and `.gitignore`/`.gitattributes` appends. | fixed | 1eec657 |
 | C9 | - | src/prompt.js | Calls `process.exit(1)` on cancel (untestable); `close` is a no-op. | open | |
 | C10 | - | src/ (CLI) | `--dry-run` option. | fixed | Prints the same plan as a real run and writes nothing; README and `--help` updated, tests added. |
-| C11 | - | src/detect.js | Language detection from `LANG` is unreliable (often `C`/`en_US`). | deferred | |
+| C11 | - | src/detect.js | Language detection from `LANG` is unreliable (often `C`/`en_US`). | fixed | Detection removed; the reply language defaults to English (preselected in the question, applied directly with `--yes` or without a terminal); stored answers still win. |
 | C12 | - | src/detect.js | No monorepo / pnpm workspace detection. | deferred | |
 | C13 | low | src/stacks.js | Single stack with a trivial `match`. | wontfix (low value) | The mechanism is intentionally ready for more stacks. |
 | C14 | low | `.gitignore` / `.gitattributes` append | The `## Claude` heading appended is unconventional (works as a comment). | fixed | Heading removed: the missing lines are appended without a title; existing `## Claude` blocks are left untouched. |
