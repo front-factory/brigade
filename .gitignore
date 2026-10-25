@@ -1,6 +1,6 @@
 ## Files
+.DS_Store
 *.log
-*.map
 *.orig
 
 ## Folders
