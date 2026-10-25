@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.0](https://github.com/front-factory/brigade/compare/v1.5.1...v1.6.0) (2026-10-25)
+
+### Features
+
+* **commands:** add /brigade-settings ([e32cbdc](https://github.com/front-factory/brigade/commit/e32cbdc7d630daef7d34a54a1ea4dd536a4c0506))
+* **options:** default replies to English and offer ten languages ([b83695f](https://github.com/front-factory/brigade/commit/b83695fe4d01794e30def731a8db3ad6a9f6ef0d))
+
+### Bug Fixes
+
+* **git-guard:** ask on unknown git writes and allow more reads ([0a4c37f](https://github.com/front-factory/brigade/commit/0a4c37f9d2afa92096965c574c6c7986f8db8f15))
+* **rules:** require the audit file when reporting review findings ([2518395](https://github.com/front-factory/brigade/commit/2518395ec1033f1cdcfa44aa5677924cfe5fe8e8))
+
 ## [1.5.1](https://github.com/front-factory/brigade/compare/v1.5.0...v1.5.1) (2026-10-23)
 
 ### Bug Fixes
