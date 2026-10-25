@@ -1,0 +1,18 @@
+# Audit: token savings in injected context
+
+Date: 2026-10-25
+Baseline commit: 5aa289b
+Scope: context that the Brigade kit injects into Claude sessions (templates/web/.claude/: rules, agents, skills, commands, settings.json, hooks) and the delegation flow, looked at for token savings. The same findings apply to the dogfood copy in .claude/.
+Status: open
+
+## Findings
+
+| ID | Severity | File | Problem | Status | Notes (commit / reason) |
+|----|----------|------|---------|--------|-------------------------|
+| T1 | high | templates/web/.claude/skills/feature/SKILL.md | The skill description says "use on each development request", so the whole skill (~2 KB) is loaded on every dev request, even for small work where it only concludes "say nothing". Move the detection to one line in rules/brigade.md and load the skill only once the user accepts a feature (or on pause/resume/end). | fixed | Detection is one line in rules/brigade.md; feature skill loads only on acceptance or pause/resume/end |
+| T2 | medium | templates/web/.claude/rules/brigade.md, skills/*, agents/implementer.md | The same rules are repeated in several always- or often-loaded files: the feature file path `<branch-with-slashes-as-dashes>` (rules, audit, session-start, implementer), the push proposal (rules Git + feature skill), "feature file travels with the commit" (rules, feature, implementer), "read decisions.md" (rules + session-start skill, so it is read twice). Keep each rule in one place and point to it. | fixed | Path stated once (feature skill), push and same-commit rules once in rules, session-start no longer reads decisions.md |
+| T3 | medium | templates/web/.claude/commands/brigade-effort.md, brigade-language.md, brigade-reference-branch.md | Three legacy commands fully superseded by /brigade-settings; each adds a description line to the skills/commands listing of every session and ~1 KB of duplicated instructions. Remove (needs a migration note in README/CHANGELOG) or keep as thin aliases with a one-line body. | open | |
+| T4 | low | templates/web/.claude/skills/*/SKILL.md, agents/*.md | Long `description` fields (feature, audit, session-start, implementer) are listed in every session. Shorten to trigger conditions only (~1 line each). | fixed | Descriptions of skills, implementer and git-operator cut to the trigger |
+| T5 | low | templates/web/.claude/settings.json | The `deny` list only covers lockfiles, node_modules, dist, build. Add other noisy paths never worth reading (e.g. `.next/**`, `coverage/**`, `**/*.map`, `**/*.min.js`, `.git/**`), possibly per detected stack. Also, the rule line "Do not read node_modules, lockfiles or build output" in rules/brigade.md duplicates the enforced deny list and could be dropped. | open | |
+| T6 | medium | templates/web/.claude/rules/brigade.md (Roles) | Every code change is delegated to `implementer`, a cold-start subagent that re-reads files and returns a report. For trivial edits (one line, a typo, a config value) this costs more than editing directly. Decision to take: allow the main session to make trivial edits, or keep the strict separation. | deferred | Design decision for the user |
+| T7 | low | templates/web/.claude/settings.json | `model: opusplan` + `effortLevel: medium` is a trade-off, not a bug: a lower default effort for the main session (`low`) or Sonnet for plan mode saves output/thinking tokens. | deferred | User's choice, already adjustable with /brigade-settings |

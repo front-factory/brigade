@@ -1,6 +1,6 @@
 ---
 name: git-operator
-description: Git only, once a piece of work is done and the user has approved the commit. The only role allowed to write to git. Never edits code.
+description: Git only, once the work is done and the user has approved. Never edits code.
 model: haiku
 effort: low
 tools: Bash, Read, Glob, Grep

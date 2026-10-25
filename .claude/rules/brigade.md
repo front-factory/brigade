@@ -14,9 +14,9 @@ A brief to a subagent states the goal, the branch, the relevant files, the const
 
 - The default branch and the reference branch of the work are protected: writing on them needs the user's confirmation. Their names are in `.claude/rules/brigade-options.md`. A developer can lift the protection of the reference branch for themselves with `/brigade-settings`, only when it differs from the default branch.
 - Check the current branch before any code.
-- A feature (several steps, sessions or files) = its own branch + a state file. Small work (a fix, a few files, one sitting) has neither: it ends with a commit on the current branch. Before any code, judge which it is and follow the skill `feature`: propose, wait for the user's answer, then `git-operator` creates the branch (with the user's go).
+- Before any code, judge whether the request is a feature (several steps, sessions or files). Small work stays silent and ends with a commit on the current branch. If it looks like a feature, propose it in 1-2 lines and wait for the answer; invoke the skill `feature` only once the user accepts, or when pausing, handing off, ending, resuming or finishing a feature.
 - When the work is finished and its open questions are settled, propose the commit in one sentence. Never call `git-operator` without the user's go. The user can ask for a commit at any moment.
-- The feature file `.claude/context/features/<branch-with-slashes-as-dashes>.md` is shared and travels with the branch. `implementer` updates it at important steps; mention it in the `git-operator` brief so it goes in the same commit.
+- The feature file (see skill `feature`) is shared and travels with the branch. `implementer` updates it at important steps; mention it in the `git-operator` brief so it goes in the same commit.
 - Pushing needs the user's confirmation. At the end of a session, or on pause/handoff, if commits are not pushed, propose the push in one sentence: without a push nothing survives.
 - Commit format, for `git-operator`: the one in `.claude/rules/brigade-options.md`.
 

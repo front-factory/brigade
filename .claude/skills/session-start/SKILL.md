@@ -1,11 +1,11 @@
 ---
 name: session-start
-description: "Use before the first coding task of a session (not for plain questions): checks the git branch, its feature file and remote sync, reports where things stand."
+description: "Use before the first coding task of a session (not for plain questions)."
 ---
 
-Check the current branch (`git branch --show-current`, `git status -sb`), read `.claude/context/decisions.md`, `CLAUDE.local.md` (if present, personal preferences only) and `.claude/context/features/<branch-with-slashes-as-dashes>.md` (if present).
+Check the current branch (`git branch --show-current`, `git status -sb`), read `CLAUDE.local.md` (if present, personal preferences only) and the feature file (see skill `feature`, if present).
 
-- **Feature file present**: read it and report in 2-3 lines the goal, what is done, the next step. Then run the resume check (see `feature`, "Resume"): new commits on base, `decisions.md` changes since the saved date, open audit rows. Ask whether to continue or start something new, and do not start coding before the user has confirmed.
+- **Feature file present**: read it and report in 2-3 lines the goal, what is done, the next step. Then run the resume check (see `feature`, "Resume"): new commits on base, `.claude/context/decisions.md` changes since the saved date, open audit rows. Ask whether to continue or start something new, and do not start coding before the user has confirmed.
 - **No file**: just report the branch and the remote sync. No file is created.
 
 Also report the sync with the remote: `git status -sb` (ahead/behind) and `git log @{u}..HEAD --oneline` for unpushed commits. If the branch is behind or has no upstream, say so. If commits are unpushed, propose the push in one sentence.

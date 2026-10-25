@@ -12,8 +12,8 @@
         "docsLanguage": "English"
     },
     "files": {
-        ".claude/agents/git-operator.md": "98fa3c61541131cb2b25e0c13c0d3672025ff261e60d11e297acafed5515d8f4",
-        ".claude/agents/implementer.md": "bfe9a58f46757a42f49f762206bbce67a48ad679b2fb6416463adfad4ed7f34f",
+        ".claude/agents/git-operator.md": "3019cafa74b4f2c1a179998153b264c7d3b1c01251e3dde6497860e1ef72e478",
+        ".claude/agents/implementer.md": "92d1779ddd3d7ff0d64ff9b45571eea8485d0147c27758afe887d8a635fe1f79",
         ".claude/commands/brigade-effort.md": "8f04af4073beadc42d2a701b1f1737eec36eb013be084d5b0f63e6a97f43fdc7",
         ".claude/commands/brigade-language.md": "18e9c21d99c87920a6285a52a8d8947a01e47c4358d1bcdef05bab8547a25a66",
         ".claude/commands/brigade-reference-branch.md": "2b41acaa7793b8fe54e796385ec77e509eb99d32850fce6d23c4ff6b2d80a263",
@@ -25,10 +25,10 @@
         ".claude/hooks/run-node.sh": "7cfb164e7fa72107a44f427d78ccd70d1297ae3bc25c2f935c6bc1318d825bba",
         ".claude/hooks/session-start.mjs": "a1ee1275d2cd8317fae2e047c23e90ff1b897e8473c124ccf5a6b99e53af437b",
         ".claude/hooks/statusline.mjs": "aaee922df46149f88ad72c64fc101eacf3744992e61188d29530a916183cb5bb",
-        ".claude/rules/brigade.md": "9ee70a4478aeebd0411081023cfdcad718c2db13cb0a4342624c3d5428430a00",
+        ".claude/rules/brigade.md": "8e33dc5a81bf69ed664b6fa102d189c7c87111860be4ca64355d194cd5c59fcc",
         ".claude/settings.json": "37f3a010d3fc1a69ddca982ce9970d1ff3f8b7acb9befb17fad76eece83cec47",
-        ".claude/skills/audit/SKILL.md": "322ad4c763e0e3ec588934e1098a7e990205799c4966e6324f74d1dc8b74c2f6",
-        ".claude/skills/feature/SKILL.md": "a499dec146fd91063562026e33dd5c8c9ec191c9580f038511f5bac1ba3f0cf0",
-        ".claude/skills/session-start/SKILL.md": "2722d250e40876500094715a48e3411aacfa7814d29d455162a7af5d7956cbde"
+        ".claude/skills/audit/SKILL.md": "96af6da83aa98221bcd05c48b67d05300a062262968cc0b3a0892c3f10cc2167",
+        ".claude/skills/feature/SKILL.md": "5faed5be1068fc5bb1578d6b395f4750c4e14a2bb075d9412f896469f7cc19b5",
+        ".claude/skills/session-start/SKILL.md": "357c8c673a27e00e47c6f8ee4ba6e22fe6013f682a20c0bebd3ad7fc40c2d83a"
     }
 }
