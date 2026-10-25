@@ -12,15 +12,6 @@ const LOCKFILES = {
 
 export const PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'];
 
-const LANGUAGES = {
-    en: 'English',
-    fr: 'French',
-    es: 'Spanish',
-    de: 'German',
-    it: 'Italian',
-    pt: 'Portuguese'
-};
-
 function git(cwd, ...args) {
     try {
         return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -76,9 +67,4 @@ export function detectCommitConvention(cwd) {
     if (!existsSync(join(cwd, '.husky', 'commit-msg'))) return '';
     if (deps['@commitlint/config-angular']) return 'angular';
     return deps['@commitlint/config-conventional'] ? 'conventional' : '';
-}
-
-export function detectLanguage(env = process.env) {
-    const code = (env.LC_ALL || env.LC_MESSAGES || env.LANG || '').slice(0, 2).toLowerCase();
-    return LANGUAGES[code] ?? '';
 }

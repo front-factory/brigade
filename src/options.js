@@ -3,12 +3,11 @@ import {
     PACKAGE_MANAGERS,
     detectCommitConvention,
     detectDefaultBranch,
-    detectLanguage,
     detectPackageManager,
     localBranches
 } from './detect.js';
 
-const LANGUAGES = ['English', 'French'];
+const LANGUAGES = ['English', 'French', 'Spanish', 'German', 'Italian', 'Portuguese', 'Dutch', 'Japanese', 'Chinese', 'Korean'];
 const ENGLISH = LANGUAGES[0];
 const DIFFERENT = '__different__';
 const LANGUAGE_KEYS = ['replyLanguage', 'codeLanguage', 'docsLanguage'];
@@ -114,19 +113,17 @@ export const OPTIONS = [
     },
     {
         keys: LANGUAGE_KEYS,
-        // The recommended setup: stored values first, then the language found (none when unknown), English for code and docs.
+        // The recommended setup: stored values first, English otherwise.
         detect: ({ previous }) => {
-            const replyLanguage = previous.replyLanguage || detectLanguage();
             const codeLanguage = previous.codeLanguage || ENGLISH;
-            return { ...(replyLanguage && { replyLanguage }), codeLanguage, docsLanguage: previous.docsLanguage || codeLanguage };
+            return { replyLanguage: previous.replyLanguage || ENGLISH, codeLanguage, docsLanguage: previous.docsLanguage || codeLanguage };
         },
         ask: async (ctx) => {
             const { prompter: { choose }, previous, current } = ctx;
             const known = { ...current, ...previous };
 
-            // First question: replies. The language found comes first, stored values lead.
-            const detected = detectLanguage();
-            const replyOptions = languages(known.replyLanguage || detected);
+            // First question: replies. Stored values lead, English is preselected otherwise.
+            const replyOptions = languages(known.replyLanguage || ENGLISH);
             if (!known.replyLanguage) replyOptions[0].hint = 'recommended';
             const replyLanguage = await choose(
                 "Language of Claude's replies for this project (each developer can use their own later)",

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import './git-env.js';
 import { CONVENTIONS } from '../src/conventions.js';
-import { detectCommitConvention, detectDefaultBranch, detectLanguage, detectPackageManager, isGitRepo, localBranches } from '../src/detect.js';
+import { detectCommitConvention, detectDefaultBranch,detectPackageManager, isGitRepo, localBranches } from '../src/detect.js';
 import { render } from '../src/install.js';
 
 const temp = () => mkdtempSync(join(tmpdir(), 'brigade-detect-'));
@@ -115,14 +115,6 @@ test('a broken package.json is ignored', () => {
 
 test('commitlint without a known config detects no convention', () => {
     assert.equal(detectCommitConvention(project({ '@commitlint/cli': '1' })), '');
-});
-
-test('the language comes from LC_ALL, then LC_MESSAGES, then LANG', () => {
-    assert.equal(detectLanguage({ LC_ALL: 'fr_FR.UTF-8', LANG: 'en_US.UTF-8' }), 'French');
-    assert.equal(detectLanguage({ LC_MESSAGES: 'DE_de', LANG: 'en_US.UTF-8' }), 'German');
-    assert.equal(detectLanguage({ LANG: 'es_ES.UTF-8' }), 'Spanish');
-    assert.equal(detectLanguage({ LANG: 'ja_JP.UTF-8' }), '');
-    assert.equal(detectLanguage({}), '');
 });
 
 test('the conventional format states the Conventional Commits 1.0.0 rules', () => {

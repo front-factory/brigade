@@ -631,28 +631,12 @@ test('a proposed brigade.md that already mentions the options file gets no note'
     assert.equal(result.report.find(({ path }) => path === RULES).note, undefined);
 });
 
-// Runs fn with a fixed locale, whatever the host one is.
-const withLocale = async (env, fn) => {
-    const saved = { LC_ALL: process.env.LC_ALL, LC_MESSAGES: process.env.LC_MESSAGES, LANG: process.env.LANG };
-    delete process.env.LC_ALL;
-    delete process.env.LC_MESSAGES;
-    Object.assign(process.env, env);
-    try {
-        return await fn();
-    } finally {
-        for (const [key, value] of Object.entries(saved)) {
-            if (value === undefined) delete process.env[key];
-            else process.env[key] = value;
-        }
-    }
-};
-
 // The setup flow of a first install, with a dev to ask.
-const fresh = (cwd, script = {}, env = { LANG: 'fr_FR.UTF-8' }) => withLocale(env, async () => {
+const fresh = async (cwd, script = {}) => {
     const { prompter, asked, cards } = asking('update', script);
     const result = await runInit({ cwd, interactive: true, prompter });
     return { result, asked, cards };
-});
+};
 const HOW = 'How do you want to set up Brigade?';
 const RIGHT = 'Is the setup right?';
 const DEFAULT_BRANCH = 'Default branch of the repository';
@@ -671,7 +655,7 @@ test('express "Install as is": one card, one choice, the detected setup is store
         { ...result.answers, commitFormat: undefined },
         {
             defaultBranch: 'main', baseBranch: 'main', packageManager: 'pnpm', commitConvention: 'conventional', commitFormat: undefined,
-            replyLanguage: 'French', codeLanguage: 'English', docsLanguage: 'English'
+            replyLanguage: 'English', codeLanguage: 'English', docsLanguage: 'English'
         }
     );
     assert.match(result.answers.commitFormat, /^Conventional Commits/);
@@ -689,7 +673,7 @@ test('"Install as is" is the first and default choice', async () => {
         if (message === HOW) seen.push(...options.map(({ value, label, hint }) => ({ value, label, hint })));
         return choose(message, options, ...rest);
     };
-    await withLocale({ LANG: 'fr_FR.UTF-8' }, () => runInit({ cwd, interactive: true, prompter }));
+    await runInit({ cwd, interactive: true, prompter });
     assert.deepEqual(seen.map(({ label }) => label), ['Install as is', 'Customize']);
     assert.equal(seen[0].hint, undefined);
 
@@ -744,7 +728,7 @@ test('"Change something" re-asks only the chosen group and keeps the other answe
     assert.equal(cards.filter(({ title }) => title === 'Your setup').length, 3);
     assert.equal(result.answers.packageManager, 'bun');
     assert.equal(result.answers.defaultBranch, 'main');
-    assert.equal(result.answers.replyLanguage, 'French');
+    assert.equal(result.answers.replyLanguage, 'English');
     assert.equal(readAnswers(cwd).answers.packageManager, 'bun');
 });
 
@@ -762,11 +746,18 @@ test('an edited group starts from the current values', async () => {
 });
 
 test('the two language questions: replies, then code and docs together or apart', async () => {
-    assert.deepEqual(langs(await fresh(project(), { [HOW]: 'asis' })), ['French', 'English', 'English']);
-    assert.deepEqual(langs(await fresh(project(), { [HOW]: 'asis' }, { LANG: 'en_US.UTF-8' })), ['English', 'English', 'English']);
+    // English whatever the host locale is.
+    const saved = process.env.LANG;
+    process.env.LANG = 'fr_FR.UTF-8';
+    try {
+        assert.deepEqual(langs(await fresh(project(), { [HOW]: 'asis' })), ['English', 'English', 'English']);
+    } finally {
+        if (saved === undefined) delete process.env.LANG;
+        else process.env.LANG = saved;
+    }
 
     const together = await fresh(project(), { [HOW]: 'customize', [CODE_DOCS]: 'French' });
-    assert.deepEqual(langs(together), ['French', 'French', 'French']);
+    assert.deepEqual(langs(together), ['English', 'French', 'French']);
 
     const different = await fresh(project(), {
         [HOW]: 'customize',
@@ -774,8 +765,21 @@ test('the two language questions: replies, then code and docs together or apart'
         'Language of the code, comments and commit messages (shared by the team)': 'English',
         'Language of the documentation (shared by the team)': 'French'
     });
-    assert.deepEqual(langs(different), ['French', 'English', 'French']);
+    assert.deepEqual(langs(different), ['English', 'English', 'French']);
     assert.ok(different.asked.includes('Language of the documentation (shared by the team)'));
+});
+
+test('the language choices offer the extended list, English first', async () => {
+    const cwd = project();
+    const { prompter } = asking('update', { [HOW]: 'customize' });
+    const { choose } = prompter;
+    let offered;
+    prompter.choose = async (message, options, ...rest) => {
+        if (message === REPLIES) offered = options.map((option) => option.value);
+        return choose(message, options, ...rest);
+    };
+    await runInit({ cwd, interactive: true, prompter });
+    assert.deepEqual(offered.slice(0, 10), ['English', 'French', 'Spanish', 'German', 'Italian', 'Portuguese', 'Dutch', 'Japanese', 'Chinese', 'Korean']);
 });
 
 test('the personal reply language is asked in Customize, skipped in express, kept on this machine', async () => {
