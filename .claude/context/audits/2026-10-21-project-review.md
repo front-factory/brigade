@@ -26,12 +26,12 @@ Status: open
 | C3 | low | src/ (`ask()`) | `detectCommitConvention` called twice in `ask()`. | fixed | 1eec657 |
 | C4 | low | src/ | "72 characters max" repeated; now a shared constant. | fixed | 1eec657 |
 | C5 | - | src/ (install) | Install is planned then written (kit files). | fixed | 1eec657; see C5b for the remaining part |
-| C5b | - | src/ (install) | `appendMissingLines` and the manifest are still written after the plan (partial atomicity). | open | |
+| C5b | - | src/ (install) | `appendMissingLines` and the manifest are still written after the plan (partial atomicity). | fixed | `planExtras` puts the options file, the ignore lines and the manifest (last) in the plan; `applyPlan` is the only writer. |
 | C6 | - | src/ (manifest) | Corrupted `brigade.json` now errors instead of being treated as a first install. | fixed | 1eec657 |
 | C7 | - | src/ (install) | Stale `.proposed` removed once the target matches the kit. | fixed | 1eec657 |
 | C8 | - | src/ (hashes, appends) | CRLF handled in hashes and `.gitignore`/`.gitattributes` appends. | fixed | 1eec657 |
 | C9 | - | src/prompt.js | Calls `process.exit(1)` on cancel (untestable); `close` is a no-op. | open | |
-| C10 | - | src/ (CLI) | `--dry-run` option. | deferred | |
+| C10 | - | src/ (CLI) | `--dry-run` option. | fixed | Prints the same plan as a real run and writes nothing; README and `--help` updated, tests added. |
 | C11 | - | src/detect.js | Language detection from `LANG` is unreliable (often `C`/`en_US`). | deferred | |
 | C12 | - | src/detect.js | No monorepo / pnpm workspace detection. | deferred | |
 | C13 | low | src/stacks.js | Single stack with a trivial `match`. | wontfix (low value) | The mechanism is intentionally ready for more stacks. |
@@ -39,7 +39,7 @@ Status: open
 | V1 | medium | src/version.js | `compareVersions` ignores pre-release tags: `1.2.0-beta.1` vs `1.2.0` compares equal, so a beta to stable switch is reported "already up to date" (the repo publishes a `beta` channel). | fixed | pre-release precedence implemented in `compareVersions`, tests added. |
 | V2 | low | bin/brigade.js | No runtime Node check: on Node < 24 `styleText`/`parseArgs` fail with a cryptic error; `engines` only warns. Add an explicit message. | open | |
 | I1 | low | src/install.js `writeManifest` | `localeCompare` makes the key order locale-dependent; use a plain comparison for a stable manifest. | open | |
-| I2 | low | src/install.js | Writes are not atomic (no temp file + rename); extends C5b. | open | |
+| I2 | low | src/install.js | Writes are not atomic (no temp file + rename); extends C5b. | fixed | `writeAtomic` (temp file + rename, temp removed on error); the run as a whole stays non-atomic. |
 | P1 | low | src/prompt.js `text` | A custom commit format can be empty: `brigade-options.md` gets a blank "Commit format:" line. Add validation. | fixed | The custom commit format is required in the prompt; a blank one without a terminal falls back to Conventional Commits; tests added. |
 | P2 | low | src/cli.js | `interactive` depends on `stdin.isTTY` only; stdout piped still prompts. | open | |
 | K6 | low | templates/web/.claude/settings.json | Lockfile deny list lacks `bun.lock`/`bun.lockb`; `Bash(<pm> run:*)` allows any script. | fixed | Bun lockfiles added to the deny list; `<pm> run:*` kept on purpose (project scripts). |
