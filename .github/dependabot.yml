@@ -6,13 +6,25 @@ updates:
       interval: "weekly"
     assignees:
       - "borisdamevin"
-    reviewers:
-      - "borisdamevin"
+    commit-message:
+      prefix: "build(deps)"
+      prefix-development: "build(deps-dev)"
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     assignees:
       - "borisdamevin"
-    reviewers:
-      - "borisdamevin"
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions:
+        patterns:
+          - "*"
