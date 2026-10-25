@@ -15,6 +15,63 @@ test('reads are never touched', () => {
     assert.equal(run('npm run build', { agent: '' }), null);
 });
 
+test('harmless reads are not writes for the main session', () => {
+    for (const command of ['git merge-base a b', 'git rev-list HEAD', 'git for-each-ref', 'git show-ref', 'git ls-remote origin', 'git fetch',
+        'git tag', 'git tag -l "v*"', 'git tag --list', 'git tag --contains abc', 'git tag --points-at HEAD', 'git reflog', 'git reflog show HEAD',
+        'git branch --list x', 'git branch -l "feat/*"', 'git branch -a', 'git branch -r', 'git branch -vv', 'git branch --show-current']) {
+        assert.equal(run(command, { agent: '' }), null, command);
+    }
+});
+
+test('tag, branch and reflog writes are still denied for the main session', () => {
+    for (const command of ['git tag v1', 'git tag -d v1', 'git tag -a v1 -m x', 'git branch x', 'git branch -d x', 'git reflog expire --all', 'git reflog delete HEAD@{1}']) {
+        assert.equal(run(command, { agent: '' }), 'deny', command);
+    }
+});
+
+test('git-operator: unknown write subcommands are asked, ref and history deletions denied', () => {
+    for (const command of ['git update-ref refs/heads/x HEAD', 'git worktree remove ../w', 'git ci -m x', 'git frobnicate']) {
+        assert.equal(run(command), 'ask', command);
+    }
+    for (const command of ['git tag -d v1', 'git tag --delete v1', 'git update-ref -d refs/heads/x', 'git filter-branch --all', 'git reflog expire --all', 'git reflog delete HEAD@{1}', 'git gc --prune=now']) {
+        assert.equal(run(command), 'deny', command);
+    }
+});
+
+test('tag --force is asked for git-operator and denied for the main session', () => {
+    for (const command of ['git tag -f v1', 'git tag --force v1']) {
+        assert.equal(run(command), 'ask', command);
+        assert.equal(run(command, { agent: '' }), 'deny', command);
+    }
+});
+
+test('branch flags that write: denied for the main session, allowed for git-operator (except -D, -f)', () => {
+    for (const command of ['git branch -u origin/x', 'git branch -t x', 'git branch --track x',
+        'git branch --set-upstream-to=origin/x', 'git branch --unset-upstream', 'git branch --edit-description', 'git branch -dr origin/x']) {
+        assert.equal(run(command, { agent: '' }), 'deny', command);
+        assert.equal(run(command), 'allow', command);
+    }
+});
+
+test('branch -f/--force: denied for the main session, asked for git-operator', () => {
+    for (const command of ['git branch -f x', 'git branch --force x', 'git branch -fu origin/x']) {
+        assert.equal(run(command, { agent: '' }), 'deny', command);
+        assert.equal(run(command), 'ask', command);
+    }
+});
+
+test('fetch --prune is a read', () => {
+    assert.equal(run('git fetch --prune', { agent: '' }), null);
+    assert.equal(run('git fetch --prune'), null);
+});
+
+test('git-operator: known safe writes are allowed', () => {
+    for (const command of ['git tag v1', 'git tag -a v1 -m "x"', 'git branch feat/y', 'git branch -m new', 'git stash push', 'git stash pop', 'git mv a b',
+        'git reset HEAD~1', 'git pull', 'git cherry-pick abc', 'git revert abc', 'git init', 'git submodule update', 'git notes add -m x']) {
+        assert.equal(run(command), 'allow', command);
+    }
+});
+
 test('git writes are denied for everyone but git-operator', () => {
     assert.equal(run('git commit -m "x"', { agent: '' }), 'deny');
     assert.equal(run('git add -A', { agent: 'implementer' }), 'deny');

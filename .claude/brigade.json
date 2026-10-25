@@ -21,7 +21,7 @@
         ".claude/context/audits/_template.md": "027b0ceb32d0a111435950f851c83a93ed34200df820a55f9d22c724605b5e28",
         ".claude/context/features/_template.md": "8fb4f614cb6118b0f43d84668e78929a7fb4c2e1f5d3370caaf44be3a05986f1",
         ".claude/context/local-template.md": "bdea68450046615e857470be7a2992f365c15cde98d2372a88221ff753ea0046",
-        ".claude/hooks/git-guard.mjs": "4c70a73162c6f07bfd8f2ce853c1f77c5fdd27daad151401ad8c3208532b6025",
+        ".claude/hooks/git-guard.mjs": "7e418157aee05084345dd0774161bb9fd80be38faca2552c3246060ea2a1235c",
         ".claude/hooks/run-node.sh": "7cfb164e7fa72107a44f427d78ccd70d1297ae3bc25c2f935c6bc1318d825bba",
         ".claude/hooks/session-start.mjs": "a1ee1275d2cd8317fae2e047c23e90ff1b897e8473c124ccf5a6b99e53af437b",
         ".claude/hooks/statusline.mjs": "aaee922df46149f88ad72c64fc101eacf3744992e61188d29530a916183cb5bb",

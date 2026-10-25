@@ -6,9 +6,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const READ = new Set(['status', 'diff', 'log', 'show', 'blame', 'rev-parse', 'ls-files', 'ls-tree', 'grep', 'describe', 'shortlog', 'cat-file']);
+const READ = new Set(['status', 'diff', 'log', 'show', 'blame', 'rev-parse', 'ls-files', 'ls-tree', 'grep', 'describe', 'shortlog', 'cat-file', 'merge-base', 'rev-list', 'for-each-ref', 'show-ref', 'ls-remote', 'fetch']);
 const ASK = new Set(['push', 'merge', 'rebase']);
 const ON_PROTECTED = new Set(['commit', 'cherry-pick', 'revert', 'am', 'pull', 'reset', 'rm']);
+// Known safe writes for git-operator; any other write subcommand (aliases included) is asked.
+const SAFE = new Set(['add', 'commit', 'restore', 'switch', 'checkout', 'branch', 'tag', 'stash', 'mv', 'rm', 'cherry-pick', 'revert', 'am', 'pull', 'reset', 'init', 'clone', 'submodule', 'notes']);
 const RANK = { allow: 0, ask: 1, deny: 2 };
 
 // Quoted text (commit messages) must not be read as commands.
@@ -69,10 +71,18 @@ function gitCommands(command, depth = 0) {
     return [...direct, ...nested];
 }
 
-// `git branch` and `git remote` only read when given no mutating flag.
+// `git branch`, `tag`, `remote`... only read when listing: no mutating flag, no name to create.
 function writes({ sub, rest }) {
     if (READ.has(sub)) return false;
-    if (sub === 'branch') return /(^|\s)(-[dDmMcC]|--delete|--move|--copy)\b/.test(rest) || /(^|\s)[^-\s]/.test(rest);
+    if (sub === 'branch') {
+        if (/(^|\s)(-\w*[dDmMcCuft]\w*|--delete|--move|--copy|--force|--track|--set-upstream-to|--unset-upstream|--edit-description)(\s|=|$)/.test(rest)) return true;
+        return !/(^|\s)(-l|-a|-r|-v+|--list|--all|--remotes|--verbose|--show-current|--contains|--merged|--no-merged|--points-at)(\s|$)/.test(rest) && /(^|\s)[^-\s]/.test(rest);
+    }
+    if (sub === 'tag') {
+        if (/(^|\s)(-\w*[dasfumF]\w*|--delete|--annotate|--sign|--force|--local-user|--message|--file)(\s|$)/.test(rest)) return true;
+        return rest !== '' && !/(^|\s)(-l|-n\d*|--list|--contains|--points-at|--merged|--no-merged)(\s|$)/.test(rest);
+    }
+    if (sub === 'reflog') return /^(expire|delete)\b/.test(rest);
     if (sub === 'remote') return !/^(-v|--verbose)?\s*$/.test(rest);
     if (sub === 'config') return !/(^|\s)(--get|--list|-l)\b/.test(rest);
     if (sub === 'stash') return !/^list\b/.test(rest);
@@ -88,7 +98,13 @@ function destructive({ sub, rest }) {
         || (sub === 'checkout' && /(^|\s)(--|-f|--force|\.)(\s|$)/.test(rest))
         || (sub === 'restore' && (!/(^|\s)(--staged|-S)(\s|$)/.test(rest) || /(^|\s)(--worktree|-W)(\s|$)/.test(rest)))
         || (sub === 'switch' && /(^|\s)(--discard-changes|-f|--force)(\s|$)/.test(rest))
-        || (sub === 'stash' && /^(drop|clear)\b/.test(rest));
+        || (sub === 'stash' && /^(drop|clear)\b/.test(rest))
+        // Commands that delete refs or history for good.
+        || (sub === 'tag' && /(^|\s)(-\w*d\w*|--delete)(\s|$)/.test(rest))
+        || (sub === 'update-ref' && /(^|\s)-d\b/.test(rest))
+        || sub === 'filter-branch'
+        || (sub === 'reflog' && /^(expire|delete)\b/.test(rest))
+        || (sub === 'gc' && /--prune/.test(rest));
 }
 
 export function decide({ command, agent, branch, protectedBranches }) {
@@ -109,10 +125,16 @@ export function decide({ command, agent, branch, protectedBranches }) {
             raise('ask', 'Nested git command that cannot be analysed: confirm.');
         } else if (ASK.has(git.sub)) {
             raise('ask', `git ${git.sub} always needs the user's confirmation.`);
+        } else if (git.sub === 'tag' && /(^|\s)(-\w*f\w*|--force)(\s|$)/.test(git.rest)) {
+            raise('ask', 'git tag --force moves an existing tag: confirm.');
+        } else if (git.sub === 'branch' && /(^|\s)(-\w*f\w*|--force)(\s|$)/.test(git.rest)) {
+            raise('ask', 'git branch --force moves an existing branch: confirm.');
         } else if (ON_PROTECTED.has(git.sub) && protectedBranches === null) {
             raise('ask', 'Protected branches unknown (.claude/brigade.json missing or invalid): confirm.');
         } else if (ON_PROTECTED.has(git.sub) && protectedBranches.includes(branch)) {
             raise('ask', `"${branch}" is a protected branch: confirm before writing on it.`);
+        } else if (!SAFE.has(git.sub)) {
+            raise('ask', `git ${git.sub}: not in the known safe list, confirm.`);
         } else {
             raise('allow', 'git-operator: git write on an unprotected branch.');
         }
