@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, rmdirSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, rmdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
 export const MANIFEST = '.claude/brigade.json';
@@ -208,13 +208,25 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
     return { report, hashes, writes, removals };
 }
 
+// Writes to a temp file next to the target, then renames it over: a reader never sees a half-written file, and a failed
+// write leaves the target as it was. Without a `mode`, the target keeps its own.
+export function writeAtomic(file, content, mode) {
+    mkdirSync(dirname(file), { recursive: true });
+    const temp = `${file}.${process.pid}.tmp`;
+    mode ??= existsSync(file) ? statSync(file).mode & 0o777 : undefined;
+    try {
+        writeFileSync(temp, content);
+        if (mode !== undefined) chmodSync(temp, mode);
+        renameSync(temp, file);
+    } catch (error) {
+        rmSync(temp, { force: true });
+        throw error;
+    }
+}
+
 // The only step that writes. Directories left empty by a removal are cleaned.
 export function applyPlan(cwd, { writes, removals }) {
-    for (const { file, content, mode } of writes) {
-        mkdirSync(dirname(file), { recursive: true });
-        writeFileSync(file, content, { mode });
-        chmodSync(file, mode);
-    }
+    for (const { file, content, mode } of writes) writeAtomic(file, content, mode);
     for (const file of removals) {
         rmSync(file, { force: true, recursive: true });
         pruneEmptyDirs(cwd, file);
@@ -245,47 +257,56 @@ Options of this project, referred to by \`.claude/rules/brigade.md\`.
 `;
 }
 
-export function writeOptionsFile({ cwd, answers, dryRun = false }) {
+// Reads only: the report entry and the write (none when the file is already right).
+function planOptionsFile({ cwd, answers }) {
     const file = join(cwd, OPTIONS_FILE);
     const content = renderOptions(answers);
     const exists = existsSync(file);
-    if (exists && sha(readFileSync(file, 'utf8')) === sha(content)) return { path: OPTIONS_FILE, status: 'unchanged' };
-
-    if (!dryRun) {
-        mkdirSync(dirname(file), { recursive: true });
-        writeFileSync(file, content);
-    }
-    return { path: OPTIONS_FILE, status: exists ? 'updated' : 'created' };
+    if (exists && sha(readFileSync(file, 'utf8')) === sha(content)) return { entry: { path: OPTIONS_FILE, status: 'unchanged' }, writes: [] };
+    return { entry: { path: OPTIONS_FILE, status: exists ? 'updated' : 'created' }, writes: [{ file, content }] };
 }
 
 const normalize = (line) => line.trim().replace(/^\//, '');
 
-// `dryRun`: the missing lines are reported but nothing is written.
-export function appendMissingLines(cwd, dryRun = false) {
-    return Object.entries(APPENDS).map(([path, lines]) => {
+// Reads only: the missing lines are reported and turned into writes.
+function planAppends(cwd) {
+    const ignored = [];
+    const writes = [];
+    for (const [path, lines] of Object.entries(APPENDS)) {
         const file = join(cwd, path);
         const existing = existsSync(file) ? readFileSync(file, 'utf8') : '';
         const known = new Set(existing.split(/\r?\n/).map(normalize));
         const missing = lines.filter((line) => !known.has(normalize(line)));
 
-        if (missing.length === 0) return { path, status: 'unchanged' };
+        if (missing.length === 0) {
+            ignored.push({ path, status: 'unchanged' });
+            continue;
+        }
 
         // Keep the file's own line endings.
-        if (!dryRun) {
-            const eol = existing.includes('\r\n') ? '\r\n' : '\n';
-            const separator = existing === '' || existing.endsWith('\n') ? '' : eol;
-            const gap = existing === '' ? '' : eol;
-            writeFileSync(file, `${existing}${separator}${gap}${missing.join(eol)}${eol}`);
-        }
-        return { path, status: 'updated', added: missing };
-    });
+        const eol = existing.includes('\r\n') ? '\r\n' : '\n';
+        const separator = existing === '' || existing.endsWith('\n') ? '' : eol;
+        const gap = existing === '' ? '' : eol;
+        writes.push({ file, content: `${existing}${separator}${gap}${missing.join(eol)}${eol}` });
+        ignored.push({ path, status: 'updated', added: missing });
+    }
+    return { ignored, writes };
 }
 
-export function writeManifest({ cwd, version, stack, answers, hashes }) {
-    const file = join(cwd, MANIFEST);
-    mkdirSync(dirname(file), { recursive: true });
+export function appendMissingLines(cwd) {
+    const { ignored, writes } = planAppends(cwd);
+    applyPlan(cwd, { writes, removals: [] });
+    return ignored;
+}
+
+// The rest of the install, planned after the kit files: the options file, the ignore lines and the manifest. The
+// manifest comes last, so a failed write leaves the previous install described.
+export function planExtras({ cwd, version, stack, answers, hashes }) {
+    const options = planOptionsFile({ cwd, answers });
+    const { ignored, writes } = planAppends(cwd);
     const files = Object.fromEntries(Object.entries(hashes).sort(([a], [b]) => a.localeCompare(b)));
-    writeFileSync(file, `${JSON.stringify({ version, stack, answers, files }, null, 4)}\n`);
+    const manifest = { file: join(cwd, MANIFEST), content: `${JSON.stringify({ version, stack, answers, files }, null, 4)}\n` };
+    return { report: [options.entry], ignored, writes: [...options.writes, ...writes, manifest] };
 }
 
 // Personal answers go to the developer's own local settings, never to the shared files. A broken file is left alone.
@@ -299,7 +320,6 @@ export function writeLocalSettings(cwd, patch) {
             return { status: 'skipped' };
         }
     }
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, `${JSON.stringify({ ...current, ...patch }, null, 4)}\n`);
+    writeAtomic(file, `${JSON.stringify({ ...current, ...patch }, null, 4)}\n`);
     return { status: 'written' };
 }

@@ -1,5 +1,5 @@
 import { isGitRepo } from './detect.js';
-import { appendMissingLines, applyPlan, hasKitFiles, MANIFEST, planFiles, readManifest, writeLocalSettings, writeManifest, writeOptionsFile } from './install.js';
+import { applyPlan, hasKitFiles, MANIFEST, planExtras, planFiles, readManifest, writeLocalSettings } from './install.js';
 import { askOptions } from './options.js';
 import { createPrompter } from './prompt.js';
 import { DEFAULT_STACK, STACKS, detectStack } from './stacks.js';
@@ -75,22 +75,23 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
     const { answers, personal, asked } = await askOptions({ cwd, prompter, previous: previous?.answers ?? {}, full: !update });
 
     const plan = planFiles({ cwd, stackDir: dir, answers, previous });
-    const { report, hashes } = plan;
-    if (dryRun) {
-        report.push(writeOptionsFile({ cwd, answers, dryRun }));
-        const ignored = appendMissingLines(cwd, dryRun);
-        return { dryRun, version, stack: name, answers, report, ignored, repo, prompter, personal: {}, local: null, asked };
-    }
+    const { report } = plan;
 
     // An update shows what it will change before writing anything.
-    if (previous && prompter.interactive && !await confirmChanges({ prompter, report })) {
+    if (!dryRun && previous && prompter.interactive && !await confirmChanges({ prompter, report })) {
         return { kept: installed, stack: previous.stack ?? name, answers: previous.answers, report: [], ignored: [], repo, prompter, personal: {}, local: null };
     }
 
+    // The plan now holds every write, the manifest included.
+    const extras = planExtras({ cwd, version, stack: name, answers, hashes: plan.hashes });
+    report.push(...extras.report);
+    plan.writes.push(...extras.writes);
+    const { ignored } = extras;
+    if (dryRun) {
+        return { dryRun, version, stack: name, answers, report, ignored, repo, prompter, personal: {}, local: null, asked };
+    }
+
     applyPlan(cwd, plan);
-    report.push(writeOptionsFile({ cwd, answers }));
-    writeManifest({ cwd, version, stack: name, answers, hashes });
-    const ignored = appendMissingLines(cwd);
     const local = personal.language ? writeLocalSettings(cwd, { language: personal.language }) : null;
 
     return { version, stack: name, answers, report, ignored, repo, prompter, personal, local, asked };

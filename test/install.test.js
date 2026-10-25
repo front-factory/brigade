@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 import './git-env.js';
 import { runInit } from '../src/init.js';
-import { appendMissingLines, mergeSettings, readManifest, render, sha, writeLocalSettings } from '../src/install.js';
+import { appendMissingLines, mergeSettings, readManifest, render, sha, writeAtomic, writeLocalSettings } from '../src/install.js';
 import { OPTIONS } from '../src/options.js';
 import { compareVersions } from '../src/version.js';
 
@@ -928,6 +928,38 @@ test('a dry run lists no ignore lines when they are already there', async () => 
     assert.ok(result.ignored.every(({ status }) => status === 'unchanged'));
 });
 
+test('a dry run plans exactly what the real run reports, manifest included', async () => {
+    const cwd = project();
+    writeFileSync(join(cwd, '.gitignore'), 'node_modules\n');
+    const preview = await runInit({ cwd, dryRun: true });
+    assert.ok(!existsSync(join(cwd, '.claude')));
+    assert.equal(readFileSync(join(cwd, '.gitignore'), 'utf8'), 'node_modules\n');
+
+    const real = await runInit({ cwd, yes: true });
+    assert.deepEqual(real.report, preview.report);
+    assert.deepEqual(real.ignored, preview.ignored);
+    assert.ok(existsSync(join(cwd, '.claude/brigade.json')));
+});
+
+test('writes are atomic: no temp file is left behind, after a run or after a failed write', async () => {
+    const cwd = project();
+    const tempFiles = () => readdirSync(cwd, { recursive: true }).filter((name) => name.endsWith('.tmp'));
+
+    await runInit({ cwd, yes: true });
+    assert.deepEqual(tempFiles(), []);
+
+    // The target is a folder: the rename fails after the temp file was written.
+    mkdirSync(join(cwd, 'blocked'));
+    assert.throws(() => writeAtomic(join(cwd, 'blocked'), 'x'));
+    assert.deepEqual(tempFiles(), []);
+
+    const file = join(cwd, 'a.txt');
+    writeFileSync(file, 'old');
+    writeAtomic(file, 'new');
+    assert.equal(readFileSync(file, 'utf8'), 'new');
+    assert.deepEqual(tempFiles(), []);
+});
+
 test('a dry run on an empty project creates nothing', async () => {
     const cwd = project();
     const result = await runInit({ cwd, dryRun: true });
@@ -1176,7 +1208,7 @@ test('an error while writing leaves the earlier writes, the old manifest, and a 
     const manifestBefore = readFileSync(join(cwd, '.claude/brigade.json'), 'utf8');
 
     await assert.rejects(runInit({ cwd, yes: true, stackDir, version: '2.0.0' }));
-    // Not atomic: what was written before the failure stays.
+    // Each file is replaced atomically, but the run is not: what was written before the failure stays.
     assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'a2\n');
     // The manifest is written last: it still describes the previous install.
     assert.equal(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8'), manifestBefore);
