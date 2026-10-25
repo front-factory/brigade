@@ -14,9 +14,9 @@
     "files": {
         ".claude/agents/git-operator.md": "3019cafa74b4f2c1a179998153b264c7d3b1c01251e3dde6497860e1ef72e478",
         ".claude/agents/implementer.md": "92d1779ddd3d7ff0d64ff9b45571eea8485d0147c27758afe887d8a635fe1f79",
-        ".claude/commands/brigade-effort.md": "8f04af4073beadc42d2a701b1f1737eec36eb013be084d5b0f63e6a97f43fdc7",
-        ".claude/commands/brigade-language.md": "18e9c21d99c87920a6285a52a8d8947a01e47c4358d1bcdef05bab8547a25a66",
-        ".claude/commands/brigade-reference-branch.md": "2b41acaa7793b8fe54e796385ec77e509eb99d32850fce6d23c4ff6b2d80a263",
+        ".claude/commands/brigade-effort.md": "95250fce81b53018293146dc2566cdd8a19c9b6a05b23022ca49aa82d266bee8",
+        ".claude/commands/brigade-language.md": "838fab3e4c8748ca9ac143ccd54619a72f6208196e2ea15eb0d7d863326a1f31",
+        ".claude/commands/brigade-reference-branch.md": "2dd4e06a7a1c3a29f554337c5c172607addaac6d994449e9a4551007b9d6639d",
         ".claude/commands/brigade-settings.md": "e9e3fd07a1f0d05044541297eec2f39c750e6d6c453931dd6c141cacf0d10cff",
         ".claude/context/audits/_template.md": "027b0ceb32d0a111435950f851c83a93ed34200df820a55f9d22c724605b5e28",
         ".claude/context/features/_template.md": "8fb4f614cb6118b0f43d84668e78929a7fb4c2e1f5d3370caaf44be3a05986f1",
