@@ -23,6 +23,8 @@ const languages = (current) => [...new Set([current, ...LANGUAGES].filter(Boolea
 // (express install), or null when they cannot be told.
 // ctx: { cwd, prompter, previous (stored answers), current (answers being edited), answers (decided so far), full (asked from scratch), personal }
 // The answers hold the dev's choices only: what comes from the kit is computed when the files are rendered.
+// An option stores only the dev's choice, never kit text: kit-owned text goes through a resolver called at render time
+// (like `commitFormatOf`), so an update never keeps a stale kit value.
 export const OPTIONS = [
     {
         keys: ['defaultBranch'],

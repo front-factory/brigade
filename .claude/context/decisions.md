@@ -15,3 +15,4 @@
 - This repo's `.claude/` is the rendered copy of `templates/web/` (dogfooding): `test/dogfood.test.js` guards against drift.
 - `.claude/brigade.json` is committed and shared like in any install (the whole team shares the install, any developer can install or update from any machine): `test/dogfood.test.js` checks it matches `.claude/`.
 - `rules/brigade.md` is pure kit (no placeholders); project options live in the generated `rules/brigade-options.md`, so kit updates never conflict.
+- Manifest `answers` hold only the user's choices; kit-owned text is resolved at render time (like `commitFormatOf`): an update always brings the latest kit, whatever the options.
