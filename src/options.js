@@ -295,6 +295,8 @@ export async function askOptions({ cwd, prompter, previous = {}, full }) {
             if (!full) asked.push(option.keys);
         } else {
             for (const key of option.keys) answers[key] = previous[key];
+            // The format text comes from the kit, not from the dev: a known convention follows the current version.
+            if (CONVENTIONS[previous.commitConvention] && option.keys.includes('commitFormat')) answers.commitFormat = CONVENTIONS[previous.commitConvention].format;
         }
     }
     return { answers: { ...previous, ...answers }, personal, asked };

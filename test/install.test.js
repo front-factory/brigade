@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import './git-env.js';
 import { runInit } from '../src/init.js';
 import { appendMissingLines, mergeSettings, readManifest, render, sha, writeAtomic, writeLocalSettings } from '../src/install.js';
+import { CONVENTIONS } from '../src/conventions.js';
 import { OPTIONS } from '../src/options.js';
 import { compareVersions } from '../src/version.js';
 
@@ -629,6 +630,26 @@ test('a proposed brigade.md that already mentions the options file gets no note'
     const result = await runInit({ cwd, yes: true });
     assert.equal(statuses(result)[RULES], 'proposed');
     assert.equal(result.report.find(({ path }) => path === RULES).note, undefined);
+});
+
+test('an update refreshes the commit format of a known convention, a custom one stays', async () => {
+    const stored = async (answers) => {
+        const cwd = project();
+        await runInit({ cwd, yes: true });
+        const manifest = readManifest(cwd);
+        manifest.version = '1.0.0';
+        manifest.answers = { ...manifest.answers, ...answers };
+        writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
+        const result = await runInit({ cwd, yes: true });
+        return { cwd, result };
+    };
+
+    const known = await stored({ commitConvention: 'conventional', commitFormat: 'An outdated text.' });
+    assert.equal(known.result.answers.commitFormat, CONVENTIONS.conventional.format);
+    assert.ok(readFileSync(join(known.cwd, OPTIONS_PATH), 'utf8').includes(CONVENTIONS.conventional.format));
+
+    const custom = await stored({ commitConvention: 'custom', commitFormat: 'Gitmoji, one line.' });
+    assert.equal(custom.result.answers.commitFormat, 'Gitmoji, one line.');
 });
 
 // The setup flow of a first install, with a dev to ask.
