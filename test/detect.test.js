@@ -155,7 +155,7 @@ test('the gitmoji format states the gitmoji specification', () => {
 });
 
 test('the generic body sentence is left out only when the convention has its own body rule', () => {
-    const answers = (commitConvention) => ({ commitConvention, commitFormat: CONVENTIONS[commitConvention]?.format ?? 'My format.' });
+    const answers = (commitConvention) => ({ commitConvention, commitFormat: 'My format.' });
     const sentence = 'Add a body when the "why" is not obvious.';
     const template = '__COMMIT_FORMAT__';
     for (const name of ['conventional', 'gitmoji', 'imperative', 'custom']) {

@@ -3,7 +3,6 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { CONVENTIONS } from '../src/conventions.js';
 import { OPTIONS_FILE, render, renderOptions, sha } from '../src/install.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -17,7 +16,6 @@ const ANSWERS = {
     baseBranch: 'develop',
     packageManager: 'npm',
     commitConvention: 'conventional',
-    commitFormat: CONVENTIONS.conventional.format,
     replyLanguage: 'French',
     codeLanguage: 'English',
     docsLanguage: 'English'

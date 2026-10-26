@@ -1,4 +1,4 @@
-import { CONVENTIONS } from './conventions.js';
+import { CONVENTIONS, commitFormatOf } from './conventions.js';
 import {
     PACKAGE_MANAGERS,
     detectCommitConvention,
@@ -22,6 +22,7 @@ const languages = (current) => [...new Set([current, ...LANGUAGES].filter(Boolea
 // validated by the dev; a previous answer wins over detection. `detect(ctx)` returns the same values without asking
 // (express install), or null when they cannot be told.
 // ctx: { cwd, prompter, previous (stored answers), current (answers being edited), answers (decided so far), full (asked from scratch), personal }
+// The answers hold the dev's choices only: what comes from the kit is computed when the files are rendered.
 export const OPTIONS = [
     {
         keys: ['defaultBranch'],
@@ -81,11 +82,11 @@ export const OPTIONS = [
         }
     },
     {
-        keys: ['commitConvention', 'commitFormat'],
+        keys: ['commitConvention'],
         detect: ({ cwd, previous }) => {
             const commitConvention = previous.commitConvention || detectCommitConvention(cwd) || 'conventional';
             if (commitConvention === 'custom') return previous.commitFormat ? { commitConvention, commitFormat: previous.commitFormat } : null;
-            return CONVENTIONS[commitConvention] ? { commitConvention, commitFormat: CONVENTIONS[commitConvention].format } : null;
+            return CONVENTIONS[commitConvention] ? { commitConvention } : null;
         },
         ask: async ({ cwd, prompter: { validate, choose, text }, previous, current }) => {
             const start = previous.commitConvention || current.commitConvention || detectCommitConvention(cwd) || 'conventional';
@@ -107,8 +108,7 @@ export const OPTIONS = [
                 : '';
             // A blank custom format (no terminal) falls back to the default convention, never to an empty line.
             if (commitConvention === 'custom' && custom) return { commitConvention, commitFormat: custom };
-            const convention = CONVENTIONS[commitConvention] ? commitConvention : 'conventional';
-            return { commitConvention: convention, commitFormat: CONVENTIONS[convention].format };
+            return { commitConvention: CONVENTIONS[commitConvention] ? commitConvention : 'conventional' };
         }
     },
     {
@@ -197,8 +197,11 @@ export function recapRows(answers) {
     ];
 }
 
+// The answers as written in the manifest: a known convention has no stored text (an older manifest may still hold one).
+const manifestAnswers = ({ commitFormat, ...answers }) => (CONVENTIONS[answers.commitConvention] || commitFormat === undefined ? answers : { ...answers, commitFormat });
+
 // `previous`: the stored answers. Returns the options (groups of keys) that have no stored value yet.
-export const missingOptions = (previous = {}) => OPTIONS.filter(({ keys }) => keys.some((key) => previous[key] === undefined) || (keys.includes('packageManager') && !storedManager(previous)));
+export const missingOptions = (previous = {}) => OPTIONS.filter(({ keys }) => keys.some((key) => previous[key] === undefined) || (keys.includes('packageManager') && !storedManager(previous)) || (keys.includes('commitConvention') && !commitFormatOf(previous)));
 
 // What each option would be without asking. The ones that cannot be told are left out of the state.
 function propose(ctx) {
@@ -275,7 +278,7 @@ async function askInteractive({ cwd, prompter, previous }) {
         const options = GROUPS.filter(({ value }) => chosen.includes(value)).flatMap(({ options }) => options.map((index) => OPTIONS[index]));
         await askEach(options, { cwd, prompter: editor, previous: {}, current, answers, full: true, personal });
     }
-    return { answers: { ...previous, ...answers }, personal, asked: [] };
+    return { answers: manifestAnswers({ ...previous, ...answers }), personal, asked: [] };
 }
 
 // Asks the options in order. From scratch (`full`) every option is asked; otherwise only the missing ones and the
@@ -295,9 +298,7 @@ export async function askOptions({ cwd, prompter, previous = {}, full }) {
             if (!full) asked.push(option.keys);
         } else {
             for (const key of option.keys) answers[key] = previous[key];
-            // The format text comes from the kit, not from the dev: a known convention follows the current version.
-            if (CONVENTIONS[previous.commitConvention] && option.keys.includes('commitFormat')) answers.commitFormat = CONVENTIONS[previous.commitConvention].format;
         }
     }
-    return { answers: { ...previous, ...answers }, personal, asked };
+    return { answers: manifestAnswers({ ...previous, ...answers }), personal, asked };
 }

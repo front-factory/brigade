@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, rmdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
+import { commitFormatOf } from './conventions.js';
 
 export const MANIFEST = '.claude/brigade.json';
 export const OPTIONS_FILE = '.claude/rules/brigade-options.md';
@@ -45,7 +46,7 @@ export function render(content, answers, json = false) {
         DEFAULT_BRANCH: answers.defaultBranch,
         BASE_BRANCH: answers.baseBranch,
         PACKAGE_MANAGER: answers.packageManager,
-        COMMIT_FORMAT: answers.commitFormat + bodyRule(answers),
+        COMMIT_FORMAT: commitFormatOf(answers) + bodyRule(answers),
         REPLY_LANGUAGE: answers.replyLanguage,
         CODE_LANGUAGE: answers.codeLanguage,
         DOCS_LANGUAGE: answers.docsLanguage
@@ -250,7 +251,7 @@ Options of this project, referred to by \`.claude/rules/brigade.md\`.
 - Default branch: \`${answers.defaultBranch}\`.
 - Reference branch of the work: \`${answers.baseBranch}\`.
 - Package manager: \`${answers.packageManager}\`.
-- Commit format: ${answers.commitFormat}
+- Commit format: ${commitFormatOf(answers)}
 - Code, comments and commit messages language: ${answers.codeLanguage}.
 - Documentation language: ${answers.docsLanguage}.
 - Reply language, project default: ${answers.replyLanguage}.

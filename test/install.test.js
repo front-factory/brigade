@@ -632,7 +632,7 @@ test('a proposed brigade.md that already mentions the options file gets no note'
     assert.equal(result.report.find(({ path }) => path === RULES).note, undefined);
 });
 
-test('an update refreshes the commit format of a known convention, a custom one stays', async () => {
+test('an update ignores a stored commit format of a known convention, a custom one stays', async () => {
     const stored = async (answers) => {
         const cwd = project();
         await runInit({ cwd, yes: true });
@@ -645,7 +645,8 @@ test('an update refreshes the commit format of a known convention, a custom one 
     };
 
     const known = await stored({ commitConvention: 'conventional', commitFormat: 'An outdated text.' });
-    assert.equal(known.result.answers.commitFormat, CONVENTIONS.conventional.format);
+    assert.equal(known.result.answers.commitFormat, undefined);
+    assert.equal(readManifest(known.cwd).answers.commitFormat, undefined);
     assert.ok(readFileSync(join(known.cwd, OPTIONS_PATH), 'utf8').includes(CONVENTIONS.conventional.format));
 
     const custom = await stored({ commitConvention: 'custom', commitFormat: 'Gitmoji, one line.' });
@@ -672,14 +673,10 @@ test('express "Install as is": one card, one choice, the detected setup is store
     assert.deepEqual(asked, [HOW]);
     assert.deepEqual(cards.map(({ title }) => title), ['Here is what will be set up']);
     assert.deepEqual(cards[0].rows.find(([label]) => label === 'Package manager'), ['Package manager', 'pnpm']);
-    assert.deepEqual(
-        { ...result.answers, commitFormat: undefined },
-        {
-            defaultBranch: 'main', baseBranch: 'main', packageManager: 'pnpm', commitConvention: 'conventional', commitFormat: undefined,
-            replyLanguage: 'English', codeLanguage: 'English', docsLanguage: 'English'
-        }
-    );
-    assert.match(result.answers.commitFormat, /^Conventional Commits/);
+    assert.deepEqual(result.answers, {
+        defaultBranch: 'main', baseBranch: 'main', packageManager: 'pnpm', commitConvention: 'conventional',
+        replyLanguage: 'English', codeLanguage: 'English', docsLanguage: 'English'
+    });
     assert.deepEqual(result.personal, {});
     assert.deepEqual(result.asked, []);
     assert.ok(existsSync(join(cwd, MANIFEST_FILE)));
@@ -844,7 +841,7 @@ test('cancelling at the first choice or at the recap leaves the project untouche
 });
 
 test('a blank custom commit format never reaches the options file', async () => {
-    const commit = OPTIONS.find(({ keys }) => keys.includes('commitFormat'));
+    const commit = OPTIONS.find(({ keys }) => keys.includes('commitConvention'));
     const prompter = (typed) => ({
         validate: async (_, detected) => detected,
         choose: async () => 'custom',
@@ -858,15 +855,14 @@ test('a blank custom commit format never reaches the options file', async () => 
     assert.equal((await ask('Gitmoji, one line')).commitFormat, 'Gitmoji, one line');
     for (const blank of ['', '   ']) {
         const answers = await ask(blank);
-        assert.equal(answers.commitConvention, 'conventional');
-        assert.match(answers.commitFormat, /^Conventional Commits/);
+        assert.deepEqual(answers, { commitConvention: 'conventional' });
     }
 
     // No terminal: a stored custom convention without a format is not kept as blank.
     const cwd = project();
     const result = await runInit({ cwd, yes: true });
     assert.match(readFileSync(join(cwd, OPTIONS_PATH), 'utf8'), /^- Commit format: \S.*$/m);
-    assert.match(result.answers.commitFormat, /\S/);
+    assert.equal(result.answers.commitFormat, undefined);
 });
 
 // A kit folder with the given files, installed at 1.0.0 in a fresh project.

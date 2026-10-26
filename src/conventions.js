@@ -37,3 +37,7 @@ export const CONVENTIONS = {
         format: 'A single imperative sentence without prefix (e.g. `Add login form`), ' + LIMIT
     }
 };
+
+// The commit format text of the answers. A known convention carries its text from the kit, computed now, never stored;
+// a custom (or unknown, from an older version) one is the dev's own stored text.
+export const commitFormatOf = ({ commitConvention, commitFormat }) => CONVENTIONS[commitConvention]?.format ?? commitFormat;
