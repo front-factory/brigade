@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.3](https://github.com/front-factory/brigade/compare/v1.6.2...v1.6.3) (2026-10-26)
+
+### Bug Fixes
+
+* **settings:** start the main session in plan mode ([ca4b585](https://github.com/front-factory/brigade/commit/ca4b585a00e7a89ae28e4eeeb28b95dc5e907b18))
+
 ## [1.6.2](https://github.com/front-factory/brigade/compare/v1.6.1...v1.6.2) (2026-10-26)
 
 ### Bug Fixes
