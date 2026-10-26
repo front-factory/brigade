@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.1](https://github.com/front-factory/brigade/compare/v1.6.0...v1.6.1) (2026-10-26)
+
+### Performance
+
+* **templates:** deny more noisy paths in settings ([7cce256](https://github.com/front-factory/brigade/commit/7cce256fefcd17d515e0e2719d1df300c10b6841))
+* **templates:** trim injected context to save tokens ([09f9955](https://github.com/front-factory/brigade/commit/09f99557a660d07b06e207d41fec133851984e9c))
+* **templates:** turn legacy settings commands into thin aliases ([4a3b3d3](https://github.com/front-factory/brigade/commit/4a3b3d3dada68f08f027f7016333a61cc7dcd974))
+
 ## [1.6.0](https://github.com/front-factory/brigade/compare/v1.5.1...v1.6.0) (2026-10-25)
 
 ### Features
