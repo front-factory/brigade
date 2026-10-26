@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { test } from 'node:test';
 import './git-env.js';
 import { runInit } from '../src/init.js';
@@ -656,8 +656,8 @@ test('an update ignores a stored commit format of a known convention, a custom o
 test('an update gives the same files as a fresh install, whatever the stored kit-derived data', async () => {
     const files = (cwd) => Object.fromEntries(readdirSync(cwd, { recursive: true, withFileTypes: true })
         .filter((entry) => entry.isFile() && !entry.parentPath.includes('.git'))
-        .map((entry) => join(entry.parentPath, entry.name).slice(cwd.length))
-        .map((path) => [path, readFileSync(join(cwd, path), 'utf8')]));
+        .map((entry) => join(entry.parentPath, entry.name))
+        .map((file) => [file.slice(cwd.length).split(sep).join('/'), readFileSync(file, 'utf8')]));
 
     const reference = project();
     await runInit({ cwd: reference, yes: true });
