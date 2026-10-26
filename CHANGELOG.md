@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.6.2](https://github.com/front-factory/brigade/compare/v1.6.1...v1.6.2) (2026-10-26)
+
+### Bug Fixes
+
+* **options:** compute the commit format from the kit instead of storing it ([7061e14](https://github.com/front-factory/brigade/commit/7061e142d86fab5fad9c208b49f2fa3ae264189c))
+* **options:** refresh derived commit format on update ([ad05adc](https://github.com/front-factory/brigade/commit/ad05adc0a9f1903cba49384d2f0a9ea139e0f5f7))
+* **test:** use forward slashes in the update-vs-fresh-install test ([95129a6](https://github.com/front-factory/brigade/commit/95129a6a2bc44b87138ae1e0e3c7955a0e494ae2))
+
 ## [1.6.1](https://github.com/front-factory/brigade/compare/v1.6.0...v1.6.1) (2026-10-26)
 
 ### Performance
