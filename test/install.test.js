@@ -653,6 +653,34 @@ test('an update ignores a stored commit format of a known convention, a custom o
     assert.equal(custom.result.answers.commitFormat, 'Gitmoji, one line.');
 });
 
+test('an update gives the same files as a fresh install, whatever the stored kit-derived data', async () => {
+    const files = (cwd) => Object.fromEntries(readdirSync(cwd, { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile() && !entry.parentPath.includes('.git'))
+        .map((entry) => join(entry.parentPath, entry.name).slice(cwd.length))
+        .map((path) => [path, readFileSync(join(cwd, path), 'utf8')]));
+
+    const reference = project();
+    await runInit({ cwd: reference, yes: true });
+
+    const cwd = project();
+    await runInit({ cwd, yes: true });
+    const manifest = readManifest(cwd);
+    manifest.version = '1.0.0';
+    manifest.answers = { ...manifest.answers, commitConvention: 'conventional', commitFormat: 'An outdated text.' };
+    // A kit file the developer did not edit, still at an older kit content.
+    writeFileSync(join(cwd, RULES), 'an older kit version\n');
+    manifest.files[RULES] = sha('an older kit version\n');
+    writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
+    await runInit({ cwd, yes: true });
+
+    // The manifest is compared apart: it does not track the write-once files after an update.
+    const { [`/${MANIFEST_FILE}`]: updatedManifest, ...updated } = files(cwd);
+    const { [`/${MANIFEST_FILE}`]: freshManifest, ...installed } = files(reference);
+    assert.deepEqual(updated, installed);
+    const [a, b] = [JSON.parse(updatedManifest), JSON.parse(freshManifest)];
+    assert.deepEqual([a.version, a.answers], [b.version, b.answers]);
+});
+
 // The setup flow of a first install, with a dev to ask.
 const fresh = async (cwd, script = {}) => {
     const { prompter, asked, cards } = asking('update', script);
