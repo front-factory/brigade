@@ -3,7 +3,7 @@
     "effortLevel": "medium",
     "language": "French",
     "permissions": {
-        "defaultMode": "acceptEdits",
+        "defaultMode": "plan",
         "allow": [
             "Bash(git status:*)",
             "Bash(git diff:*)",
