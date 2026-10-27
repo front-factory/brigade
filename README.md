@@ -37,6 +37,9 @@ project and committed with it. The rest of the kit, all under `.claude/`:
 The guard protects the default branch and the reference branch. To lift the latter for yourself only, run
 `/brigade-settings`: it sets `BRIGADE_UNPROTECT_REFERENCE_BRANCH=1` in `.claude/settings.local.json`. Restart the session.
 
+For a personal effort per role (`implementer`, `git-operator`), copy `.claude/context/local-template.md` to
+`CLAUDE.local.md` at the project root (git-ignored), or let `/brigade-settings` write it.
+
 ## Install
 
 Run `npx @frontfactory/brigade init` in your project:
@@ -56,6 +59,7 @@ Options:
 - `--yes` (or `-y`) accepts everything detected.
 - `--stack <name>` forces the stack instead of detecting it (only `web` for now).
 - `--dry-run` prints the install plan, asks nothing, writes nothing, and exits with code 0.
+- `--version` (or `-v`) prints the version, `--help` (or `-h`) the usage.
 
 Brigade never touches your `CLAUDE.md`: its rules live in `.claude/rules/brigade.md`, which Claude Code loads at launch.
 
@@ -113,6 +117,10 @@ parses the text of the command, so it can miss subshells, `bash -c`, aliases and
 `permissions` in `settings.json` and branch protection on the remote. "Never read or write secrets" is a rule given to
 Claude, not an enforcement, beyond the `deny` `Read` rules.
 
+The hooks run through a launcher that looks for `node`. If it finds none, it fails open: the guard is off for the
+session, and Claude Code shows a "node was not found" warning when a hook runs. Add `node` to the PATH of
+non-interactive shells and restart.
+
 Only `git-operator` writes to git. `push`, `merge` and `rebase` ask for confirmation, destructive commands are denied.
 Brigade proposes a commit once the work is finished and never commits without your go. A feature gets its own branch
 and a state file `.claude/context/features/<branch>.md` (slashes become dashes), committed with the branch.
@@ -126,7 +134,7 @@ answers reach it through `.claude/rules/brigade-options.md` (see `renderOptions`
 
 ## Develop
 
-`npm test` runs the tests (`node --test`). Commits follow Conventional Commits, checked by commitlint. Node >= 24.
+`npm test` runs the tests (`node --test`), `npm run test:coverage` adds the coverage report. Commits follow Conventional Commits, checked by commitlint. Node >= 24.
 
 The CI runs the tests on pushes and pull requests to `main`, `develop` and `beta`. On a push to `main` or `beta`,
 semantic-release derives the version from the commits, updates the changelog and publishes to npm.
