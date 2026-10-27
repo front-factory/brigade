@@ -2,10 +2,10 @@
 // Status line: "Brigade v<version> · <branch>", read-only. Whatever is missing is left out, and it never throws.
 // Reads the Claude Code status payload on stdin.
 import {
-    existsSync, readFileSync, statSync 
+    existsSync, readFileSync, statSync
 } from 'node:fs';
 import {
-    dirname, join, resolve 
+    dirname, join, resolve
 } from 'node:path';
 import { pathToFileURL } from 'node:url';
 

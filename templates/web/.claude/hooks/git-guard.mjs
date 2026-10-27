@@ -69,7 +69,7 @@ const SAFE = new Set([
 const RANK = {
     allow: 0,
     ask: 1,
-    deny: 2 
+    deny: 2
 };
 
 // Quoted text (commit messages) must not be read as commands.
@@ -77,7 +77,7 @@ const strip = (command) => command.replace(/"(?:[^"\\]|\\.)*"|'[^']*'/g, '""');
 
 const UNKNOWN = {
     sub: '?',
-    rest: '' 
+    rest: ''
 };
 const MAX_DEPTH = 3;
 
@@ -150,7 +150,7 @@ function parseGit(text) {
 
     return {
         sub: tokens[i],
-        rest: tokens.slice(i + 1).join(' ') 
+        rest: tokens.slice(i + 1).join(' ')
     };
 }
 
@@ -253,14 +253,14 @@ function destructive({ sub, rest }) {
 export function decide({ command, agent, branch, protectedBranches }) {
     let decision = {
         permissionDecision: 'allow',
-        reason: '' 
+        reason: ''
     };
 
     const raise = (permissionDecision, reason) => {
         if (RANK[permissionDecision] > RANK[decision.permissionDecision] || decision.reason === '') {
             decision = {
                 permissionDecision,
-                reason 
+                reason
             };
         }
     };
@@ -311,7 +311,7 @@ function currentBranch(cwd) {
                 'ignore',
                 'pipe',
                 'ignore'
-            ] 
+            ]
         }).trim();
     } catch {
         return '';
@@ -360,7 +360,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         })
         : {
             permissionDecision: 'ask',
-            reason: 'Hook payload unreadable: confirm.' 
+            reason: 'Hook payload unreadable: confirm.'
         };
 
     if (decision) {
