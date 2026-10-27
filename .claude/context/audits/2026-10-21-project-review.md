@@ -49,7 +49,7 @@ Status: open
 | T4 | low | test/install.test.js | Uses `rm` via `execFileSync` (not portable to Windows); use `rmSync`. | fixed | `rm` replaced by `rmSync`. |
 | T5 | low | test/ | Tests depended on the machine's git config (`init.defaultBranch`); made hermetic with GIT_CONFIG_GLOBAL/GIT_CONFIG_NOSYSTEM. | fixed | Empty temp gitconfig used instead of the null device, which git cannot open on Windows. |
 | R1 | - | CI | The matrix has a single Node (24) while the comment promises every `engines` version. | fixed | Matrix: Node 24 on ubuntu, macOS and Windows, plus the latest Node on ubuntu. |
-| R2 | - | repo | No lint/format tooling (only `.editorconfig`). | open | |
+| R2 | - | repo | No lint/format tooling (only `.editorconfig`). | fixed | eslint added in 6cb4739 |
 | R3 | low | CI | Dotfiles ARE packaged (`npm pack --dry-run`: 29 files, 24.7 kB, all `templates/web/.claude/**` present); only a CI guard (`npm pack --dry-run` check) is missing. | fixed | Added test/pack.test.js: `npm pack --dry-run --json` must list bin, src and every templates/web file (dotfiles included). |
 | R4 | - | release | Publish with npm Trusted Publishing (OIDC) instead of `NPM_TOKEN`. | fixed | `NPM_TOKEN` removed from `ci.yml`. The trusted publisher on npmjs.com remains a manual step. |
 | R5 | low | Dependabot | Add `groups` and a `commit-message` prefix compatible with commitlint. `reviewers` in dependabot.yml is deprecated by GitHub: use a CODEOWNERS file. | fixed | Commit-message prefixes, groups added; reviewers replaced by CODEOWNERS. |
@@ -57,7 +57,7 @@ Status: open
 | R7 | low | hooks | No `pre-push` hook running `npm test`. | wontfix (low value) | Tests are fast and CI already runs them on ubuntu, macOS and Windows; a pre-push hook is bypassable with --no-verify and only slows pushes. |
 | R8 | medium | .github/workflows/ci.yml | Actions not pinned by SHA in the `publish` job (has `id-token: write`); no `concurrency`, no `timeout-minutes`; `actions: read` unused. | fixed | actions pinned by SHA, `concurrency` and `timeout-minutes` added, `actions: read` removed. |
 | R9 | medium | .github/workflows/ci.yml | Tests only on ubuntu; the CLI runs on dev machines (macOS/Windows). Add an OS matrix (relates to T4). | fixed | test job runs on ubuntu, macOS and Windows (Node 24, `fail-fast: false`); Windows/macOS runs not verified locally. |
-| R10 | low | CI | Commit format only enforced by the local husky hook (bypassable with `--no-verify`); semantic-release silently ignores non-conforming commits. Add commitlint in CI. | open | |
+| R10 | low | CI | Commit format only enforced by the local husky hook (bypassable with `--no-verify`); semantic-release silently ignores non-conforming commits. Add commitlint in CI. | fixed | commitlint in CI, see A11 of 2026-10-26-docs-consistency |
 | D1 | - | README.md | Gained Update, Troubleshooting and git guard security-model sections. | fixed | 2afea10 |
 | D2 | - | CONTRIBUTING.md, SECURITY.md | Not written. | wontfix | The user declined them. |
 | N1 | medium | src/detect.js, src/install.js | `packageManager` of package.json (and free-text answers such as the language) were substituted verbatim into `settings.json`: a crafted value could add an `allow` permission rule or break the JSON. | fixed | Only npm, pnpm, yarn and bun are accepted (declared field and stored answer, otherwise treated as undetected); values rendered into `.json` files are JSON-escaped; tests added. |
