@@ -30,7 +30,7 @@ Status: open
 | C6 | - | src/ (manifest) | Corrupted `brigade.json` now errors instead of being treated as a first install. | fixed | 1eec657 |
 | C7 | - | src/ (install) | Stale `.proposed` removed once the target matches the kit. | fixed | 1eec657 |
 | C8 | - | src/ (hashes, appends) | CRLF handled in hashes and `.gitignore`/`.gitattributes` appends. | fixed | 1eec657 |
-| C9 | - | src/prompt.js | Calls `process.exit(1)` on cancel (untestable); `close` is a no-op. | open | |
+| C9 | - | src/prompt.js | Calls `process.exit(1)` on cancel (untestable); `close` is a no-op. | fixed | `prompt.js` throws `CancelError`, `main` prints the message and returns 1; the unused `close` is removed; cancel path tested in `prompt.test.js`. |
 | C10 | - | src/ (CLI) | `--dry-run` option. | fixed | Prints the same plan as a real run and writes nothing; README and `--help` updated, tests added. |
 | C11 | - | src/detect.js | Language detection from `LANG` is unreliable (often `C`/`en_US`). | fixed | Detection removed; the reply language defaults to English (preselected in the question, applied directly with `--yes` or without a terminal); stored answers still win. |
 | C12 | - | src/detect.js | No monorepo / pnpm workspace detection. | deferred | |

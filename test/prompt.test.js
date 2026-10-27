@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { stripVTControlCharacters } from 'node:util';
 
 import { createPrompter } from '../src/prompt.js';
@@ -83,8 +85,6 @@ test('without a terminal nothing is printed', async () => {
         prompter.done('Done', [
             'x'
         ]);
-
-        prompter.close();
     });
 
     assert.equal(out, '');
@@ -135,6 +135,34 @@ test('with a terminal the display helpers print', async () => {
     ]) {
         assert.ok(out.includes(text), text);
     }
+});
+
+// Ctrl-C on a real prompt: clack reads it from stdin, so it runs in a child process fed with it.
+test('cancelling a question throws a CancelError instead of exiting', () => {
+    const script = `
+        import { createPrompter, CancelError } from './src/prompt.js';
+
+        try {
+            await createPrompter({ interactive: true }).text('Name?', 'main');
+        } catch (error) {
+            console.log(error instanceof CancelError ? error.message : 'other: ' + error.message);
+            process.exit(0);
+        }
+        console.log('answered');
+    `;
+
+    const result = spawnSync(process.execPath, [
+        '--input-type=module',
+        '-e',
+        script
+    ], {
+        cwd: fileURLToPath(new URL('..', import.meta.url)),
+        encoding: 'utf8',
+        input: '\x03'
+    });
+
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(stripVTControlCharacters(result.stdout), /Cancelled\. Nothing was written\./);
 });
 
 test('without a terminal a confirmation is a yes', async () => {

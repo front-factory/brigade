@@ -5,7 +5,9 @@ import { parseArgs } from 'node:util';
 import { runInit } from './init.js';
 import { APPENDS } from './install.js';
 import { recapRows } from './options.js';
+import { CancelError } from './prompt.js';
 import { STACKS } from './stacks.js';
+import * as ui from './ui.js';
 import { runUninstall } from './uninstall.js';
 import { VERSION } from './version.js';
 import {
@@ -296,6 +298,12 @@ export async function main(argv) {
 
         return 0;
     } catch (error) {
+        if (error instanceof CancelError) {
+            console.log(`\n${ui.dim(error.message)}`);
+
+            return 1;
+        }
+
         console.error(`brigade: ${error.message}`);
 
         return 1;

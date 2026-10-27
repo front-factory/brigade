@@ -4,19 +4,22 @@ import * as ui from './ui.js';
 
 const OTHER = Symbol('other');
 
+// Thrown when the developer cancels a question; `main` prints the message and exits with 1.
+export class CancelError extends Error {
+    constructor() {
+        super('Cancelled. Nothing was written.');
+        this.name = 'CancelError';
+    }
+}
+
 // Non-interactive (no TTY or `--yes`): every question resolves to its default and nothing is printed.
 export function createPrompter({ interactive }) {
-    const cancelled = () => {
-        console.log(`\n${ui.dim('Cancelled. Nothing was written.')}`);
-        process.exit(1);
-    };
-
     // Nothing is written before the last question, so cancelling leaves the project untouched.
     const answer = async (pending) => {
         const value = await pending;
 
         if (p.isCancel(value)) {
-            cancelled();
+            throw new CancelError();
         }
 
         return value;
@@ -129,7 +132,6 @@ export function createPrompter({ interactive }) {
         info: when((message) => console.log(`${ui.dim('·')} ${ui.dim(message)}`)),
         warn: when((message) => console.log(`${ui.accent('!')} ${message}`)),
         outro: when((message) => console.log(`\n${message}`)),
-        done: when((message, lines) => console.log(`\n${ui.success('✓')} ${ui.bright(message)}\n${ui.bullets(lines)}\n`)),
-        close: () => {}
+        done: when((message, lines) => console.log(`\n${ui.success('✓')} ${ui.bright(message)}\n${ui.bullets(lines)}\n`))
     };
 }
