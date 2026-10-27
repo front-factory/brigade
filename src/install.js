@@ -561,11 +561,18 @@ export function planExtras({ cwd, version, stack, answers, hashes }) {
     });
     const { ignored, writes } = planAppends(cwd);
 
+    // Plain code-unit order, so the manifest does not depend on the locale.
     const files = Object.fromEntries(Object.entries(hashes).sort(([
         a
     ], [
         b
-    ]) => a.localeCompare(b)));
+    ]) => {
+        if (a === b) {
+            return 0;
+        }
+
+        return a < b ? -1 : 1;
+    }));
 
     const manifest = {
         file: join(cwd, MANIFEST),

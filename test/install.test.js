@@ -11,7 +11,7 @@ import { test } from 'node:test';
 import './git-env.js';
 import { runInit } from '../src/init.js';
 import {
-    appendMissingLines, mergeSettings, readManifest, render, sha, writeAtomic, writeLocalSettings
+    appendMissingLines, mergeSettings, planExtras, readManifest, render, sha, writeAtomic, writeLocalSettings
 } from '../src/install.js';
 import { CONVENTIONS } from '../src/conventions.js';
 import { OPTIONS } from '../src/options.js';
@@ -1812,6 +1812,52 @@ test('a blank custom commit format never reaches the options file', async () => 
 
     assert.match(readFileSync(join(cwd, OPTIONS_PATH), 'utf8'), /^- Commit format: \S.*$/m);
     assert.equal(result.answers.commitFormat, undefined);
+});
+
+test('the manifest lists the files in plain code-unit order, whatever the locale', () => {
+    const cwd = project();
+
+    const answers = {
+        defaultBranch: 'main',
+        baseBranch: 'main',
+        packageManager: 'npm',
+        commitConvention: 'none',
+        commitFormat: 'free',
+        codeLanguage: 'English',
+        docsLanguage: 'English',
+        replyLanguage: 'English'
+    };
+
+    const hashes = {
+        'b.md': '1',
+        'a_b.md': '2',
+        'B.md': '3',
+        'a.b.md': '4',
+        'a-b.md': '5'
+    };
+
+    const { writes } = planExtras({
+        cwd,
+        version: '1.0.0',
+        stack: 'x',
+        answers,
+        hashes
+    });
+    const manifest = JSON.parse(writes.at(-1).content);
+
+    // localeCompare would put b.md before B.md and a_b.md before a-b.md.
+    assert.deepEqual(Object.keys(manifest.files), [
+        'B.md',
+        'a-b.md',
+        'a.b.md',
+        'a_b.md',
+        'b.md'
+    ]);
+
+    rmSync(cwd, {
+        recursive: true,
+        force: true
+    });
 });
 
 // A kit folder with the given files, installed at 1.0.0 in a fresh project.
