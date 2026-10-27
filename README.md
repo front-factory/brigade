@@ -82,6 +82,21 @@ What happens to your files:
 
 `.claude/brigade.json` records the version, your answers and the sha256 of each file written. Commit it, do not edit it.
 
+## Uninstall
+
+Run `npx @frontfactory/brigade uninstall`. It lists what it will do and asks before removing anything.
+
+- Removed: every kit file you never edited, their leftover `.proposed` files, `.claude/rules/brigade-options.md` and
+  `.claude/brigade.json` (last), then the folders left empty.
+- Kept and reported (delete them yourself): kit files you edited, and `decisions.md` or `architecture.md` once they
+  differ from the template.
+- `.claude/settings.json`: the kit's entries are removed, yours stay. The file is deleted if nothing of yours is left.
+- Never touched: `CLAUDE.md`, `CLAUDE.local.md`, `.claude/settings.local.json`, your features and audits. The lines
+  Brigade added to `.gitignore` and `.gitattributes` stay: remove them yourself if you want.
+- `--dry-run` prints the plan and writes nothing. Without a terminal, `--yes` is required.
+
+Removed files remain in your git history.
+
 ## Troubleshooting
 
 - `Unknown stack` or `Unknown option`: run `npx @frontfactory/brigade --help`.
