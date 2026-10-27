@@ -273,7 +273,7 @@ export async function main(argv) {
 
     try {
         const options = parse(rest, command);
-        const interactive = Boolean(process.stdin.isTTY) && !options.yes && !options.dryRun;
+        const interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !options.yes && !options.dryRun;
 
         if (command === 'uninstall') {
             const cwd = process.cwd();

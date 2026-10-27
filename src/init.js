@@ -80,7 +80,7 @@ async function confirmChanges({ prompter, report }) {
 }
 
 // `dryRun`: nothing is asked and nothing is written, the result lists what a real run would do.
-export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDir, version = VERSION, interactive = process.stdin.isTTY && !yes && !dryRun, prompter }) {
+export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDir, version = VERSION, interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !yes && !dryRun, prompter }) {
     const name = stack ?? detectStack(cwd);
     const dir = stackDir ?? (STACKS[name] ?? STACKS[DEFAULT_STACK]).dir;
     const previous = readManifest(cwd);

@@ -169,7 +169,7 @@ export function planUninstall({ cwd, stackDir, manifest }) {
 }
 
 // `dryRun`: nothing is asked and nothing is written. Without a terminal, `yes` is required.
-export async function runUninstall({ cwd, yes = false, dryRun = false, version = VERSION, interactive = process.stdin.isTTY && !yes && !dryRun, prompter }) {
+export async function runUninstall({ cwd, yes = false, dryRun = false, version = VERSION, interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !yes && !dryRun, prompter }) {
     const manifest = readManifest(cwd);
 
     if (!manifest) {
