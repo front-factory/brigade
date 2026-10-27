@@ -7,7 +7,9 @@
         "prepare": "husky",
         "test": "node --test \"test/*.test.js\"",
         "test:coverage": "node --test --experimental-test-coverage \"test/*.test.js\"",
-        "release": "semantic-release"
+        "release": "semantic-release",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix"
     },
     "engines": {
         "node": ">=24"
