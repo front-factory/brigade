@@ -3,7 +3,7 @@ name: session-start
 description: "Use before the first coding task of a session (not for plain questions)."
 ---
 
-Check the current branch (`git branch --show-current`, `git status -sb`), read `CLAUDE.local.md` (if present, personal preferences only) and the feature file (see skill `feature`, if present).
+Check the current branch (`git branch --show-current`, `git status -sb`), read `CLAUDE.local.md` (if present, personal preferences only) and the feature file (see skill `feature`, if present). Do not read `.claude/context/decisions.md` here: the rule in `brigade.md` already reads it at the start of every session; on resume this skill only checks what changed in it.
 
 - **Feature file present**: read it and report in 2-3 lines the goal, what is done, the next step. Then run the resume check (see `feature`, "Resume"): new commits on base, `.claude/context/decisions.md` changes since the saved date, open audit rows. Ask whether to continue or start something new, and do not start coding before the user has confirmed.
 - **No file**: just report the branch and the remote sync. No file is created.

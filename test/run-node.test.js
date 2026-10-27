@@ -119,11 +119,14 @@ test('the launcher falls back to volta, then to the system locations', () => {
     }).stdout.trim(), 'system script.mjs arg');
 });
 
-test('the launcher exits 0 with one line on stderr when node is nowhere', () => {
+test('the launcher exits 0 with one line on stderr and a systemMessage on stdout when node is nowhere', () => {
     const result = launch();
 
     assert.equal(result.status, 0);
-    assert.equal(result.stdout, '');
     assert.match(result.stderr, /^Brigade: node was not found, the hook script\.mjs was skipped/);
     assert.equal(result.stderr.trim().split('\n').length, 1);
+
+    const { systemMessage } = JSON.parse(result.stdout);
+
+    assert.match(systemMessage, /node was not found.*git guard.*disabled/);
 });

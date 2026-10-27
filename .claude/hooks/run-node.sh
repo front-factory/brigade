@@ -1,7 +1,7 @@
 #!/bin/sh
 # Launcher of the hooks: runs `node <script> [args]` even when node is not on the PATH of this non-interactive shell
 # (version managers like nvm, fnm, volta or asdf only set it up in interactive shells). Stdin and arguments are
-# forwarded. When node cannot be found it prints one line on stderr and exits 0, so a hook never blocks the session.
+# forwarded. When node cannot be found it prints one line on stderr and a JSON systemMessage on stdout (shown to the user), and exits 0, so a hook never blocks the session.
 # Usage: sh run-node.sh <script.mjs> [args]
 
 # Prints the first usable node of a directory.
@@ -53,6 +53,8 @@ find_node() {
 NODE=$(find_node)
 if [ -z "$NODE" ]; then
     echo "Brigade: node was not found, the hook $(basename "${1:-}") was skipped. Add node to the PATH of non-interactive shells." >&2
+    # Fail open, but visible: Claude Code shows the systemMessage of a hook to the user.
+    echo '{"systemMessage":"Brigade: node was not found, so the Brigade hooks, including the git guard, are disabled for this session. Add node to the PATH of non-interactive shells."}'
     exit 0
 fi
 exec "$NODE" "$@"
