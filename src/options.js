@@ -38,7 +38,7 @@ const languages = (current) => [
     ].filter(Boolean))
 ].map((value) => ({
     value,
-    label: value 
+    label: value
 }));
 
 // The options of the kit, in the order they are asked. `keys` are the names stored in the manifest `answers`: a group
@@ -58,7 +58,7 @@ export const OPTIONS = [
             const defaultBranch = previous.defaultBranch || detectDefaultBranch(cwd);
 
             return defaultBranch ? {
-                defaultBranch 
+                defaultBranch
             } : null;
         },
         ask: async ({ cwd, prompter: { validate, text }, previous, current }) => ({
@@ -77,7 +77,7 @@ export const OPTIONS = [
             const baseBranch = previous.baseBranch || answers.defaultBranch;
 
             return baseBranch ? {
-                baseBranch 
+                baseBranch
             } : null;
         },
         ask: async ({ cwd, prompter: { choose }, previous, current, answers }) => {
@@ -112,7 +112,7 @@ export const OPTIONS = [
             const packageManager = storedManager(previous) || detectPackageManager(cwd).value;
 
             return packageManager ? {
-                packageManager 
+                packageManager
             } : null;
         },
         ask: async ({ cwd, prompter: { validate, choose }, previous, current }) => {
@@ -135,10 +135,10 @@ export const OPTIONS = [
                         managers.map((value) => ({
                             value,
                             label: value,
-                            hint: manager.candidates.includes(value) ? 'found in the project' : undefined 
+                            hint: manager.candidates.includes(value) ? 'found in the project' : undefined
                         })),
                         {
-                            other: false 
+                            other: false
                         }
                     )
                 )
@@ -155,12 +155,12 @@ export const OPTIONS = [
             if (commitConvention === 'custom') {
                 return previous.commitFormat ? {
                     commitConvention,
-                    commitFormat: previous.commitFormat 
+                    commitFormat: previous.commitFormat
                 } : null;
             }
 
             return CONVENTIONS[commitConvention] ? {
-                commitConvention 
+                commitConvention
             } : null;
         },
         ask: async ({ cwd, prompter: { validate, choose, text }, previous, current }) => {
@@ -178,16 +178,16 @@ export const OPTIONS = [
                         ]) => ({
                             value,
                             label,
-                            hint: example 
+                            hint: example
                         })),
                         {
                             value: 'custom',
                             label: 'Custom',
-                            hint: 'you describe it in one sentence' 
+                            hint: 'you describe it in one sentence'
                         }
                     ].sort((a, b) => (b.value === current.commitConvention) - (a.value === current.commitConvention)),
                     {
-                        other: false 
+                        other: false
                     }
                 ),
                 CONVENTIONS[start]?.label
@@ -195,7 +195,7 @@ export const OPTIONS = [
 
             const custom = commitConvention === 'custom'
                 ? await text('Describe your commit format in one sentence', previous.commitFormat || current.commitFormat, {
-                    required: true 
+                    required: true
                 })
                 : '';
 
@@ -203,12 +203,12 @@ export const OPTIONS = [
             if (commitConvention === 'custom' && custom) {
                 return {
                     commitConvention,
-                    commitFormat: custom 
+                    commitFormat: custom
                 };
             }
 
             return {
-                commitConvention: CONVENTIONS[commitConvention] ? commitConvention : 'conventional' 
+                commitConvention: CONVENTIONS[commitConvention] ? commitConvention : 'conventional'
             };
         }
     },
@@ -221,7 +221,7 @@ export const OPTIONS = [
             return {
                 replyLanguage: previous.replyLanguage || ENGLISH,
                 codeLanguage,
-                docsLanguage: previous.docsLanguage || codeLanguage 
+                docsLanguage: previous.docsLanguage || codeLanguage
             };
         },
         ask: async (ctx) => {
@@ -229,7 +229,7 @@ export const OPTIONS = [
 
             const known = {
                 ...current,
-                ...previous 
+                ...previous
             };
 
             // First question: replies. Stored values lead, English is preselected otherwise.
@@ -243,7 +243,7 @@ export const OPTIONS = [
                 'Language of Claude\'s replies for this project (each developer can use their own later)',
                 replyOptions,
                 {
-                    other: false 
+                    other: false
                 }
             );
 
@@ -258,20 +258,20 @@ export const OPTIONS = [
                 ])
             ].map((value) => ({
                 value,
-                label: value 
+                label: value
             }));
 
             if (together && !sameChoices.some(({ value }) => value === together)) {
                 sameChoices.push({
                     value: together,
-                    label: together 
+                    label: together
                 });
             }
 
             const different = {
                 value: DIFFERENT,
                 label: 'Different for code and docs',
-                hint: 'you choose each language' 
+                hint: 'you choose each language'
             };
             const first = split ? different : sameChoices.find(({ value }) => value === (together || ENGLISH));
 
@@ -285,7 +285,7 @@ export const OPTIONS = [
                     ].filter((option) => option !== first)
                 ],
                 {
-                    other: false 
+                    other: false
                 }
             );
 
@@ -305,13 +305,13 @@ export const OPTIONS = [
                 languagesChosen = {
                     replyLanguage,
                     codeLanguage,
-                    docsLanguage 
+                    docsLanguage
                 };
             } else {
                 languagesChosen = {
                     replyLanguage,
                     codeLanguage: codeDocs,
-                    docsLanguage: codeDocs 
+                    docsLanguage: codeDocs
                 };
             }
 
@@ -326,15 +326,15 @@ export const OPTIONS = [
                     [
                         {
                             value: 'keep',
-                            label: `Keep the project language (${replyLanguage})` 
+                            label: `Keep the project language (${replyLanguage})`
                         },
                         {
                             value: 'own',
-                            label: 'Use another language for me' 
+                            label: 'Use another language for me'
                         }
                     ],
                     {
-                        other: false 
+                        other: false
                     }
                 );
 
@@ -390,7 +390,7 @@ export function recapRows(answers) {
 // The answers as written in the manifest: a known convention has no stored text (an older manifest may still hold one).
 const manifestAnswers = ({ commitFormat, ...answers }) => (CONVENTIONS[answers.commitConvention] || commitFormat === undefined ? answers : {
     ...answers,
-    commitFormat 
+    commitFormat
 });
 
 // `previous`: the stored answers. Returns the options (groups of keys) that have no stored value yet.
@@ -403,7 +403,7 @@ function propose(ctx) {
     for (const option of OPTIONS) {
         const found = option.detect({
             ...ctx,
-            answers 
+            answers
         });
 
         for (const [
@@ -427,28 +427,28 @@ const GROUPS = [
         options: [
             0,
             1
-        ] 
+        ]
     },
     {
         value: 'packageManager',
         label: 'Package manager',
         options: [
             2
-        ] 
+        ]
     },
     {
         value: 'commit',
         label: 'Commit format',
         options: [
             3
-        ] 
+        ]
     },
     {
         value: 'languages',
         label: 'Languages',
         options: [
             4
-        ] 
+        ]
     }
 ];
 
@@ -474,7 +474,7 @@ async function askInteractive({ cwd, prompter, previous }) {
         current: {},
         answers: {},
         full: true,
-        personal 
+        personal
     });
     const unresolved = OPTIONS.filter(({ keys }) => keys.some((key) => answers[key] === undefined));
 
@@ -487,16 +487,16 @@ async function askInteractive({ cwd, prompter, previous }) {
             {
                 value: 'asis',
                 label: 'Install as is',
-                hint: unresolved.length ? 'the options still to choose will be asked' : undefined 
+                hint: unresolved.length ? 'the options still to choose will be asked' : undefined
             },
             {
                 value: 'customize',
                 label: 'Customize',
-                hint: 'every option, one by one' 
+                hint: 'every option, one by one'
             }
         ],
         {
-            other: false 
+            other: false
         }
     );
 
@@ -514,7 +514,7 @@ async function askInteractive({ cwd, prompter, previous }) {
             current: {},
             answers,
             full: true,
-            personal 
+            personal
         });
 
         reviewed = true;
@@ -526,7 +526,7 @@ async function askInteractive({ cwd, prompter, previous }) {
             current: {},
             answers,
             full: false,
-            personal 
+            personal
         });
 
         reviewed = true;
@@ -542,15 +542,15 @@ async function askInteractive({ cwd, prompter, previous }) {
             [
                 {
                     value: 'ok',
-                    label: 'Everything is right' 
+                    label: 'Everything is right'
                 },
                 {
                     value: 'change',
-                    label: 'Change something' 
+                    label: 'Change something'
                 }
             ],
             {
-                other: false 
+                other: false
             }
         );
 
@@ -560,17 +560,17 @@ async function askInteractive({ cwd, prompter, previous }) {
 
         const chosen = await prompter.multi('What do you want to change?', GROUPS.map(({ value, label }) => ({
             value,
-            label 
+            label
         })));
 
         // Re-asked options skip "Is that right?" and start from the current values.
         const editor = {
             ...prompter,
-            validate: async (_message, _detected, pick) => pick() 
+            validate: async (_message, _detected, pick) => pick()
         };
 
         const current = {
-            ...answers 
+            ...answers
         };
         const options = GROUPS.filter(({ value }) => chosen.includes(value)).flatMap(({ options }) => options.map((index) => OPTIONS[index]));
 
@@ -581,17 +581,17 @@ async function askInteractive({ cwd, prompter, previous }) {
             current,
             answers,
             full: true,
-            personal 
+            personal
         });
     }
 
     return {
         answers: manifestAnswers({
             ...previous,
-            ...answers 
+            ...answers
         }),
         personal,
-        asked: [] 
+        asked: []
     };
 }
 
@@ -603,7 +603,7 @@ export async function askOptions({ cwd, prompter, previous = {}, full }) {
         return askInteractive({
             cwd,
             prompter,
-            previous 
+            previous
         });
     }
 
@@ -621,7 +621,7 @@ export async function askOptions({ cwd, prompter, previous = {}, full }) {
                 current: {},
                 answers,
                 full,
-                personal 
+                personal
             }));
 
             if (!full) {
@@ -637,9 +637,9 @@ export async function askOptions({ cwd, prompter, previous = {}, full }) {
     return {
         answers: manifestAnswers({
             ...previous,
-            ...answers 
+            ...answers
         }),
         personal,
-        asked 
+        asked
     };
 }

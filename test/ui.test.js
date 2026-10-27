@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { test } from 'node:test';
 
 import {
-    banner, bullets, card, checklist, step 
+    banner, bullets, card, checklist, step
 } from '../src/ui.js';
 
 const ANSI = /\x1b\[/;
@@ -36,7 +36,7 @@ test('plain output carries no ANSI', () => {
             {
                 done: true,
                 label: 'a',
-                detail: 'added' 
+                detail: 'added'
             }
         ]),
         bullets([
@@ -49,7 +49,7 @@ test('plain output carries no ANSI', () => {
 
 test('a card aligns its keys and fits its content', () => {
     const lines = card('Your setup', ROWS, {
-        columns: 100 
+        columns: 100
     }).split('\n').slice(1);
 
     assert.equal(new Set(lines.map((line) => line.length)).size, 1);
@@ -67,7 +67,7 @@ test('a card is capped to a narrow terminal', () => {
             'a very long value that cannot fit in twenty columns'
         ]
     ], {
-        columns: 20 
+        columns: 20
     }).split('\n').slice(1);
 
     assert.ok(lines.every((line) => line.length <= 20));
@@ -88,7 +88,7 @@ test('0 or missing columns fall back to 80', () => {
         undefined
     ]) {
         const lines = card('Setup', long, {
-            columns 
+            columns
         }).split('\n').slice(1);
 
         assert.ok(lines.every((line) => line.length <= 80));
@@ -101,12 +101,12 @@ test('the checklist ticks done items and aligns the details', () => {
         {
             done: true,
             label: 'a.md',
-            detail: 'added' 
+            detail: 'added'
         },
         {
             done: false,
             label: 'long/path.md',
-            detail: 'already up to date' 
+            detail: 'already up to date'
         }
     ]).split('\n');
 
@@ -122,16 +122,16 @@ const render = (env) => execFileSync(process.execPath, [
     encoding: 'utf8',
     env: {
         PATH: process.env.PATH,
-        ...env 
+        ...env
     }
 });
 
 test('colors follow the environment: forced on, then off with NO_COLOR', () => {
     assert.match(render({
-        FORCE_COLOR: '1' 
+        FORCE_COLOR: '1'
     }), ANSI);
 
     assert.doesNotMatch(render({
-        NO_COLOR: '1' 
+        NO_COLOR: '1'
     }), ANSI);
 });

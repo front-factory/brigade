@@ -1,15 +1,15 @@
 import { isGitRepo } from './detect.js';
 import {
-    applyPlan, hasKitFiles, MANIFEST, planExtras, planFiles, readManifest, writeLocalSettings 
+    applyPlan, hasKitFiles, MANIFEST, planExtras, planFiles, readManifest, writeLocalSettings
 } from './install.js';
 import { askOptions } from './options.js';
 import { createPrompter } from './prompt.js';
 import {
-    DEFAULT_STACK, STACKS, detectStack 
+    DEFAULT_STACK, STACKS, detectStack
 } from './stacks.js';
 import { VERSION, compareVersions } from './version.js';
 import {
-    CHANGING, PREVIEW_WORDS, PROPOSALS 
+    CHANGING, PREVIEW_WORDS, PROPOSALS
 } from './words.js';
 
 // Asked whenever Brigade is already installed. The first option is the answer when nothing can be asked.
@@ -23,16 +23,16 @@ async function chooseVersion({ prompter, installed, version }) {
                 {
                     value: 'update',
                     label: 'Change my options',
-                    hint: 'the questions are asked again, files only change if an answer does' 
+                    hint: 'the questions are asked again, files only change if an answer does'
                 },
                 {
                     value: 'keep',
                     label: 'Leave it as it is',
-                    hint: 'nothing is written' 
+                    hint: 'nothing is written'
                 }
             ],
             {
-                other: false 
+                other: false
             }
         );
     }
@@ -47,16 +47,16 @@ async function chooseVersion({ prompter, installed, version }) {
             {
                 value: 'update',
                 label: `${newer ? 'Update' : 'Switch'} to ${version}`,
-                hint: 'new kit files, your answers are kept and only new options are asked. Files you edited are kept' 
+                hint: 'new kit files, your answers are kept and only new options are asked. Files you edited are kept'
             },
             {
                 value: 'keep',
                 label: `Keep ${installed}`,
-                hint: 'nothing is written' 
+                hint: 'nothing is written'
             }
         ],
         {
-            other: false 
+            other: false
         }
     );
 }
@@ -86,7 +86,7 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
     const previous = readManifest(cwd);
 
     prompter ??= createPrompter({
-        interactive: Boolean(interactive) 
+        interactive: Boolean(interactive)
     });
 
     const repo = isGitRepo(cwd);
@@ -99,7 +99,7 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
     const choice = installed && await chooseVersion({
         prompter,
         installed,
-        version 
+        version
     });
 
     if (choice === 'keep') {
@@ -112,7 +112,7 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
             repo,
             prompter,
             personal: {},
-            local: null 
+            local: null
         };
     }
 
@@ -122,7 +122,7 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
 
     if (!previous && hasKitFiles({
         cwd,
-        stackDir: dir 
+        stackDir: dir
     })) {
         prompter.warn(`${MANIFEST} is missing but Brigade files already exist here. Nothing is overwritten: files identical to the kit are adopted and files that differ are kept, and get a .proposed only when the kit changed them. If the manifest exists in your team's repo, restore it from git first.`);
     }
@@ -135,21 +135,21 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
         cwd,
         prompter,
         previous: previous?.answers ?? {},
-        full: !update 
+        full: !update
     });
 
     const plan = planFiles({
         cwd,
         stackDir: dir,
         answers,
-        previous 
+        previous
     });
     const { report } = plan;
 
     // An update shows what it will change before writing anything.
     if (!dryRun && previous && prompter.interactive && !await confirmChanges({
         prompter,
-        report 
+        report
     })) {
         return {
             kept: installed,
@@ -160,7 +160,7 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
             repo,
             prompter,
             personal: {},
-            local: null 
+            local: null
         };
     }
 
@@ -170,7 +170,7 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
         version,
         stack: name,
         answers,
-        hashes: plan.hashes 
+        hashes: plan.hashes
     });
 
     report.push(...extras.report);
@@ -189,14 +189,14 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
             prompter,
             personal: {},
             local: null,
-            asked 
+            asked
         };
     }
 
     applyPlan(cwd, plan);
 
     const local = personal.language ? writeLocalSettings(cwd, {
-        language: personal.language 
+        language: personal.language
     }) : null;
 
     return {
@@ -209,6 +209,6 @@ export async function runInit({ cwd, yes = false, dryRun = false, stack, stackDi
         prompter,
         personal,
         local,
-        asked 
+        asked
     };
 }

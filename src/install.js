@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
 import {
-    chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, rmdirSync, statSync, writeFileSync 
+    chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, rmdirSync, statSync, writeFileSync
 } from 'node:fs';
 import {
-    dirname, join, relative, resolve, sep 
+    dirname, join, relative, resolve, sep
 } from 'node:path';
 import { commitFormatOf } from './conventions.js';
 
@@ -39,7 +39,7 @@ export const sha = (content) => createHash('sha256').update(content.replace(/\r\
 
 function listFiles(dir) {
     return readdirSync(dir, {
-        withFileTypes: true 
+        withFileTypes: true
     }).flatMap((entry) => {
         const abs = join(dir, entry.name);
 
@@ -116,7 +116,7 @@ export function mergeSettings(mine, kit) {
 
     if (isObject(mine) && isObject(kit)) {
         const merged = {
-            ...mine 
+            ...mine
         };
 
         for (const [
@@ -183,7 +183,7 @@ function mergedSettings(current, kit) {
 
         return {
             merged: mergeSettings(mine, theirs),
-            mine 
+            mine
         };
     } catch {
         return null;
@@ -226,7 +226,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
         const write = (file) => writes.push({
             file,
             content,
-            mode 
+            mode
         });
         const recorded = previous?.files?.[path];
 
@@ -235,7 +235,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
             hashes[path] = wanted;
             report.push({
                 path,
-                status: 'created' 
+                status: 'created'
             });
 
             continue;
@@ -248,7 +248,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
         if (WRITE_ONCE.has(path)) {
             report.push({
                 path,
-                status: current === wanted ? 'unchanged' : 'kept' 
+                status: current === wanted ? 'unchanged' : 'kept'
             });
 
             continue;
@@ -263,7 +263,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
             hashes[path] = current;
             report.push({
                 path,
-                status: 'unchanged' 
+                status: 'unchanged'
             });
         } else if (recorded === current) {
             write(target);
@@ -275,7 +275,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
             hashes[path] = wanted;
             report.push({
                 path,
-                status: 'updated' 
+                status: 'updated'
             });
         } else if (settings) {
             // The developer's entries stay, the kit's new ones are added. The recorded hash stays the kit's, so the
@@ -293,18 +293,18 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
             if (isSame(merged, mine)) {
                 report.push({
                     path,
-                    status: 'kept' 
+                    status: 'kept'
                 });
             } else {
                 writes.push({
                     file: target,
                     content: `${JSON.stringify(merged, null, 4)}\n`,
-                    mode 
+                    mode
                 });
 
                 report.push({
                     path,
-                    status: 'merged' 
+                    status: 'merged'
                 });
             }
         } else if (recorded === wanted) {
@@ -313,7 +313,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
             hashes[path] = wanted;
             report.push({
                 path,
-                status: 'kept' 
+                status: 'kept'
             });
         } else {
             // The developer's file is never touched. The proposal is delivered once: the kit's hash is recorded, so the
@@ -329,7 +329,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
 
             const entry = {
                 path,
-                status: 'proposed' 
+                status: 'proposed'
             };
 
             if (path === RULES_PATH && !text.includes('brigade-options.md')) {
@@ -360,13 +360,13 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
             removals.push(target);
             report.push({
                 path,
-                status: 'removed' 
+                status: 'removed'
             });
         } else {
             hashes[path] = recorded;
             report.push({
                 path,
-                status: 'obsolete' 
+                status: 'obsolete'
             });
         }
     }
@@ -378,7 +378,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
         removals.push(legacy);
         report.push({
             path: `${LEGACY_BASE_DIR}/`,
-            status: 'removed' 
+            status: 'removed'
         });
     }
 
@@ -386,7 +386,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
         report,
         hashes,
         writes,
-        removals 
+        removals
     };
 }
 
@@ -394,7 +394,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
 // write leaves the target as it was. Without a `mode`, the target keeps its own.
 export function writeAtomic(file, content, mode) {
     mkdirSync(dirname(file), {
-        recursive: true 
+        recursive: true
     });
 
     const temp = `${file}.${process.pid}.tmp`;
@@ -411,7 +411,7 @@ export function writeAtomic(file, content, mode) {
         renameSync(temp, file);
     } catch (error) {
         rmSync(temp, {
-            force: true 
+            force: true
         });
 
         throw error;
@@ -427,7 +427,7 @@ export function applyPlan(cwd, { writes, removals }) {
     for (const file of removals) {
         rmSync(file, {
             force: true,
-            recursive: true 
+            recursive: true
         });
 
         pruneEmptyDirs(cwd, file);
@@ -441,7 +441,7 @@ export function installFiles(options) {
 
     return {
         report: plan.report,
-        hashes: plan.hashes 
+        hashes: plan.hashes
     };
 }
 
@@ -473,23 +473,23 @@ function planOptionsFile({ cwd, answers }) {
         return {
             entry: {
                 path: OPTIONS_FILE,
-                status: 'unchanged' 
+                status: 'unchanged'
             },
-            writes: [] 
+            writes: []
         };
     }
 
     return {
         entry: {
             path: OPTIONS_FILE,
-            status: exists ? 'updated' : 'created' 
+            status: exists ? 'updated' : 'created'
         },
         writes: [
             {
                 file,
-                content 
+                content
             }
-        ] 
+        ]
     };
 }
 
@@ -512,7 +512,7 @@ function planAppends(cwd) {
         if (missing.length === 0) {
             ignored.push({
                 path,
-                status: 'unchanged' 
+                status: 'unchanged'
             });
 
             continue;
@@ -525,19 +525,19 @@ function planAppends(cwd) {
 
         writes.push({
             file,
-            content: `${existing}${separator}${gap}${missing.join(eol)}${eol}` 
+            content: `${existing}${separator}${gap}${missing.join(eol)}${eol}`
         });
 
         ignored.push({
             path,
             status: 'updated',
-            added: missing 
+            added: missing
         });
     }
 
     return {
         ignored,
-        writes 
+        writes
     };
 }
 
@@ -546,7 +546,7 @@ export function appendMissingLines(cwd) {
 
     applyPlan(cwd, {
         writes,
-        removals: [] 
+        removals: []
     });
 
     return ignored;
@@ -557,7 +557,7 @@ export function appendMissingLines(cwd) {
 export function planExtras({ cwd, version, stack, answers, hashes }) {
     const options = planOptionsFile({
         cwd,
-        answers 
+        answers
     });
     const { ignored, writes } = planAppends(cwd);
 
@@ -573,8 +573,8 @@ export function planExtras({ cwd, version, stack, answers, hashes }) {
             version,
             stack,
             answers,
-            files 
-        }, null, 4)}\n` 
+            files
+        }, null, 4)}\n`
     };
 
     return {
@@ -586,7 +586,7 @@ export function planExtras({ cwd, version, stack, answers, hashes }) {
             ...options.writes,
             ...writes,
             manifest
-        ] 
+        ]
     };
 }
 
@@ -600,17 +600,17 @@ export function writeLocalSettings(cwd, patch) {
             current = JSON.parse(readFileSync(file, 'utf8'));
         } catch {
             return {
-                status: 'skipped' 
+                status: 'skipped'
             };
         }
     }
 
     writeAtomic(file, `${JSON.stringify({
         ...current,
-        ...patch 
+        ...patch
     }, null, 4)}\n`);
 
     return {
-        status: 'written' 
+        status: 'written'
     };
 }

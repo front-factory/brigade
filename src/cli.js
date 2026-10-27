@@ -67,7 +67,7 @@ function parse(args, command) {
     const options = {
         yes: values.yes ?? false,
         dryRun: values['dry-run'] ?? false,
-        stack: values.stack 
+        stack: values.stack
     };
 
     if (options.stack === '') {
@@ -106,7 +106,7 @@ function summary({ version, answers, report, ignored, repo, personal, local, dry
                 done: true,
                 label: path,
                 detail: `${wording} (${added.join(', ')})`,
-                plain: `${wording.padEnd(28)} ${path} (${added.join(', ')})` 
+                plain: `${wording.padEnd(28)} ${path} (${added.join(', ')})`
             });
         }
     }
@@ -132,7 +132,7 @@ function summary({ version, answers, report, ignored, repo, personal, local, dry
         rows,
         added,
         kept: report.some(({ status }) => status === 'proposed'),
-        repo 
+        repo
     };
 }
 

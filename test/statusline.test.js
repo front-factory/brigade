@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import {
-    mkdirSync, mkdtempSync, writeFileSync 
+    mkdirSync, mkdtempSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -17,7 +17,7 @@ function project({ version = '1.3.0', head = 'ref: refs/heads/feat/x\n' } = {}) 
     if (version) {
         mkdirSync(join(cwd, '.claude'));
         writeFileSync(join(cwd, '.claude/brigade.json'), JSON.stringify({
-            version 
+            version
         }));
     }
 
@@ -38,14 +38,14 @@ const run = (script, input, env = {}) =>
         env: {
             ...process.env,
             CLAUDE_PROJECT_DIR: '',
-            ...env 
-        } 
+            ...env
+        }
     });
 
 const status = (cwd, input = {
     workspace: {
-        project_dir: cwd 
-    } 
+        project_dir: cwd
+    }
 }) => run(STATUSLINE, JSON.stringify(input));
 
 test('the status line shows the version and the branch', () => {
@@ -60,26 +60,26 @@ test('the status line finds the project from cwd and from a subfolder', () => {
 
     mkdirSync(join(cwd, 'src'));
     assert.equal(status(cwd, {
-        cwd: join(cwd, 'src') 
+        cwd: join(cwd, 'src')
     }).stdout, 'Brigade v1.3.0 · feat/x\n');
 });
 
 test('the status line leaves out what is missing', () => {
     assert.equal(status(project({
-        head: null 
+        head: null
     })).stdout, 'Brigade v1.3.0\n');
 
     assert.equal(status(project({
-        version: null 
+        version: null
     })).stdout, 'Brigade · feat/x\n');
 
     assert.equal(status(project({
         version: null,
-        head: null 
+        head: null
     })).stdout, 'Brigade\n');
 
     assert.equal(status(project({
-        head: 'a1b2c3d\n' 
+        head: 'a1b2c3d\n'
     })).stdout, 'Brigade v1.3.0\n');
 });
 
@@ -97,7 +97,7 @@ test('the status line survives an unreadable manifest and payload', () => {
 
 test('the status line follows a worktree .git file', () => {
     const cwd = project({
-        head: null 
+        head: null
     });
 
     mkdirSync(join(cwd, 'real'));
@@ -110,9 +110,9 @@ test('the session start hook announces the version', () => {
     const cwd = project();
 
     const result = run(SESSION_START, JSON.stringify({
-        cwd 
+        cwd
     }), {
-        CLAUDE_PROJECT_DIR: cwd 
+        CLAUDE_PROJECT_DIR: cwd
     });
 
     assert.equal(result.status, 0);
@@ -125,11 +125,11 @@ test('the session start hook announces the version', () => {
 
 test('the session start hook stays silent and succeeds without a usable manifest', () => {
     const none = project({
-        version: null 
+        version: null
     });
 
     const result = run(SESSION_START, 'not json', {
-        CLAUDE_PROJECT_DIR: none 
+        CLAUDE_PROJECT_DIR: none
     });
 
     assert.equal(result.status, 0);
@@ -140,7 +140,7 @@ test('the session start hook stays silent and succeeds without a usable manifest
     writeFileSync(join(broken, '.claude/brigade.json'), '{ nope');
 
     const second = run(SESSION_START, '{}', {
-        CLAUDE_PROJECT_DIR: broken 
+        CLAUDE_PROJECT_DIR: broken
     });
 
     assert.equal(second.status, 0);

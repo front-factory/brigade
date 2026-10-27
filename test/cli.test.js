@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
-    existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync 
+    existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,14 +19,14 @@ function brigade(args, cwd = mkdtempSync(join(tmpdir(), 'brigade-cli-'))) {
     ], {
         cwd,
         encoding: 'utf8',
-        stdin: 'ignore' 
+        stdin: 'ignore'
     });
 
     return {
         code: result.status,
         out: result.stdout,
         err: result.stderr,
-        cwd 
+        cwd
     };
 }
 
@@ -374,7 +374,7 @@ test('an update removes the old .claude/brigade-base/ folder, the dry run only l
     ]);
 
     mkdirSync(join(first.cwd, '.claude/brigade-base/rules'), {
-        recursive: true 
+        recursive: true
     });
 
     writeFileSync(join(first.cwd, '.claude/brigade-base/rules/brigade.md'), 'old base\n');

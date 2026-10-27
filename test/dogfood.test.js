@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import {
-    dirname, join, relative 
+    dirname, join, relative
 } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
-    OPTIONS_FILE, render, renderOptions, sha 
+    OPTIONS_FILE, render, renderOptions, sha
 } from '../src/install.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,7 +30,7 @@ const ANSWERS = {
 
 function listFiles(dir) {
     return readdirSync(dir, {
-        withFileTypes: true 
+        withFileTypes: true
     }).flatMap((entry) => {
         const abs = join(dir, entry.name);
 

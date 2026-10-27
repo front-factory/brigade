@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import {
-    mkdirSync, mkdtempSync, writeFileSync 
+    mkdirSync, mkdtempSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import './git-env.js';
 import { CONVENTIONS } from '../src/conventions.js';
 import {
-    detectCommitConvention, detectDefaultBranch, detectPackageManager, isGitRepo, localBranches 
+    detectCommitConvention, detectDefaultBranch, detectPackageManager, isGitRepo, localBranches
 } from '../src/detect.js';
 import { render } from '../src/install.js';
 
@@ -17,7 +17,7 @@ const temp = () => mkdtempSync(join(tmpdir(), 'brigade-detect-'));
 
 const git = (cwd, ...args) => execFileSync('git', args, {
     cwd,
-    stdio: 'ignore' 
+    stdio: 'ignore'
 });
 
 // The unborn branch is set by hand so the result never depends on `init.defaultBranch`.
@@ -34,7 +34,7 @@ function project(deps, hook = true) {
     const cwd = mkdtempSync(join(tmpdir(), 'brigade-detect-'));
 
     writeFileSync(join(cwd, 'package.json'), JSON.stringify({
-        devDependencies: deps 
+        devDependencies: deps
     }));
 
     if (hook) {
@@ -47,15 +47,15 @@ function project(deps, hook = true) {
 
 test('commit convention needs commitlint and a commit-msg hook', () => {
     assert.equal(detectCommitConvention(project({
-        '@commitlint/config-conventional': '1' 
+        '@commitlint/config-conventional': '1'
     })), 'conventional');
 
     assert.equal(detectCommitConvention(project({
-        '@commitlint/config-angular': '1' 
+        '@commitlint/config-angular': '1'
     })), 'angular');
 
     assert.equal(detectCommitConvention(project({
-        '@commitlint/config-conventional': '1' 
+        '@commitlint/config-conventional': '1'
     }, false)), '');
 
     assert.equal(detectCommitConvention(project({})), '');
@@ -104,7 +104,7 @@ test('the package manager comes from packageManager, else from a single lockfile
     const declared = temp();
 
     writeFileSync(join(declared, 'package.json'), JSON.stringify({
-        packageManager: 'pnpm@9.1.0' 
+        packageManager: 'pnpm@9.1.0'
     }));
 
     writeFileSync(join(declared, 'yarn.lock'), '');
@@ -112,7 +112,7 @@ test('the package manager comes from packageManager, else from a single lockfile
         value: 'pnpm',
         candidates: [
             'pnpm'
-        ] 
+        ]
     });
 
     const single = temp();
@@ -122,7 +122,7 @@ test('the package manager comes from packageManager, else from a single lockfile
         value: 'yarn',
         candidates: [
             'yarn'
-        ] 
+        ]
     });
 
     const bun = temp();
@@ -133,7 +133,7 @@ test('the package manager comes from packageManager, else from a single lockfile
         value: 'bun',
         candidates: [
             'bun'
-        ] 
+        ]
     });
 });
 
@@ -147,19 +147,19 @@ test('a packageManager that is not a known manager is rejected', () => {
         const cwd = temp();
 
         writeFileSync(join(cwd, 'package.json'), JSON.stringify({
-            packageManager 
+            packageManager
         }));
 
         assert.deepEqual(detectPackageManager(cwd), {
             value: '',
-            candidates: [] 
+            candidates: []
         });
     }
 
     const lockfile = temp();
 
     writeFileSync(join(lockfile, 'package.json'), JSON.stringify({
-        packageManager: 'evil@1' 
+        packageManager: 'evil@1'
     }));
 
     writeFileSync(join(lockfile, 'yarn.lock'), '');
@@ -167,7 +167,7 @@ test('a packageManager that is not a known manager is rejected', () => {
         value: 'yarn',
         candidates: [
             'yarn'
-        ] 
+        ]
     });
 });
 
@@ -181,12 +181,12 @@ test('several lockfiles or none leave the package manager empty', () => {
         candidates: [
             'pnpm',
             'npm'
-        ] 
+        ]
     });
 
     assert.deepEqual(detectPackageManager(temp()), {
         value: '',
-        candidates: [] 
+        candidates: []
     });
 });
 
@@ -201,7 +201,7 @@ test('a broken package.json is ignored', () => {
 
 test('commitlint without a known config detects no convention', () => {
     assert.equal(detectCommitConvention(project({
-        '@commitlint/cli': '1' 
+        '@commitlint/cli': '1'
     })), '');
 });
 
@@ -271,7 +271,7 @@ test('the gitmoji format states the gitmoji specification', () => {
 test('the generic body sentence is left out only when the convention has its own body rule', () => {
     const answers = (commitConvention) => ({
         commitConvention,
-        commitFormat: 'My format.' 
+        commitFormat: 'My format.'
     });
     const sentence = 'Add a body when the "why" is not obvious.';
     const template = '__COMMIT_FORMAT__';

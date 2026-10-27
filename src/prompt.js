@@ -34,7 +34,7 @@ export function createPrompter({ interactive }) {
             message,
             placeholder: fallback,
             defaultValue: fallback,
-            validate 
+            validate
         }))).trim();
     }
 
@@ -47,20 +47,20 @@ export function createPrompter({ interactive }) {
         const items = options.map(({ value, label, hint }) => ({
             value,
             label,
-            hint 
+            hint
         }));
 
         if (other) {
             items.push({
                 value: OTHER,
-                label: 'Other…' 
+                label: 'Other…'
             });
         }
 
         const value = await answer(p.select({
             message,
             options: items,
-            initialValue: options[0].value 
+            initialValue: options[0].value
         }));
 
         return value === OTHER ? text(`${message} (type it)`) : value;
@@ -78,7 +78,7 @@ export function createPrompter({ interactive }) {
 
         const keep = await answer(p.confirm({
             message: `${message}: ${shown}. Is that right?`,
-            initialValue: true 
+            initialValue: true
         }));
 
         return keep ? detected : pick();
@@ -92,7 +92,7 @@ export function createPrompter({ interactive }) {
 
         return answer(p.confirm({
             message,
-            initialValue: true 
+            initialValue: true
         }));
     }
 
@@ -107,9 +107,9 @@ export function createPrompter({ interactive }) {
             options: options.map(({ value, label, hint }) => ({
                 value,
                 label,
-                hint 
+                hint
             })),
-            required: true 
+            required: true
         }));
     }
 

@@ -7,11 +7,11 @@ import { createPrompter } from '../src/prompt.js';
 const OPTIONS = [
     {
         value: 'a',
-        label: 'A' 
+        label: 'A'
     },
     {
         value: 'b',
-        label: 'B' 
+        label: 'B'
     }
 ];
 
@@ -34,7 +34,7 @@ async function printed(fn) {
 
 test('without a terminal every question resolves to its default', async () => {
     const prompter = createPrompter({
-        interactive: false 
+        interactive: false
     });
 
     assert.equal(prompter.interactive, false);
@@ -46,7 +46,7 @@ test('without a terminal every question resolves to its default', async () => {
 
 test('validate keeps the detected value, or falls back to pick when there is none', async () => {
     const prompter = createPrompter({
-        interactive: false 
+        interactive: false
     });
     const pick = async () => 'picked';
 
@@ -56,7 +56,7 @@ test('validate keeps the detected value, or falls back to pick when there is non
 
 test('without a terminal nothing is printed', async () => {
     const prompter = createPrompter({
-        interactive: false 
+        interactive: false
     });
 
     const out = await printed(() => {
@@ -73,7 +73,7 @@ test('without a terminal nothing is printed', async () => {
             {
                 done: true,
                 label: 'a',
-                detail: 'added' 
+                detail: 'added'
             }
         ]);
 
@@ -92,7 +92,7 @@ test('without a terminal nothing is printed', async () => {
 
 test('with a terminal the display helpers print', async () => {
     const prompter = createPrompter({
-        interactive: true 
+        interactive: true
     });
 
     const out = await printed(() => {
@@ -109,7 +109,7 @@ test('with a terminal the display helpers print', async () => {
             {
                 done: true,
                 label: 'file.md',
-                detail: 'added' 
+                detail: 'added'
             }
         ]);
 
@@ -139,6 +139,6 @@ test('with a terminal the display helpers print', async () => {
 
 test('without a terminal a confirmation is a yes', async () => {
     assert.equal(await createPrompter({
-        interactive: false 
+        interactive: false
     }).confirm('Go on?'), true);
 });

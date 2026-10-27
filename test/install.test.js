@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import {
-    existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync 
+    existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import {
-    dirname, join, sep 
+    dirname, join, sep
 } from 'node:path';
 import { test } from 'node:test';
 import './git-env.js';
 import { runInit } from '../src/init.js';
 import {
-    appendMissingLines, mergeSettings, readManifest, render, sha, writeAtomic, writeLocalSettings 
+    appendMissingLines, mergeSettings, readManifest, render, sha, writeAtomic, writeLocalSettings
 } from '../src/install.js';
 import { CONVENTIONS } from '../src/conventions.js';
 import { OPTIONS } from '../src/options.js';
@@ -26,11 +26,11 @@ function project() {
         '-b',
         'main'
     ], {
-        cwd 
+        cwd
     });
 
     writeFileSync(join(cwd, 'package.json'), JSON.stringify({
-        packageManager: 'pnpm@9.0.0' 
+        packageManager: 'pnpm@9.0.0'
     }));
 
     return cwd;
@@ -49,7 +49,7 @@ test('installs the web kit on a fresh project with the detected answers', async 
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.equal(result.stack, 'web');
@@ -71,7 +71,7 @@ test('installs the skills and the context folder, decisions.md and architecture.
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     for (const file of [
@@ -99,7 +99,7 @@ test('installs the skills and the context folder, decisions.md and architecture.
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.equal(statuses(result)['.claude/context/decisions.md'], 'kept');
@@ -113,7 +113,7 @@ test('installs the skills and the context folder, decisions.md and architecture.
 
     const again = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.equal(statuses(again)['.claude/context/architecture.md'], 'kept');
@@ -127,12 +127,12 @@ test('a second run changes nothing', async () => {
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     const again = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.ok(again.report.every(({ status }) => status === 'unchanged'));
@@ -147,7 +147,7 @@ test('a modified file the kit did not change is kept without a .proposed', async
     await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     const recorded = readManifest(cwd).files['rule.md'];
@@ -157,7 +157,7 @@ test('a modified file the kit did not change is kept without a .proposed', async
     const result = await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     assert.equal(statuses(result)['rule.md'], 'kept');
@@ -171,7 +171,7 @@ test('a modified file the kit changed gets a .proposed', async () => {
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     writeFileSync(join(cwd, RULES), 'mine\n');
@@ -182,7 +182,7 @@ test('a modified file the kit changed gets a .proposed', async () => {
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.equal(statuses(result)[RULES], 'proposed');
@@ -195,7 +195,7 @@ test('an existing file identical to the kit produces no .proposed', async () => 
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     const kit = readFileSync(join(cwd, RULES), 'utf8');
@@ -206,7 +206,7 @@ test('an existing file identical to the kit produces no .proposed', async () => 
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.equal(statuses(result)[RULES], 'unchanged');
@@ -221,7 +221,7 @@ test('a file Brigade wrote and nobody touched is updated in place', async () => 
     await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     writeFileSync(join(stackDir, 'rule.md'), 'v2\n');
@@ -229,7 +229,7 @@ test('a file Brigade wrote and nobody touched is updated in place', async () => 
     const updated = await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     assert.equal(statuses(updated)['rule.md'], 'updated');
@@ -241,7 +241,7 @@ test('a file Brigade wrote and nobody touched is updated in place', async () => 
     const proposed = await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     assert.equal(statuses(proposed)['rule.md'], 'proposed');
@@ -256,7 +256,7 @@ test('.gitignore and .gitattributes only get the lines they miss', async () => {
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
     const ignore = readFileSync(join(cwd, '.gitignore'), 'utf8');
     const lines = ignore.split('\n');
@@ -275,7 +275,7 @@ test('the project reply language is shared, the personal one stays local', async
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     const shared = JSON.parse(readFileSync(join(cwd, '.claude/settings.json'), 'utf8'));
@@ -293,13 +293,13 @@ test('a malicious packageManager or stored answer never extends settings.json', 
     const declared = project();
 
     writeFileSync(join(declared, 'package.json'), JSON.stringify({
-        packageManager: evil 
+        packageManager: evil
     }));
 
     writeFileSync(join(declared, 'package-lock.json'), '');
     await runInit({
         cwd: declared,
-        yes: true 
+        yes: true
     });
 
     assert.deepEqual(allowed(declared), [
@@ -317,14 +317,14 @@ test('a malicious packageManager or stored answer never extends settings.json', 
         version: '0.0.0',
         stack: 'web',
         answers: {
-            packageManager: evil 
+            packageManager: evil
         },
-        files: {} 
+        files: {}
     }));
 
     await runInit({
         cwd: stored,
-        yes: true 
+        yes: true
     });
 
     assert.ok(allowed(stored).every((rule) => !rule.includes('evil')));
@@ -333,7 +333,7 @@ test('a malicious packageManager or stored answer never extends settings.json', 
 test('answers with quotes and backslashes keep JSON valid, markdown keeps them raw', () => {
     const answers = {
         replyLanguage: 'Fr"ench\\',
-        packageManager: 'npm' 
+        packageManager: 'npm'
     };
     const json = render('{ "language": "__REPLY_LANGUAGE__" }', answers, true);
 
@@ -352,14 +352,14 @@ test('a language typed with a quote still installs a valid settings.json', async
         version: '0.0.0',
         stack: 'web',
         answers: {
-            replyLanguage 
+            replyLanguage
         },
-        files: {} 
+        files: {}
     }));
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     const settings = JSON.parse(readFileSync(join(cwd, '.claude/settings.json'), 'utf8'));
@@ -373,21 +373,21 @@ test('a personal choice merges into settings.local.json and spares a broken file
 
     mkdirSync(join(cwd, '.claude'));
     writeFileSync(join(cwd, '.claude/settings.local.json'), JSON.stringify({
-        effortLevel: 'high' 
+        effortLevel: 'high'
     }));
 
     assert.equal(writeLocalSettings(cwd, {
-        language: 'French' 
+        language: 'French'
     }).status, 'written');
 
     assert.deepEqual(JSON.parse(readFileSync(join(cwd, '.claude/settings.local.json'), 'utf8')), {
         effortLevel: 'high',
-        language: 'French' 
+        language: 'French'
     });
 
     writeFileSync(join(cwd, '.claude/settings.local.json'), '{ broken');
     assert.equal(writeLocalSettings(cwd, {
-        language: 'French' 
+        language: 'French'
     }).status, 'skipped');
 
     assert.equal(readFileSync(join(cwd, '.claude/settings.local.json'), 'utf8'), '{ broken');
@@ -435,7 +435,7 @@ const asking = (answer, script = {}, apply = true) => {
         close: noop,
         card: (title, rows) => cards.push({
             title,
-            rows 
+            rows
         }),
         files: (items) => shown.push(...items),
         confirm: async (message) => {
@@ -477,7 +477,7 @@ const asking = (answer, script = {}, apply = true) => {
         prompter,
         asked,
         cards,
-        shown 
+        shown
     };
 };
 
@@ -501,7 +501,7 @@ test('the installed version is recorded', async () => {
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     assert.equal(JSON.parse(readFileSync(join(cwd, '.claude/brigade.json'), 'utf8')).version, '1.0.0');
@@ -513,7 +513,7 @@ test('the same version still offers to run the setup again or to leave it', asyn
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     const manifest = readFileSync(join(cwd, '.claude/brigade.json'), 'utf8');
@@ -524,7 +524,7 @@ test('the same version still offers to run the setup again or to leave it', asyn
         cwd,
         version: '1.0.0',
         interactive: true,
-        prompter: left.prompter 
+        prompter: left.prompter
     });
 
     assert.equal(kept.kept, '1.0.0');
@@ -540,7 +540,7 @@ test('the same version still offers to run the setup again or to leave it', asyn
         cwd,
         version: '1.0.0',
         interactive: true,
-        prompter: again.prompter 
+        prompter: again.prompter
     });
 
     assert.equal(rerun.kept, undefined);
@@ -556,7 +556,7 @@ test('keeping the installed version writes nothing', async () => {
         cwd,
         yes: true,
         stackDir,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     const manifest = readFileSync(join(cwd, '.claude/brigade.json'), 'utf8');
@@ -568,7 +568,7 @@ test('keeping the installed version writes nothing', async () => {
         stackDir,
         version: '2.0.0',
         interactive: true,
-        prompter: asking('keep').prompter 
+        prompter: asking('keep').prompter
     });
 
     assert.equal(result.kept, '1.0.0');
@@ -585,7 +585,7 @@ test('updating replays the kit and records the new version', async () => {
         cwd,
         yes: true,
         stackDir,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     writeFileSync(join(stackDir, 'rule.md'), 'v2\n');
@@ -595,7 +595,7 @@ test('updating replays the kit and records the new version', async () => {
         stackDir,
         version: '2.0.0',
         interactive: true,
-        prompter: asking('update').prompter 
+        prompter: asking('update').prompter
     });
 
     assert.equal(statuses(result)['rule.md'], 'updated');
@@ -608,13 +608,13 @@ test('without a terminal an older install is updated, as before', async () => {
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     const result = await runInit({
         cwd,
         yes: true,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(result.kept, undefined);
@@ -631,7 +631,7 @@ test('an error while planning leaves the project untouched', async () => {
     await assert.rejects(runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     }));
 
     assert.ok(!existsSync(join(cwd, 'a.md')));
@@ -655,7 +655,7 @@ test('a corrupted manifest is an error, a missing one is a first install', async
         assert.throws(() => readManifest(cwd), /corrupted/);
         await assert.rejects(runInit({
             cwd,
-            yes: true 
+            yes: true
         }), /corrupted/);
     }
 
@@ -671,7 +671,7 @@ test('a stale .proposed is removed once the target matches the kit', async () =>
     await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     writeFileSync(join(cwd, 'rule.md'), 'mine\n');
@@ -679,7 +679,7 @@ test('a stale .proposed is removed once the target matches the kit', async () =>
     await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     assert.ok(existsSync(join(cwd, 'rule.md.proposed')));
@@ -689,7 +689,7 @@ test('a stale .proposed is removed once the target matches the kit', async () =>
     const result = await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     assert.equal(statuses(result)['rule.md'], 'unchanged');
@@ -704,7 +704,7 @@ test('a file that differs from the kit only by line endings is unchanged', async
     await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     writeFileSync(join(cwd, 'rule.md'), 'a\r\nb\r\n');
@@ -712,7 +712,7 @@ test('a file that differs from the kit only by line endings is unchanged', async
     const result = await runInit({
         cwd,
         yes: true,
-        stackDir 
+        stackDir
     });
 
     assert.equal(statuses(result)['rule.md'], 'unchanged');
@@ -760,7 +760,7 @@ test('updating with a full manifest asks nothing but keep or update and keeps th
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     const before = readAnswers(cwd).answers;
@@ -771,7 +771,7 @@ test('updating with a full manifest asks nothing but keep or update and keeps th
         cwd,
         version: '2.0.0',
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.deepEqual(asked, [
@@ -788,7 +788,7 @@ test('updating asks only the group that is missing from the manifest', async () 
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     dropKey(cwd, 'docsLanguage');
@@ -799,7 +799,7 @@ test('updating asks only the group that is missing from the manifest', async () 
         cwd,
         version: '2.0.0',
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.deepEqual(asked, [
@@ -825,7 +825,7 @@ test('without a terminal a missing option takes its default and is reported', as
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     dropKey(cwd, 'packageManager');
@@ -833,7 +833,7 @@ test('without a terminal a missing option takes its default and is reported', as
     const result = await runInit({
         cwd,
         yes: true,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.deepEqual(result.asked, [
@@ -851,7 +851,7 @@ test('a downgrade keeps the keys the older version does not know', async () => {
     await runInit({
         cwd,
         yes: true,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     const manifest = readAnswers(cwd);
@@ -862,7 +862,7 @@ test('a downgrade keeps the keys the older version does not know', async () => {
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     assert.equal(readAnswers(cwd).answers.futureOption, 'x');
@@ -875,7 +875,7 @@ test('an update keeps edited files as .proposed, updates untouched ones and leav
     writeFileSync(join(stackDir, 'a.md'), 'a1\n');
     writeFileSync(join(stackDir, 'b.md'), 'b1\n');
     mkdirSync(join(stackDir, '.claude/context'), {
-        recursive: true 
+        recursive: true
     });
 
     writeFileSync(join(stackDir, '.claude/context/decisions.md'), 'seed\n');
@@ -884,7 +884,7 @@ test('an update keeps edited files as .proposed, updates untouched ones and leav
         cwd,
         yes: true,
         stackDir,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     writeFileSync(join(cwd, 'a.md'), 'edited\n');
@@ -901,7 +901,7 @@ test('an update keeps edited files as .proposed, updates untouched ones and leav
         stackDir,
         version: '2.0.0',
         interactive: true,
-        prompter: asking('update').prompter 
+        prompter: asking('update').prompter
     });
 
     assert.equal(statuses(result)['a.md'], 'proposed');
@@ -920,7 +920,7 @@ test('the same version still asks the whole setup again', async () => {
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     const { prompter, asked } = asking('update');
@@ -929,7 +929,7 @@ test('the same version still asks the whole setup again', async () => {
         cwd,
         version: '1.0.0',
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.ok(asked.includes('How do you want to set up Brigade?'));
@@ -940,7 +940,7 @@ test('OPTIONS declares exactly the answers a fresh install stores', async () => 
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.deepEqual(OPTIONS.flatMap(({ keys }) => keys).sort(), Object.keys(readAnswers(cwd).answers).sort());
@@ -954,7 +954,7 @@ const warnings = () => {
 
     return {
         prompter,
-        seen 
+        seen
     };
 };
 
@@ -965,7 +965,7 @@ test('a missing manifest with kit files already there warns and still installs',
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     rmSync(join(cwd, MANIFEST_FILE));
@@ -975,7 +975,7 @@ test('a missing manifest with kit files already there warns and still installs',
     const result = await runInit({
         cwd,
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.equal(seen.filter(lostManifest).length, 1);
@@ -990,7 +990,7 @@ test('no lost-manifest warning on a true first install', async () => {
     await runInit({
         cwd,
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.ok(!seen.some(lostManifest));
@@ -1001,7 +1001,7 @@ test('no lost-manifest warning when the manifest exists', async () => {
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     const { prompter, seen } = warnings();
@@ -1009,7 +1009,7 @@ test('no lost-manifest warning when the manifest exists', async () => {
     await runInit({
         cwd,
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.ok(!seen.some(lostManifest));
@@ -1020,7 +1020,7 @@ test('the options file follows the answers, is overwritten when edited and is no
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     const rules = readFileSync(join(cwd, RULES), 'utf8');
@@ -1031,7 +1031,7 @@ test('the options file follows the answers, is overwritten when edited and is no
 
     const again = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.equal(statuses(again)[OPTIONS_PATH], 'updated');
@@ -1039,7 +1039,7 @@ test('the options file follows the answers, is overwritten when edited and is no
     assert.ok(!existsSync(join(cwd, `${OPTIONS_PATH}.proposed`)));
     assert.equal(statuses(await runInit({
         cwd,
-        yes: true 
+        yes: true
     }))[OPTIONS_PATH], 'unchanged');
 
     // An answer changes: only the options file follows, the kit file stays untouched.
@@ -1050,7 +1050,7 @@ test('the options file follows the answers, is overwritten when edited and is no
 
     const changed = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.equal(statuses(changed)[OPTIONS_PATH], 'updated');
@@ -1065,7 +1065,7 @@ test('a kit update of brigade.md is applied without a proposal when the answers 
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     // Simulate an install of an older kit: the old text is what the manifest knows.
@@ -1080,7 +1080,7 @@ test('a kit update of brigade.md is applied without a proposal when the answers 
     const result = await runInit({
         cwd,
         yes: true,
-        version: '1.0.1' 
+        version: '1.0.1'
     });
 
     assert.equal(statuses(result)[RULES], 'updated');
@@ -1097,7 +1097,7 @@ const OLD_ANSWERS = {
     commitFormat: 'Conventional Commits.',
     replyLanguage: 'French',
     codeLanguage: 'English',
-    docsLanguage: 'English' 
+    docsLanguage: 'English'
 };
 const oldRules = (extra = '') => render(readFileSync(new URL('./fixtures/old-brigade.md', import.meta.url), 'utf8'), OLD_ANSWERS) + extra;
 
@@ -1106,7 +1106,7 @@ async function oldInstall({ edit = '', manifest = true } = {}) {
     const text = oldRules();
 
     mkdirSync(join(cwd, '.claude/rules'), {
-        recursive: true 
+        recursive: true
     });
 
     writeFileSync(join(cwd, RULES), text + edit);
@@ -1117,19 +1117,19 @@ async function oldInstall({ edit = '', manifest = true } = {}) {
             stack: 'web',
             answers: OLD_ANSWERS,
             files: {
-                [RULES]: sha(text) 
-            } 
+                [RULES]: sha(text)
+            }
         }));
     }
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     return {
         cwd,
-        result 
+        result
     };
 }
 
@@ -1144,7 +1144,7 @@ test('an unedited old brigade.md is updated and the options file is created', as
 
 test('an edited old brigade.md is kept, proposed with a migration note', async () => {
     const { cwd, result } = await oldInstall({
-        edit: '\n- my own rule\n' 
+        edit: '\n- my own rule\n'
     });
 
     assert.equal(statuses(result)[RULES], 'proposed');
@@ -1156,7 +1156,7 @@ test('an edited old brigade.md is kept, proposed with a migration note', async (
 
 test('an old brigade.md with a lost manifest is proposed with the note', async () => {
     const { cwd, result } = await oldInstall({
-        manifest: false 
+        manifest: false
     });
 
     assert.equal(statuses(result)[RULES], 'proposed');
@@ -1169,7 +1169,7 @@ test('a proposed brigade.md that already mentions the options file gets no note'
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     writeFileSync(join(cwd, RULES), 'mine, see brigade-options.md\n');
@@ -1180,7 +1180,7 @@ test('a proposed brigade.md that already mentions the options file gets no note'
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.equal(statuses(result)[RULES], 'proposed');
@@ -1193,7 +1193,7 @@ test('an update ignores a stored commit format of a known convention, a custom o
 
         await runInit({
             cwd,
-            yes: true 
+            yes: true
         });
 
         const manifest = readManifest(cwd);
@@ -1201,25 +1201,25 @@ test('an update ignores a stored commit format of a known convention, a custom o
         manifest.version = '1.0.0';
         manifest.answers = {
             ...manifest.answers,
-            ...answers 
+            ...answers
         };
 
         writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
 
         const result = await runInit({
             cwd,
-            yes: true 
+            yes: true
         });
 
         return {
             cwd,
-            result 
+            result
         };
     };
 
     const known = await stored({
         commitConvention: 'conventional',
-        commitFormat: 'An outdated text.' 
+        commitFormat: 'An outdated text.'
     });
 
     assert.equal(known.result.answers.commitFormat, undefined);
@@ -1228,7 +1228,7 @@ test('an update ignores a stored commit format of a known convention, a custom o
 
     const custom = await stored({
         commitConvention: 'custom',
-        commitFormat: 'Gitmoji, one line.' 
+        commitFormat: 'Gitmoji, one line.'
     });
 
     assert.equal(custom.result.answers.commitFormat, 'Gitmoji, one line.');
@@ -1237,7 +1237,7 @@ test('an update ignores a stored commit format of a known convention, a custom o
 test('an update gives the same files as a fresh install, whatever the stored kit-derived data', async () => {
     const files = (cwd) => Object.fromEntries(readdirSync(cwd, {
         recursive: true,
-        withFileTypes: true 
+        withFileTypes: true
     })
         .filter((entry) => entry.isFile() && !entry.parentPath.includes('.git'))
         .map((entry) => join(entry.parentPath, entry.name))
@@ -1250,14 +1250,14 @@ test('an update gives the same files as a fresh install, whatever the stored kit
 
     await runInit({
         cwd: reference,
-        yes: true 
+        yes: true
     });
 
     const cwd = project();
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     const manifest = readManifest(cwd);
@@ -1266,7 +1266,7 @@ test('an update gives the same files as a fresh install, whatever the stored kit
     manifest.answers = {
         ...manifest.answers,
         commitConvention: 'conventional',
-        commitFormat: 'An outdated text.' 
+        commitFormat: 'An outdated text.'
     };
 
     // A kit file the developer did not edit, still at an older kit content.
@@ -1275,7 +1275,7 @@ test('an update gives the same files as a fresh install, whatever the stored kit
     writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     // The manifest is compared apart: it does not track the write-once files after an update.
@@ -1308,13 +1308,13 @@ const fresh = async (cwd, script = {}) => {
     const result = await runInit({
         cwd,
         interactive: true,
-        prompter 
+        prompter
     });
 
     return {
         result,
         asked,
-        cards 
+        cards
     };
 };
 
@@ -1335,7 +1335,7 @@ test('express "Install as is": one card, one choice, the detected setup is store
     const cwd = project();
 
     const { result, asked, cards } = await fresh(cwd, {
-        [HOW]: 'asis' 
+        [HOW]: 'asis'
     });
 
     assert.deepEqual(asked, [
@@ -1379,7 +1379,7 @@ test('"Install as is" is the first and default choice', async () => {
             seen.push(...options.map(({ value, label, hint }) => ({
                 value,
                 label,
-                hint 
+                hint
             })));
         }
 
@@ -1389,7 +1389,7 @@ test('"Install as is" is the first and default choice', async () => {
     await runInit({
         cwd,
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.deepEqual(seen.map(({ label }) => label), [
@@ -1417,7 +1417,7 @@ test('"Install as is" is the first and default choice', async () => {
     await runInit({
         cwd: bare,
         interactive: true,
-        prompter: again.prompter 
+        prompter: again.prompter
     });
 
     assert.match(hints[0], /will be asked/);
@@ -1429,7 +1429,7 @@ test('an option that cannot be detected is asked in express, then the recap is s
     writeFileSync(join(cwd, 'package.json'), '{}');
 
     const { result, asked, cards } = await fresh(cwd, {
-        [MANAGER]: 'yarn' 
+        [MANAGER]: 'yarn'
     });
 
     // The scripted validate asks once, then the choice.
@@ -1458,7 +1458,7 @@ test('Customize asks every option one by one, then the recap', async () => {
     const cwd = project();
 
     const { result, asked, cards } = await fresh(cwd, {
-        [HOW]: 'customize' 
+        [HOW]: 'customize'
     });
 
     // The scripted validate records its title and keeps the detected value.
@@ -1548,7 +1548,7 @@ test('an edited group starts from the current values', async () => {
             [
                 'packageManager'
             ]
-        ] 
+        ]
     });
     const choose = prompter.choose;
 
@@ -1563,7 +1563,7 @@ test('an edited group starts from the current values', async () => {
     await runInit({
         cwd,
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.deepEqual(offered, [
@@ -1580,7 +1580,7 @@ test('the two language questions: replies, then code and docs together or apart'
 
     try {
         assert.deepEqual(langs(await fresh(project(), {
-            [HOW]: 'asis' 
+            [HOW]: 'asis'
         })), [
             'English',
             'English',
@@ -1596,7 +1596,7 @@ test('the two language questions: replies, then code and docs together or apart'
 
     const together = await fresh(project(), {
         [HOW]: 'customize',
-        [CODE_DOCS]: 'French' 
+        [CODE_DOCS]: 'French'
     });
 
     assert.deepEqual(langs(together), [
@@ -1625,7 +1625,7 @@ test('the language choices offer the extended list, English first', async () => 
     const cwd = project();
 
     const { prompter } = asking('update', {
-        [HOW]: 'customize' 
+        [HOW]: 'customize'
     });
     const { choose } = prompter;
     let offered;
@@ -1641,7 +1641,7 @@ test('the language choices offer the extended list, English first', async () => 
     await runInit({
         cwd,
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.deepEqual(offered.slice(0, 10), [
@@ -1660,7 +1660,7 @@ test('the language choices offer the extended list, English first', async () => 
 
 test('the personal reply language is asked in Customize, skipped in express, kept on this machine', async () => {
     const express = await fresh(project(), {
-        [HOW]: 'asis' 
+        [HOW]: 'asis'
     });
 
     assert.ok(!express.asked.some((question) => question.startsWith(MINE)));
@@ -1670,12 +1670,12 @@ test('the personal reply language is asked in Customize, skipped in express, kep
     const { result, asked } = await fresh(cwd, {
         [HOW]: 'customize',
         [MINE]: 'own',
-        'Your own reply language': 'English' 
+        'Your own reply language': 'English'
     });
 
     assert.ok(asked.some((question) => question.startsWith(MINE)));
     assert.deepEqual(result.personal, {
-        language: 'English' 
+        language: 'English'
     });
 
     assert.equal(result.local.status, 'written');
@@ -1694,7 +1694,7 @@ test('editing the languages group asks the personal question again', async () =>
             [
                 'languages'
             ]
-        ] 
+        ]
     });
 
     assert.equal(asked.filter((question) => question.startsWith(MINE)).length, 2);
@@ -1706,7 +1706,7 @@ test('"Change my options" starts from the stored answers', async () => {
     await runInit({
         cwd,
         yes: true,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     const manifest = readAnswers(cwd);
@@ -1715,20 +1715,20 @@ test('"Change my options" starts from the stored answers', async () => {
         packageManager: 'bun',
         replyLanguage: 'English',
         codeLanguage: 'English',
-        docsLanguage: 'French' 
+        docsLanguage: 'French'
     });
 
     writeFileSync(join(cwd, MANIFEST_FILE), JSON.stringify(manifest));
 
     const { prompter, cards } = asking('update', {
-        [HOW]: 'asis' 
+        [HOW]: 'asis'
     });
 
     const result = await runInit({
         cwd,
         version: '1.0.0',
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.ok(cards[0].rows.some(([
@@ -1743,11 +1743,11 @@ test('"Change my options" starts from the stored answers', async () => {
 test('cancelling at the first choice or at the recap leaves the project untouched', async () => {
     for (const script of [
         {
-            [HOW]: CANCEL 
+            [HOW]: CANCEL
         },
         {
             [HOW]: 'customize',
-            [RIGHT]: CANCEL 
+            [RIGHT]: CANCEL
         },
         {
             [HOW]: 'customize',
@@ -1757,7 +1757,7 @@ test('cancelling at the first choice or at the recap leaves the project untouche
                     'commit'
                 ]
             ],
-            [COMMIT]: CANCEL 
+            [COMMIT]: CANCEL
         }
     ]) {
         const cwd = project();
@@ -1784,9 +1784,9 @@ test('a blank custom commit format never reaches the options file', async () => 
         cwd: project(),
         prompter: prompter(typed),
         previous: {
-            commitConvention: 'custom' 
+            commitConvention: 'custom'
         },
-        current: {} 
+        current: {}
     });
 
     assert.equal((await ask('Gitmoji, one line')).commitFormat, 'Gitmoji, one line');
@@ -1798,7 +1798,7 @@ test('a blank custom commit format never reaches the options file', async () => 
         const answers = await ask(blank);
 
         assert.deepEqual(answers, {
-            commitConvention: 'conventional' 
+            commitConvention: 'conventional'
         });
     }
 
@@ -1807,7 +1807,7 @@ test('a blank custom commit format never reaches the options file', async () => 
 
     const result = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.match(readFileSync(join(cwd, OPTIONS_PATH), 'utf8'), /^- Commit format: \S.*$/m);
@@ -1824,7 +1824,7 @@ async function installed(files) {
         content
     ] of Object.entries(files)) {
         mkdirSync(dirname(join(stackDir, path)), {
-            recursive: true 
+            recursive: true
         });
 
         writeFileSync(join(stackDir, path), content);
@@ -1834,12 +1834,12 @@ async function installed(files) {
         cwd,
         yes: true,
         stackDir,
-        version: '1.0.0' 
+        version: '1.0.0'
     });
 
     return {
         cwd,
-        stackDir 
+        stackDir
     };
 }
 
@@ -1848,7 +1848,7 @@ const manifestOf = (cwd) => JSON.parse(readFileSync(join(cwd, '.claude/brigade.j
 test('an interactive update lists the changes and writes them once confirmed', async () => {
     const { cwd, stackDir } = await installed({
         'a.md': 'a1\n',
-        'b.md': 'b1\n' 
+        'b.md': 'b1\n'
     });
 
     writeFileSync(join(cwd, 'b.md'), 'mine\n');
@@ -1863,7 +1863,7 @@ test('an interactive update lists the changes and writes them once confirmed', a
         stackDir,
         version: '2.0.0',
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.ok(asked.includes('Apply these changes?'));
@@ -1878,7 +1878,7 @@ test('an interactive update lists the changes and writes them once confirmed', a
 
 test('declining the preview writes nothing', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a1\n' 
+        'a.md': 'a1\n'
     });
     const manifest = readFileSync(join(cwd, '.claude/brigade.json'), 'utf8');
 
@@ -1890,7 +1890,7 @@ test('declining the preview writes nothing', async () => {
         stackDir,
         version: '2.0.0',
         interactive: true,
-        prompter: asking('update', {}, false).prompter 
+        prompter: asking('update', {}, false).prompter
     });
 
     assert.equal(result.kept, '1.0.0');
@@ -1905,7 +1905,7 @@ test('a first install shows no preview and asks no confirmation', async () => {
     await runInit({
         cwd: project(),
         interactive: true,
-        prompter 
+        prompter
     });
 
     assert.ok(!asked.includes('Apply these changes?'));
@@ -1914,7 +1914,7 @@ test('a first install shows no preview and asks no confirmation', async () => {
 test('a dry run reports what would change and writes nothing, not even the manifest', async () => {
     const { cwd, stackDir } = await installed({
         'a.md': 'a1\n',
-        'gone.md': 'g\n' 
+        'gone.md': 'g\n'
     });
     const manifest = readFileSync(join(cwd, '.claude/brigade.json'), 'utf8');
 
@@ -1926,7 +1926,7 @@ test('a dry run reports what would change and writes nothing, not even the manif
         cwd,
         stackDir,
         version: '2.0.0',
-        dryRun: true 
+        dryRun: true
     });
 
     assert.equal(result.dryRun, true);
@@ -1946,7 +1946,7 @@ test('a dry run lists the ignore lines it would add and writes nothing', async (
 
     const result = await runInit({
         cwd,
-        dryRun: true 
+        dryRun: true
     });
 
     assert.deepEqual(result.ignored.find(({ path }) => path === '.gitignore').added, [
@@ -1970,7 +1970,7 @@ test('a dry run lists no ignore lines when they are already there', async () => 
 
     const result = await runInit({
         cwd,
-        dryRun: true 
+        dryRun: true
     });
 
     assert.ok(result.ignored.every(({ status }) => status === 'unchanged'));
@@ -1983,7 +1983,7 @@ test('a dry run plans exactly what the real run reports, manifest included', asy
 
     const preview = await runInit({
         cwd,
-        dryRun: true 
+        dryRun: true
     });
 
     assert.ok(!existsSync(join(cwd, '.claude')));
@@ -1991,7 +1991,7 @@ test('a dry run plans exactly what the real run reports, manifest included', asy
 
     const real = await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.deepEqual(real.report, preview.report);
@@ -2003,12 +2003,12 @@ test('writes are atomic: no temp file is left behind, after a run or after a fai
     const cwd = project();
 
     const tempFiles = () => readdirSync(cwd, {
-        recursive: true 
+        recursive: true
     }).filter((name) => name.endsWith('.tmp'));
 
     await runInit({
         cwd,
-        yes: true 
+        yes: true
     });
 
     assert.deepEqual(tempFiles(), []);
@@ -2031,7 +2031,7 @@ test('a dry run on an empty project creates nothing', async () => {
 
     const result = await runInit({
         cwd,
-        dryRun: true 
+        dryRun: true
     });
 
     assert.ok(result.report.every(({ status }) => status === 'created'));
@@ -2041,18 +2041,18 @@ test('a dry run on an empty project creates nothing', async () => {
 test('a file removed from the kit and untouched is deleted, with its empty folders', async () => {
     const { cwd, stackDir } = await installed({
         'a.md': 'a\n',
-        'old/deep/x.md': 'x\n' 
+        'old/deep/x.md': 'x\n'
     });
 
     rmSync(join(stackDir, 'old'), {
-        recursive: true 
+        recursive: true
     });
 
     const result = await runInit({
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)['old/deep/x.md'], 'removed');
@@ -2063,7 +2063,7 @@ test('a file removed from the kit and untouched is deleted, with its empty folde
 test('a file removed from the kit but edited is kept, reported and still recorded', async () => {
     const { cwd, stackDir } = await installed({
         'a.md': 'a\n',
-        'old.md': 'o\n' 
+        'old.md': 'o\n'
     });
 
     writeFileSync(join(cwd, 'old.md'), 'mine\n');
@@ -2073,7 +2073,7 @@ test('a file removed from the kit but edited is kept, reported and still recorde
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)['old.md'], 'obsolete');
@@ -2083,7 +2083,7 @@ test('a file removed from the kit but edited is kept, reported and still recorde
 
 test('a file the manifest does not record is never removed, nor one outside the project', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a\n' 
+        'a.md': 'a\n'
     });
 
     writeFileSync(join(cwd, 'mine.md'), 'mine\n');
@@ -2099,7 +2099,7 @@ test('a file the manifest does not record is never removed, nor one outside the 
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)['mine.md'], undefined);
@@ -2116,9 +2116,9 @@ test('mergeSettings keeps the developer\'s entries, adds the kit\'s and never du
             allow: [
                 'mine',
                 'shared'
-            ] 
+            ]
         },
-        extra: 1 
+        extra: 1
     };
 
     const kit = {
@@ -2130,15 +2130,15 @@ test('mergeSettings keeps the developer\'s entries, adds the kit\'s and never du
             ],
             deny: [
                 'd'
-            ] 
+            ]
         },
         hooks: {
             A: [
                 {
-                    m: 1 
+                    m: 1
                 }
-            ] 
-        } 
+            ]
+        }
     };
 
     assert.deepEqual(mergeSettings(mine, kit), {
@@ -2151,15 +2151,15 @@ test('mergeSettings keeps the developer\'s entries, adds the kit\'s and never du
             ],
             deny: [
                 'd'
-            ] 
+            ]
         },
         extra: 1,
         hooks: {
             A: [
                 {
-                    m: 1 
+                    m: 1
                 }
-            ] 
+            ]
         }
     });
 
@@ -2170,15 +2170,15 @@ const SETTINGS = '.claude/settings.json';
 
 const settingsKit = (allow) => JSON.stringify({
     permissions: {
-        allow 
-    } 
+        allow
+    }
 });
 
 test('an edited settings.json is merged by keys, not proposed', async () => {
     const { cwd, stackDir } = await installed({
         [SETTINGS]: settingsKit([
             'a'
-        ]) 
+        ])
     });
 
     writeFileSync(join(cwd, SETTINGS), JSON.stringify({
@@ -2186,9 +2186,9 @@ test('an edited settings.json is merged by keys, not proposed', async () => {
             allow: [
                 'a',
                 'mine'
-            ] 
+            ]
         },
-        model: 'x' 
+        model: 'x'
     }));
 
     writeFileSync(join(stackDir, SETTINGS), settingsKit([
@@ -2200,7 +2200,7 @@ test('an edited settings.json is merged by keys, not proposed', async () => {
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)[SETTINGS], 'merged');
@@ -2210,9 +2210,9 @@ test('an edited settings.json is merged by keys, not proposed', async () => {
                 'a',
                 'mine',
                 'b'
-            ] 
+            ]
         },
-        model: 'x' 
+        model: 'x'
     });
 
     assert.ok(!existsSync(join(cwd, `${SETTINGS}.proposed`)));
@@ -2225,7 +2225,7 @@ test('a merged settings.json is stable on the next run', async () => {
     const { cwd, stackDir } = await installed({
         [SETTINGS]: settingsKit([
             'a'
-        ]) 
+        ])
     });
 
     writeFileSync(join(cwd, SETTINGS), JSON.stringify({
@@ -2233,8 +2233,8 @@ test('a merged settings.json is stable on the next run', async () => {
             allow: [
                 'a',
                 'mine'
-            ] 
-        } 
+            ]
+        }
     }));
 
     writeFileSync(join(stackDir, SETTINGS), settingsKit([
@@ -2246,7 +2246,7 @@ test('a merged settings.json is stable on the next run', async () => {
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     const merged = readFileSync(join(cwd, SETTINGS), 'utf8');
@@ -2255,7 +2255,7 @@ test('a merged settings.json is stable on the next run', async () => {
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(again)[SETTINGS], 'kept');
@@ -2266,7 +2266,7 @@ test('an untouched settings.json is still updated in place', async () => {
     const { cwd, stackDir } = await installed({
         [SETTINGS]: settingsKit([
             'a'
-        ]) 
+        ])
     });
 
     writeFileSync(join(stackDir, SETTINGS), settingsKit([
@@ -2278,7 +2278,7 @@ test('an untouched settings.json is still updated in place', async () => {
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)[SETTINGS], 'updated');
@@ -2288,7 +2288,7 @@ test('a settings.json that is not valid JSON falls back to a proposal', async ()
     const { cwd, stackDir } = await installed({
         [SETTINGS]: settingsKit([
             'a'
-        ]) 
+        ])
     });
 
     writeFileSync(join(cwd, SETTINGS), '{ broken');
@@ -2301,7 +2301,7 @@ test('a settings.json that is not valid JSON falls back to a proposal', async ()
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)[SETTINGS], 'proposed');
@@ -2316,7 +2316,7 @@ const RULE_V2 = 'a\nb\nc\nd\nE\n';
 
 test('a manifest path cannot make Brigade remove a file outside the project', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a\n' 
+        'a.md': 'a\n'
     });
 
     writeFileSync(join(cwd, '.claude/precious.md'), 'keep\n');
@@ -2329,7 +2329,7 @@ test('a manifest path cannot make Brigade remove a file outside the project', as
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.ok(existsSync(join(cwd, '.claude/precious.md')));
@@ -2337,7 +2337,7 @@ test('a manifest path cannot make Brigade remove a file outside the project', as
 
 test('an edited file the kit changed is kept, with the whole kit file as .proposed and no markers', async () => {
     const { cwd, stackDir } = await installed({
-        [RULE]: RULE_V1 
+        [RULE]: RULE_V1
     });
 
     writeFileSync(join(cwd, RULE), 'a\nb\nc\nd\nmine\n');
@@ -2347,7 +2347,7 @@ test('an edited file the kit changed is kept, with the whole kit file as .propos
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)[RULE], 'proposed');
@@ -2358,7 +2358,7 @@ test('an edited file the kit changed is kept, with the whole kit file as .propos
 
 test('an edited file the kit did not change is kept and gets no proposal', async () => {
     const { cwd, stackDir } = await installed({
-        [RULE]: RULE_V1 
+        [RULE]: RULE_V1
     });
 
     writeFileSync(join(cwd, RULE), 'mine\n');
@@ -2367,7 +2367,7 @@ test('an edited file the kit did not change is kept and gets no proposal', async
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)[RULE], 'kept');
@@ -2377,7 +2377,7 @@ test('an edited file the kit did not change is kept and gets no proposal', async
 
 test('a proposal is delivered once, then rewritten only when the kit changes again', async () => {
     const { cwd, stackDir } = await installed({
-        [RULE]: RULE_V1 
+        [RULE]: RULE_V1
     });
 
     writeFileSync(join(cwd, RULE), 'a\nb\nc\nd\nmine\n');
@@ -2386,7 +2386,7 @@ test('a proposal is delivered once, then rewritten only when the kit changes aga
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     const proposal = join(cwd, `${RULE}.proposed`);
@@ -2398,7 +2398,7 @@ test('a proposal is delivered once, then rewritten only when the kit changes aga
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(again)[RULE], 'kept');
@@ -2411,7 +2411,7 @@ test('a proposal is delivered once, then rewritten only when the kit changes aga
         cwd,
         yes: true,
         stackDir,
-        version: '3.0.0' 
+        version: '3.0.0'
     });
 
     assert.equal(statuses(changed)[RULE], 'proposed');
@@ -2420,7 +2420,7 @@ test('a proposal is delivered once, then rewritten only when the kit changes aga
 
 test('a deleted proposal does not come back until the kit changes again', async () => {
     const { cwd, stackDir } = await installed({
-        [RULE]: RULE_V1 
+        [RULE]: RULE_V1
     });
 
     writeFileSync(join(cwd, RULE), 'a\nb\nc\nd\nmine\n');
@@ -2429,7 +2429,7 @@ test('a deleted proposal does not come back until the kit changes again', async 
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     rmSync(join(cwd, `${RULE}.proposed`));
@@ -2438,7 +2438,7 @@ test('a deleted proposal does not come back until the kit changes again', async 
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(again)[RULE], 'kept');
@@ -2451,7 +2451,7 @@ test('a deleted proposal does not come back until the kit changes again', async 
         cwd,
         yes: true,
         stackDir,
-        version: '3.0.0' 
+        version: '3.0.0'
     });
 
     assert.equal(statuses(changed)[RULE], 'proposed');
@@ -2460,7 +2460,7 @@ test('a deleted proposal does not come back until the kit changes again', async 
 
 test('once the developer merged the proposal by hand the next run is quiet and the proposal goes', async () => {
     const { cwd, stackDir } = await installed({
-        [RULE]: RULE_V1 
+        [RULE]: RULE_V1
     });
 
     writeFileSync(join(cwd, RULE), 'a\nb\nc\nd\nmine\n');
@@ -2469,7 +2469,7 @@ test('once the developer merged the proposal by hand the next run is quiet and t
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     writeFileSync(join(cwd, RULE), 'a\nb\nc\nd\nE\n');
@@ -2478,7 +2478,7 @@ test('once the developer merged the proposal by hand the next run is quiet and t
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(resolved)[RULE], 'unchanged');
@@ -2489,7 +2489,7 @@ test('once the developer merged the proposal by hand the next run is quiet and t
 test('a dry run lists updated and proposed files and writes nothing', async () => {
     const { cwd, stackDir } = await installed({
         'm.md': RULE_V1,
-        'u.md': 'u1\n' 
+        'u.md': 'u1\n'
     });
 
     writeFileSync(join(cwd, 'm.md'), 'mine\n');
@@ -2507,7 +2507,7 @@ test('a dry run lists updated and proposed files and writes nothing', async () =
         cwd,
         dryRun: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)['m.md'], 'proposed');
@@ -2518,7 +2518,7 @@ test('a dry run lists updated and proposed files and writes nothing', async () =
 
 test('an error while planning leaves the project untouched', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a1\n' 
+        'a.md': 'a1\n'
     });
 
     writeFileSync(join(stackDir, 'a.md'), 'a2\n');
@@ -2529,7 +2529,7 @@ test('an error while planning leaves the project untouched', async () => {
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     }));
 
     assert.equal(readFileSync(join(cwd, 'a.md'), 'utf8'), 'a1\n');
@@ -2538,7 +2538,7 @@ test('an error while planning leaves the project untouched', async () => {
 test('a kit file deleted by the developer is recreated, with its manifest entry intact', async () => {
     const { cwd, stackDir } = await installed({
         'a.md': 'a1\n',
-        'b.md': 'b1\n' 
+        'b.md': 'b1\n'
     });
 
     rmSync(join(cwd, 'a.md'));
@@ -2547,7 +2547,7 @@ test('a kit file deleted by the developer is recreated, with its manifest entry 
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)['a.md'], 'created');
@@ -2558,7 +2558,7 @@ test('a kit file deleted by the developer is recreated, with its manifest entry 
 
 test('a kit file deleted by the developer comes back with the new kit content when the kit changed', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a1\n' 
+        'a.md': 'a1\n'
     });
 
     rmSync(join(cwd, 'a.md'));
@@ -2568,7 +2568,7 @@ test('a kit file deleted by the developer comes back with the new kit content wh
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)['a.md'], 'created');
@@ -2578,7 +2578,7 @@ test('a kit file deleted by the developer comes back with the new kit content wh
 
 test('an error while writing leaves the earlier writes, the old manifest, and a re-run converges', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a1\n' 
+        'a.md': 'a1\n'
     });
 
     writeFileSync(join(stackDir, 'a.md'), 'a2\n');
@@ -2592,7 +2592,7 @@ test('an error while writing leaves the earlier writes, the old manifest, and a 
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     }));
 
     // Each file is replaced atomically, but the run is not: what was written before the failure stays.
@@ -2608,7 +2608,7 @@ test('an error while writing leaves the earlier writes, the old manifest, and a 
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)['a.md'], 'unchanged');
@@ -2625,16 +2625,16 @@ test('settings.json: what the kit dropped or changed stays, the kit\'s new entri
                 allow: [
                     'a',
                     'old'
-                ] 
+                ]
             },
             hooks: {
                 Pre: [
                     {
-                        command: 'v1' 
+                        command: 'v1'
                     }
-                ] 
-            } 
-        }) 
+                ]
+            }
+        })
     });
 
     writeFileSync(join(cwd, SETTINGS), JSON.stringify({
@@ -2643,16 +2643,16 @@ test('settings.json: what the kit dropped or changed stays, the kit\'s new entri
                 'a',
                 'old',
                 'mine'
-            ] 
+            ]
         },
         hooks: {
             Pre: [
                 {
-                    command: 'v1' 
+                    command: 'v1'
                 }
-            ] 
+            ]
         },
-        model: 'x' 
+        model: 'x'
     }));
 
     writeFileSync(join(stackDir, SETTINGS), JSON.stringify({
@@ -2660,22 +2660,22 @@ test('settings.json: what the kit dropped or changed stays, the kit\'s new entri
             allow: [
                 'a',
                 'new'
-            ] 
+            ]
         },
         hooks: {
             Pre: [
                 {
-                    command: 'v2' 
+                    command: 'v2'
                 }
-            ] 
-        } 
+            ]
+        }
     }));
 
     await runInit({
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.deepEqual(JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')), {
@@ -2685,17 +2685,17 @@ test('settings.json: what the kit dropped or changed stays, the kit\'s new entri
                 'old',
                 'mine',
                 'new'
-            ] 
+            ]
         },
         hooks: {
             Pre: [
                 {
-                    command: 'v1' 
+                    command: 'v1'
                 },
                 {
-                    command: 'v2' 
+                    command: 'v2'
                 }
-            ] 
+            ]
         },
         model: 'x'
     });
@@ -2706,12 +2706,12 @@ const LEGACY = '.claude/brigade-base';
 
 const withLegacy = (cwd) => {
     mkdirSync(join(cwd, LEGACY, 'rules'), {
-        recursive: true 
+        recursive: true
     });
 
     writeFileSync(join(cwd, LEGACY, 'rules/brigade.md'), 'old base\n');
     mkdirSync(join(cwd, '.claude/brigade-base-notes'), {
-        recursive: true 
+        recursive: true
     });
 
     writeFileSync(join(cwd, '.claude/brigade-base-notes/n.md'), 'mine\n');
@@ -2719,7 +2719,7 @@ const withLegacy = (cwd) => {
 
 test('an update removes the old .claude/brigade-base/ folder and reports it, and only that folder', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a1\n' 
+        'a.md': 'a1\n'
     });
 
     withLegacy(cwd);
@@ -2728,7 +2728,7 @@ test('an update removes the old .claude/brigade-base/ folder and reports it, and
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.ok(!existsSync(join(cwd, LEGACY)));
@@ -2739,7 +2739,7 @@ test('an update removes the old .claude/brigade-base/ folder and reports it, and
 
 test('a dry run lists the old .claude/brigade-base/ folder and keeps it', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a1\n' 
+        'a.md': 'a1\n'
     });
 
     withLegacy(cwd);
@@ -2748,7 +2748,7 @@ test('a dry run lists the old .claude/brigade-base/ folder and keeps it', async 
         cwd,
         dryRun: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.equal(statuses(result)[`${LEGACY}/`], 'removed');
@@ -2757,14 +2757,14 @@ test('a dry run lists the old .claude/brigade-base/ folder and keeps it', async 
 
 test('a project without the old base folder reports nothing about it', async () => {
     const { cwd, stackDir } = await installed({
-        'a.md': 'a1\n' 
+        'a.md': 'a1\n'
     });
 
     const result = await runInit({
         cwd,
         yes: true,
         stackDir,
-        version: '2.0.0' 
+        version: '2.0.0'
     });
 
     assert.ok(!(`${LEGACY}/` in statuses(result)));

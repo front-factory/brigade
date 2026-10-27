@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import {
-    join, relative, sep 
+    join, relative, sep
 } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +11,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 function listFiles(dir) {
     return readdirSync(dir, {
-        withFileTypes: true 
+        withFileTypes: true
     }).flatMap((entry) =>
         entry.isDirectory() ? listFiles(join(dir, entry.name)) : [
             join(dir, entry.name)

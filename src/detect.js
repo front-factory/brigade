@@ -26,7 +26,7 @@ function git(cwd, ...args) {
                 'ignore',
                 'pipe',
                 'ignore'
-            ] 
+            ]
         }).trim();
     } catch {
         return '';
@@ -77,7 +77,7 @@ export function detectPackageManager(cwd) {
             value: declared,
             candidates: [
                 declared
-            ] 
+            ]
         };
     }
 
@@ -93,7 +93,7 @@ export function detectPackageManager(cwd) {
 
     return {
         value: candidates.length === 1 ? candidates[0] : '',
-        candidates 
+        candidates
     };
 }
 
@@ -103,7 +103,7 @@ export function detectCommitConvention(cwd) {
 
     const deps = {
         ...pkg?.dependencies,
-        ...pkg?.devDependencies 
+        ...pkg?.devDependencies
     };
 
     if (!existsSync(join(cwd, '.husky', 'commit-msg'))) {
