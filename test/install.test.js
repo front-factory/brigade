@@ -2308,6 +2308,83 @@ test('a merged settings.json is stable on the next run', async () => {
     assert.equal(readFileSync(join(cwd, SETTINGS), 'utf8'), merged);
 });
 
+const modeKit = (defaultMode) => JSON.stringify({
+    permissions: {
+        defaultMode,
+        allow: [
+            'a'
+        ]
+    }
+});
+
+const editedWithMode = async (defaultMode) => {
+    const { cwd, stackDir } = await installed({
+        [SETTINGS]: modeKit('acceptEdits')
+    });
+
+    writeFileSync(join(cwd, SETTINGS), JSON.stringify({
+        permissions: {
+            defaultMode,
+            allow: [
+                'a',
+                'mine'
+            ]
+        }
+    }));
+
+    writeFileSync(join(stackDir, SETTINGS), modeKit('plan'));
+
+    const result = await runInit({
+        cwd,
+        yes: true,
+        stackDir,
+        version: '2.0.0'
+    });
+
+    return {
+        cwd,
+        stackDir,
+        result
+    };
+};
+
+test('an edited settings.json moves the old acceptEdits default mode to plan', async () => {
+    const { cwd, result } = await editedWithMode('acceptEdits');
+
+    assert.equal(statuses(result)[SETTINGS], 'merged');
+    assert.deepEqual(JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')), {
+        permissions: {
+            defaultMode: 'plan',
+            allow: [
+                'a',
+                'mine'
+            ]
+        }
+    });
+});
+
+test('an edited settings.json keeps another default mode', async () => {
+    const { cwd, result } = await editedWithMode('bypassPermissions');
+
+    assert.equal(statuses(result)[SETTINGS], 'kept');
+    assert.equal(JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')).permissions.defaultMode, 'bypassPermissions');
+});
+
+test('a migrated default mode is stable on the next run', async () => {
+    const { cwd, stackDir } = await editedWithMode('acceptEdits');
+    const migrated = readFileSync(join(cwd, SETTINGS), 'utf8');
+
+    const again = await runInit({
+        cwd,
+        yes: true,
+        stackDir,
+        version: '2.0.0'
+    });
+
+    assert.equal(statuses(again)[SETTINGS], 'kept');
+    assert.equal(readFileSync(join(cwd, SETTINGS), 'utf8'), migrated);
+});
+
 test('an untouched settings.json is still updated in place', async () => {
     const { cwd, stackDir } = await installed({
         [SETTINGS]: settingsKit([

@@ -171,6 +171,22 @@ export function stripSettings(mine, kit) {
     return mine;
 }
 
+// The old kit default mode moves to the new one, since mergeSettings keeps the developer's value and would leave it
+// behind forever. Any other value is the developer's choice and stays.
+function migrateDefaultMode(merged, kit) {
+    if (merged.permissions?.defaultMode !== 'acceptEdits' || kit.permissions?.defaultMode !== 'plan') {
+        return merged;
+    }
+
+    return {
+        ...merged,
+        permissions: {
+            ...merged.permissions,
+            defaultMode: 'plan'
+        }
+    };
+}
+
 // The merged file content, or null when either side is not a JSON object (the caller falls back to a proposal).
 function mergedSettings(current, kit) {
     try {
@@ -182,7 +198,7 @@ function mergedSettings(current, kit) {
         }
 
         return {
-            merged: mergeSettings(mine, theirs),
+            merged: migrateDefaultMode(mergeSettings(mine, theirs), theirs),
             mine
         };
     } catch {
