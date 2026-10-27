@@ -12,6 +12,7 @@ export default defineConfig([
         rules: {
             // The CLI rethrows caught errors with its own user-facing message.
             'preserve-caught-error': 'off',
+            '@stylistic/no-trailing-spaces': 'error',
             // Re-declares every entry: a later config replaces the rule options instead of merging them.
             '@stylistic/padding-line-between-statements': [
                 'error',
