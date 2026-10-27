@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.7.0](https://github.com/front-factory/brigade/compare/v1.6.3...v1.7.0) (2026-10-27)
+
+### Features
+
+* **cli:** add the uninstall command ([1e703db](https://github.com/front-factory/brigade/commit/1e703db2ebdadd4f0774d456c025a85098584126))
+
+### Bug Fixes
+
+* **brigade:** refresh the manifest hashes after the lint style ([a37008c](https://github.com/front-factory/brigade/commit/a37008c39cb289f85883dd0c7377317f19bf05dd))
+* **cli:** prompt only when stdin and stdout are terminals ([4761c26](https://github.com/front-factory/brigade/commit/4761c2643fedd942d2c8e2618137ce897aa97297))
+* **hooks:** warn when node is not found ([ff9805e](https://github.com/front-factory/brigade/commit/ff9805ebc347fe290072604dee9061cf3eec1298))
+* **install:** sort the manifest files without the locale ([e7f1ad5](https://github.com/front-factory/brigade/commit/e7f1ad5e1cd062cd673bcb824893790653fca67a))
+* **prompt:** throw a cancel error instead of exiting ([284f486](https://github.com/front-factory/brigade/commit/284f486c27595352d9a2d98d4a878221dda8cd09))
+
 ## [1.6.3](https://github.com/front-factory/brigade/compare/v1.6.2...v1.6.3) (2026-10-26)
 
 ### Bug Fixes
