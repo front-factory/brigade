@@ -31,6 +31,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: ${{ matrix.node-version }}
@@ -40,6 +42,20 @@ jobs:
         run: npm ci --no-audit
         env:
           HUSKY: 0
+
+      # Lint and commitlint run once, not on every matrix entry.
+      - name: Lint
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == 24 }}
+        run: npm run lint
+
+      - name: Commitlint
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == 24 }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+          else
+            npx commitlint --last --verbose
+          fi
 
       - name: Test
         run: npm test
