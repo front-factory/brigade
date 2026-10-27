@@ -31,3 +31,16 @@ export const CHANGING = new Set([
 export const PROPOSALS = new Set([
     'proposed'
 ]);
+
+// The same for `uninstall`.
+export const UNINSTALL_WORDS = {
+    removed: 'removed',
+    stripped: 'stripped, yours kept',
+    kept: 'yours kept, delete it yourself'
+};
+
+export const UNINSTALL_PREVIEW_WORDS = {
+    removed: 'would be removed',
+    stripped: 'would be stripped, yours kept',
+    kept: 'yours kept, delete it yourself'
+};

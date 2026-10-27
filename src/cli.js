@@ -1,15 +1,22 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { runInit } from './init.js';
+import { APPENDS } from './install.js';
 import { recapRows } from './options.js';
 import { STACKS } from './stacks.js';
+import { runUninstall } from './uninstall.js';
 import { VERSION } from './version.js';
 import {
-    CHANGING, PREVIEW_WORDS, PROPOSALS, WORDS 
+    CHANGING, PREVIEW_WORDS, PROPOSALS, UNINSTALL_PREVIEW_WORDS, UNINSTALL_WORDS, WORDS
 } from './words.js';
 
 const HELP = `Usage: brigade init [--yes] [--dry-run] [--stack <name>]
+       brigade uninstall [--yes] [--dry-run]
        brigade --version
+
+  uninstall       remove what Brigade wrote and keep every file you edited (needs --yes without a terminal)
 
   --yes           accept every detected or default answer, ask nothing
                   (an installed project is updated with its stored answers; new options get their default)
@@ -19,24 +26,29 @@ const HELP = `Usage: brigade init [--yes] [--dry-run] [--stack <name>]
   -v, --version   show the version
 `;
 
-function parse(args) {
+function parse(args, command) {
     let values;
+
+    const flags = {
+        yes: {
+            type: 'boolean',
+            short: 'y'
+        },
+        'dry-run': {
+            type: 'boolean'
+        }
+    };
+
+    if (command === 'init') {
+        flags.stack = {
+            type: 'string'
+        };
+    }
 
     try {
         ({ values } = parseArgs({
             args,
-            options: {
-                yes: {
-                    type: 'boolean',
-                    short: 'y' 
-                },
-                'dry-run': {
-                    type: 'boolean' 
-                },
-                stack: {
-                    type: 'string' 
-                } 
-            } 
+            options: flags
         }));
     } catch (error) {
         const arg = /'([^']+)'/.exec(error.message)?.[1];
@@ -191,7 +203,43 @@ function print(result, interactive) {
     ]);
 }
 
-const isHelp = (arg) => arg === '--help' || arg === '-h';
+// The lines Brigade appended to the project files stay there: listed so the developer can remove them.
+const leftLines = (cwd) => Object.entries(APPENDS).filter(([
+    path
+]) => existsSync(join(cwd, path))).map(([
+    path,
+    lines
+]) => `${path} (${lines.join(', ')})`);
+
+function printUninstall({ prompter, report, dryRun, aborted }, interactive, cwd) {
+    if (aborted) {
+        prompter.outro('Nothing was removed.');
+
+        return;
+    }
+
+    const words = dryRun ? UNINSTALL_PREVIEW_WORDS : UNINSTALL_WORDS;
+    const left = leftLines(cwd);
+    const note = left.length ? `Left in place, remove the lines yourself if you want: ${left.join(', ')}.` : '';
+    const history = 'Removed files are still in your git history.';
+    const lines = report.map(({ path, status }) => `${words[status].padEnd(30)} ${path}`).join('\n');
+    const tail = `${note ? `${note}\n` : ''}${history}`;
+
+    if (dryRun) {
+        console.log(`Brigade uninstall dry run. Nothing was removed.\n\n${lines}\n\n${tail}\n\nRun without --dry-run to apply.`);
+    } else if (interactive) {
+        prompter.done('Brigade removed.', [
+            ...(note ? [
+                note
+            ] : []),
+            history
+        ]);
+    } else {
+        console.log(`Brigade removed.\n\n${lines}\n\n${tail}`);
+    }
+}
+
+const isHelp =(arg) => arg === '--help' || arg === '-h';
 
 export async function main(argv) {
     const [
@@ -211,7 +259,7 @@ export async function main(argv) {
         return 0;
     }
 
-    if (command !== 'init') {
+    if (command !== 'init' && command !== 'uninstall') {
         console.error(`brigade: Unknown command: ${command}\n\n${HELP}`);
 
         return 1;
@@ -224,13 +272,26 @@ export async function main(argv) {
     }
 
     try {
-        const options = parse(rest);
+        const options = parse(rest, command);
         const interactive = Boolean(process.stdin.isTTY) && !options.yes && !options.dryRun;
+
+        if (command === 'uninstall') {
+            const cwd = process.cwd();
+
+            printUninstall(await runUninstall({
+                cwd,
+                interactive,
+                yes: options.yes,
+                dryRun: options.dryRun
+            }), interactive, cwd);
+
+            return 0;
+        }
 
         print(await runInit({
             cwd: process.cwd(),
             interactive,
-            ...options 
+            ...options
         }), interactive);
 
         return 0;

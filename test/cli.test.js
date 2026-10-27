@@ -217,10 +217,75 @@ test('--dry-run lists what would be written and writes nothing', () => {
     assert.ok(!existsSync(join(cwd, '.claude')));
 });
 
-test('--help documents --dry-run', () => {
+test('--help documents --dry-run and uninstall', () => {
     assert.match(brigade([
         '--help'
     ]).out, /--dry-run/);
+
+    assert.match(brigade([
+        '--help'
+    ]).out, /brigade uninstall/);
+});
+
+test('uninstall --dry-run lists the plan and writes nothing', () => {
+    const first = brigade([
+        'init',
+        '--yes'
+    ]);
+
+    writeFileSync(join(first.cwd, '.claude/rules/brigade.md'), 'mine\n');
+
+    const { code, out, cwd } = brigade([
+        'uninstall',
+        '--dry-run'
+    ], first.cwd);
+
+    assert.equal(code, 0);
+    assert.match(out, /^Brigade uninstall dry run\. Nothing was removed\./);
+    assert.match(out, /^yours kept, delete it yourself +\.claude\/rules\/brigade\.md$/m);
+    assert.match(out, /^would be removed +\.claude\/brigade\.json$/m);
+    assert.match(out, /Left in place, .*\.gitignore/);
+    assert.ok(existsSync(join(cwd, '.claude/brigade.json')));
+});
+
+test('uninstall without --yes and without a terminal exits 1 and writes nothing', () => {
+    const first = brigade([
+        'init',
+        '--yes'
+    ]);
+
+    const { code, err, cwd } = brigade([
+        'uninstall'
+    ], first.cwd);
+
+    assert.equal(code, 1);
+    assert.match(err, /uninstall needs --yes without a terminal/);
+    assert.ok(existsSync(join(cwd, '.claude/brigade.json')));
+});
+
+test('uninstall --yes removes the install, and fails where nothing is installed', () => {
+    const first = brigade([
+        'init',
+        '--yes'
+    ]);
+
+    const { code, out, cwd } = brigade([
+        'uninstall',
+        '--yes'
+    ], first.cwd);
+
+    assert.equal(code, 0);
+    assert.match(out, /^Brigade removed\./);
+    assert.match(out, /still in your git history/);
+    assert.ok(!existsSync(join(cwd, '.claude')));
+
+    const again = brigade([
+        'uninstall',
+        '--yes'
+    ], cwd);
+
+    assert.equal(again.code, 1);
+    assert.match(again.err, /Brigade is not installed here/);
 });
 
 test('the plain summary reports a file removed from the kit', () => {

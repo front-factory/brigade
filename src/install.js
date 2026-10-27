@@ -13,7 +13,7 @@ export const OPTIONS_FILE = '.claude/rules/brigade-options.md';
 export const LEGACY_BASE_DIR = '.claude/brigade-base';
 
 // Lines Brigade appends to the project files when missing. Existing lines are never touched or duplicated.
-const APPENDS = {
+export const APPENDS = {
     '.gitignore': [
         '.claude/settings.local.json',
         'CLAUDE.local.md'
@@ -24,11 +24,12 @@ const APPENDS = {
 };
 
 const RULES_PATH = '.claude/rules/brigade.md';
-const SETTINGS_PATH = '.claude/settings.json';
+
+export const SETTINGS_PATH = '.claude/settings.json';
 const MIGRATION_NOTE = 'The kit\'s brigade.md no longer holds your options: they moved to .claude/rules/brigade-options.md. Merge brigade.md.proposed into your file, or delete your file\'s edits and re-run to take the new one.';
 
 // Written once, then the team's own: never updated, never proposed over.
-const WRITE_ONCE = new Set([
+export const WRITE_ONCE = new Set([
     '.claude/context/decisions.md',
     '.claude/context/architecture.md'
 ]);
@@ -126,6 +127,45 @@ export function mergeSettings(mine, kit) {
         }
 
         return merged;
+    }
+
+    return mine;
+}
+
+// The inverse of mergeSettings: what is left of the developer's settings once the kit's entries are gone. Array items
+// equal to a kit item and keys equal to the kit's are dropped, and so are the objects and arrays left empty.
+export function stripSettings(mine, kit) {
+    if (Array.isArray(mine) && Array.isArray(kit)) {
+        const known = new Set(kit.map((item) => JSON.stringify(item)));
+
+        return mine.filter((item) => !known.has(JSON.stringify(item)));
+    }
+
+    if (isObject(mine) && isObject(kit)) {
+        const rest = {};
+
+        for (const [
+            key,
+            value
+        ] of Object.entries(mine)) {
+            if (!(key in kit)) {
+                rest[key] = value;
+                continue;
+            }
+
+            if (isSame(value, kit[key])) {
+                continue;
+            }
+
+            const left = stripSettings(value, kit[key]);
+            const empty = (Array.isArray(left) && left.length === 0) || (isObject(left) && Object.keys(left).length === 0);
+
+            if (!empty) {
+                rest[key] = left;
+            }
+        }
+
+        return rest;
     }
 
     return mine;
