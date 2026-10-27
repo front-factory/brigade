@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.7.1](https://github.com/front-factory/brigade/compare/v1.7.0...v1.7.1) (2026-10-27)
+
+### Bug Fixes
+
+* **settings:** migrate defaultMode acceptEdits to plan on merge ([4c0bfa7](https://github.com/front-factory/brigade/commit/4c0bfa7ffdc05febc242547529ccdcddeee48bac))
+
 ## [1.7.0](https://github.com/front-factory/brigade/compare/v1.6.3...v1.7.0) (2026-10-27)
 
 ### Features
