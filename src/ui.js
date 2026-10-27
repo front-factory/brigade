@@ -5,7 +5,10 @@ import { styleText } from 'node:util';
 // Palette: amber accent, bright (cream) text, dim secondary, green for success, red for errors only.
 const paint = (format, text) => styleText(format, text);
 
-export const accent = (text) => paint(['bold', 'yellow'], text);
+export const accent = (text) => paint([
+    'bold',
+    'yellow'
+], text);
 export const bright = (text) => paint('whiteBright', text);
 export const dim = (text) => paint('gray', text);
 export const success = (text) => paint('green', text);
@@ -22,7 +25,10 @@ const truncate = (text, max) => (text.length <= max ? text : `${text.slice(0, Ma
 
 // Compact welcome header: letter-spaced wordmark, dimmed version, a rule, the tagline.
 export function banner(version) {
-    const wordmark = [...'BRIGADE'].join(' ');
+    const wordmark = [
+        ...'BRIGADE'
+    ].join(' ');
+
     return [
         '',
         `  ${accent(wordmark)}  ${dim(version)}`,
@@ -40,27 +46,45 @@ export function step(n, total, label) {
 // An aligned key/value card with rounded borders, fitted to its content and capped to the terminal width.
 // `rows`: [[label, value]].
 export function card(title, rows, { columns } = {}) {
-    const keyWidth = Math.max(0, ...rows.map(([key]) => key.length));
-    const content = Math.max(title.length + 2, ...rows.map(([, value]) => keyWidth + 2 + value.length));
+    const keyWidth = Math.max(0, ...rows.map(([
+        key
+    ]) => key.length));
+
+    const content = Math.max(title.length + 2, ...rows.map(([
+        , value
+    ]) => keyWidth + 2 + value.length));
     const inner = Math.max(12, Math.min(content, columnsOf(columns) - 4));
     const valueWidth = Math.max(0, inner - keyWidth - 2);
 
     const name = truncate(title, inner - 2);
     const top = `${dim('╭─')} ${accent(name)} ${dim(`${'─'.repeat(inner - name.length - 2)}─╮`)}`;
-    const body = rows.map(([key, value]) => {
+
+    const body = rows.map(([
+        key,
+        value
+    ]) => {
         const shown = truncate(value, valueWidth);
         const pad = ' '.repeat(Math.max(0, inner - keyWidth - 2 - shown.length));
+
         return `${dim('│')} ${dim(key.padEnd(keyWidth))}  ${bright(shown)}${pad} ${dim('│')}`;
     });
     const bottom = dim(`╰${'─'.repeat(inner + 2)}╯`);
-    return ['', top, ...body, bottom].join('\n');
+
+    return [
+        '',
+        top,
+        ...body,
+        bottom
+    ].join('\n');
 }
 
 // A tidy list. `items`: [{ done, label, detail? }]. Done items get a green check, the others are dimmed.
 export function checklist(items) {
     const width = Math.max(0, ...items.map(({ label }) => label.length));
+
     return items.map(({ done, label, detail = '' }) => {
         const gap = ' '.repeat(width - label.length);
+
         return done
             ? `  ${success('✓')} ${bright(label)}${gap}  ${dim(detail)}`
             : `  ${dim('-')} ${dim(label)}${gap}  ${dim(detail)}`;

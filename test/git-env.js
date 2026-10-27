@@ -6,6 +6,7 @@ import { join } from 'node:path';
 // An empty temp file is used because git cannot open the Windows null device as a config file.
 const dir = mkdtempSync(join(tmpdir(), 'brigade-git-'));
 const file = join(dir, 'gitconfig');
+
 writeFileSync(file, '');
 process.env.GIT_CONFIG_GLOBAL = file;
 process.env.GIT_CONFIG_NOSYSTEM = '1';

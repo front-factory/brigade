@@ -20,7 +20,14 @@ export const PREVIEW_WORDS = {
 };
 
 // Statuses that change something on disk.
-export const CHANGING = new Set(['created', 'updated', 'merged', 'removed']);
+export const CHANGING = new Set([
+    'created',
+    'updated',
+    'merged',
+    'removed'
+]);
 
 // Statuses that leave a `<file>.proposed` next to the developer's file.
-export const PROPOSALS = new Set(['proposed']);
+export const PROPOSALS = new Set([
+    'proposed'
+]);

