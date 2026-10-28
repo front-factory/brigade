@@ -6,29 +6,26 @@
 
 Claude Code, organized like a kitchen brigade.
 
-Brigade sets up a Claude Code architecture in any web project, new or existing, without fuss: a main session that
-thinks and orchestrates, an `implementer` that writes the code and a `git-operator` that handles git, each limited to
-its mission, with guardrails built in.
-
-You are the Chef de cuisine, and this is your kitchen. You decide the menu and you have the last word. You do not stand
-at the stove: you give your orders to the sous-chef, who briefs a chef de partie. The chef de partie cooks, nothing
-else. The sous-chef tastes every plate before it moves on. At the pass, the expediter checks it one last time and sends
-it out, but only when you say go. Everybody stays at their station.
+Brigade sets up a Claude Code architecture in any web project, new or existing, without fuss.
 
 ```sh
 npx @frontfactory/brigade init
 ```
 
+You are the chef de cuisine, and this is your kitchen. You decide the menu and have the last word, but you don't stand
+at the stove. The sous-chef (the main session) takes your orders, briefs the cooks and tastes every plate. A chef de
+partie writes the code. At the pass, the counter between the kitchen and the dining room, the expediter handles git: it
+checks the plate and sends it out, only when you say go. Everybody stays at their station, with guardrails built in.
+
 ## What you get
 
-Three roles, each limited to its mission. The names come from a kitchen brigade:
+Three roles, each limited to its mission:
 
-| In the kitchen                | Brigade role     | Model (default effort)     | What it does                                                                                                                                                            |
-|-------------------------------|------------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Chef de cuisine (you)         | You              | -                          | Decide the menu (the plan), have the last word, give the go for the commit and the push.                                                                                |
-| Sous-chef                     | Main session     | Opus in Plan Mode (medium) | The chef's right hand. Directs the brigade, splits the work between the stations, checks each plate before it goes out. Does not cook (no code) and does not touch git. |
-| Chef de partie (station chef) | `implementer`    | Sonnet (medium)            | Cooks, i.e. writes the code, as briefed. Nothing else.                                                                                                                  |
-| Expediter (works at the pass) | `git-operator`   | Haiku (low)                | Final check at the counter between kitchen and dining room, then sends the plate out, i.e. commit and push, only once the work is done and you said go.                 |
+| In the kitchen | Brigade role   | Model (default effort)     | Mission                                                                                                                       |
+|----------------|----------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| Sous-chef      | Main session   | Opus in Plan Mode (medium) | Discusses, plans, orchestrates, verifies, proposes. Goes back and forth with the subagents; never writes code or touches git. |
+| Chef de partie | `implementer`  | Sonnet (medium)            | Writes the code, as briefed. Nothing else.                                                                                    |
+| Expediter      | `git-operator` | Haiku (low)                | Handles git, once the work is done and you said go.                                                                           |
 
 Plus base rules for work, security and efficiency, adapted to the stack (web for now). The setup is shared with the
 project and committed with it. The rest of the kit, all under `.claude/`:
