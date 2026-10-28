@@ -10,19 +10,25 @@ Brigade sets up a Claude Code architecture in any web project, new or existing, 
 thinks and orchestrates, an `implementer` that writes the code and a `git-operator` that handles git, each limited to
 its mission, with guardrails built in.
 
+You are the Chef de cuisine, and this is your kitchen. You decide the menu and you have the last word. You do not stand
+at the stove: you give your orders to the sous-chef, who briefs a chef de partie. The chef de partie cooks, nothing
+else. The sous-chef tastes every plate before it moves on. At the pass, the expediter checks it one last time and sends
+it out, but only when you say go. Everybody stays at their station.
+
 ```sh
 npx @frontfactory/brigade init
 ```
 
 ## What you get
 
-Three roles, each limited to its mission:
+Three roles, each limited to its mission. The names come from a kitchen brigade:
 
-| Role           | Model (default effort)     | Mission                                                                                       |
-|----------------|----------------------------|-----------------------------------------------------------------------------------------------|
-| Main session   | Opus in Plan Mode (medium) | Discuss, think, orchestrate, verify, propose, answer. Goes back and forth with the subagents. |
-| `implementer`  | Sonnet (medium)            | Development, nothing else.                                                                    |
-| `git-operator` | Haiku (low)                | Git, nothing else, once the work is done.                                                     |
+| In the kitchen                | Brigade role     | Model (default effort)     | What it does                                                                                                                                                            |
+|-------------------------------|------------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Chef de cuisine (you)         | You              | -                          | Decide the menu (the plan), have the last word, give the go for the commit and the push.                                                                                |
+| Sous-chef                     | Main session     | Opus in Plan Mode (medium) | The chef's right hand. Directs the brigade, splits the work between the stations, checks each plate before it goes out. Does not cook (no code) and does not touch git. |
+| Chef de partie (station chef) | `implementer`    | Sonnet (medium)            | Cooks, i.e. writes the code, as briefed. Nothing else.                                                                                                                  |
+| Expediter (works at the pass) | `git-operator`   | Haiku (low)                | Final check at the counter between kitchen and dining room, then sends the plate out, i.e. commit and push, only once the work is done and you said go.                 |
 
 Plus base rules for work, security and efficiency, adapted to the stack (web for now). The setup is shared with the
 project and committed with it. The rest of the kit, all under `.claude/`:
