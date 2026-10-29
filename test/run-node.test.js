@@ -131,6 +131,18 @@ test('the launcher exits 0 with one line on stderr and a systemMessage on stdout
     assert.match(systemMessage, /node was not found.*git guard.*disabled/);
 });
 
+test('the launcher picks the highest major, not the highest minor, with a home path without extra dots', () => {
+    const home = tmp();
+
+    fakeNode(join(home, '.nvm/versions/node/v18.20.4/bin'), 'v18');
+    fakeNode(join(home, '.nvm/versions/node/v22.11.0/bin'), 'v22');
+    fakeNode(join(home, '.nvm/versions/node/v24.2.0/bin'), 'v24');
+
+    assert.equal(launch({
+        HOME: home
+    }).stdout.trim(), 'v24 script.mjs arg');
+});
+
 test('the launcher picks the highest nvm version numerically, whatever dots the home path has', () => {
     const home = join(tmp(), 'first.last');
 
