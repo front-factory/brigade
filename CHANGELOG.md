@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.7.2](https://github.com/front-factory/brigade/compare/v1.7.1...v1.7.2) (2026-10-29)
+
+### Bug Fixes
+
+* **guard:** check protected branches after a switch in the same command ([345e6a5](https://github.com/front-factory/brigade/commit/345e6a59ff19612a2bc6a91c089457dcb4156d15))
+* **guard:** detect git behind timeout, & and a quoted subcommand ([f75fc29](https://github.com/front-factory/brigade/commit/f75fc294de07688b630c1f172d6a0c8354b81daa))
+* **guard:** ignore heredoc bodies when looking for git commands ([0ded11d](https://github.com/front-factory/brigade/commit/0ded11d9303c7d24b8cc57e6599283c57959d1a2))
+* **guard:** let read-only git commands through ([92b2fd6](https://github.com/front-factory/brigade/commit/92b2fd6cf17a126d8130d8c2d96f1992b7cdac95))
+* **hooks:** pick the highest node version in run-node.sh ([5839922](https://github.com/front-factory/brigade/commit/5839922200d867f30d21a6c841720e61b8d5c581))
+* **install:** merge settings only when the kit changed them ([a84efa2](https://github.com/front-factory/brigade/commit/a84efa27b11b8da7a67b53f8a75946bb1a5403bf))
+* **install:** replace older kit hook entries when merging settings ([23f34fe](https://github.com/front-factory/brigade/commit/23f34fe31500906ddd66516d722ce2c92a144d55))
+* **prompt:** refuse a blank answer to "Other…" ([e003e2a](https://github.com/front-factory/brigade/commit/e003e2a08f95a0b37a9a7805aeadb0dc14a32ade))
+* **settings:** keep the main session on Opus outside plan mode ([c766df2](https://github.com/front-factory/brigade/commit/c766df2bf5051520cd1a33724e2a342955bfd2d2))
+* **uninstall:** stop with a clear error on a manifest without answers ([189715f](https://github.com/front-factory/brigade/commit/189715fbcbc149f6cc31c52829c48a19bafc6852))
+
 ## [1.7.1](https://github.com/front-factory/brigade/compare/v1.7.0...v1.7.1) (2026-10-27)
 
 ### Bug Fixes
