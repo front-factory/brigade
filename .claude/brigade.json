@@ -1,5 +1,5 @@
 {
-    "version": "1.7.0",
+    "version": "1.7.1",
     "stack": "web",
     "answers": {
         "defaultBranch": "main",
@@ -25,7 +25,7 @@
         ".claude/hooks/session-start.mjs": "0930836fc3caa0c35f1fffe14b0773683876187b5a6bd66a224100c1344e8564",
         ".claude/hooks/statusline.mjs": "37ed6960cf3e85cd3d2c509c0e80854bdc53c0884f03ddd8447dbb7394f21da6",
         ".claude/rules/brigade.md": "f97456a0f649e953bb621ca716466de8905f133d4490eb53639a6a80e8aca3b0",
-        ".claude/settings.json": "f64c6c9120b0eebfe3d4e9af2b0867d055abd42b0d68d915ce8774aed12c7b21",
+        ".claude/settings.json": "2d394798c9d9b3b198a24bd3a60fedee216ca3e45789c78c21d6f6d8091939b0",
         ".claude/skills/audit/SKILL.md": "96af6da83aa98221bcd05c48b67d05300a062262968cc0b3a0892c3f10cc2167",
         ".claude/skills/feature/SKILL.md": "5faed5be1068fc5bb1578d6b395f4750c4e14a2bb075d9412f896469f7cc19b5",
         ".claude/skills/session-start/SKILL.md": "90f32cb8b652cc12118c78a71ae029bff48e3ec25259971d36a8ce989d3ff004"

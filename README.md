@@ -23,7 +23,7 @@ Three roles, each limited to its mission:
 
 | In the kitchen | Brigade role   | Model (default effort)     | Mission                                                                                                                       |
 |----------------|----------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| Sous-chef      | Main session   | Opus in Plan Mode (medium) | Discusses, plans, orchestrates, verifies, proposes. Goes back and forth with the subagents; never writes code or touches git. |
+| Sous-chef      | Main session   | Opus (medium) | Discusses, plans, orchestrates, verifies, proposes. Goes back and forth with the subagents; never writes code or touches git. |
 | Chef de partie | `implementer`  | Sonnet (medium)            | Writes the code, as briefed. Nothing else.                                                                                    |
 | Expediter      | `git-operator` | Haiku (low)                | Handles git, once the work is done and you said go.                                                                           |
 

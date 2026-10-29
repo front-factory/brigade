@@ -247,20 +247,25 @@ export function stripSettings(mine, kit) {
     return mine;
 }
 
-// The old kit default mode moves to the new one, since mergeSettings keeps the developer's value and would leave it
-// behind forever. Any other value is the developer's choice and stays.
-function migrateDefaultMode(merged, kit) {
-    if (merged.permissions?.defaultMode !== 'acceptEdits' || kit.permissions?.defaultMode !== 'plan') {
-        return merged;
-    }
+// The old kit defaults (mode, model) move to the new ones, since mergeSettings keeps the developer's value and would
+// leave them behind forever. Any other value is the developer's choice and stays.
+function migrateDefaults(merged, kit) {
+    const result = {
+        ...merged
+    };
 
-    return {
-        ...merged,
-        permissions: {
+    if (merged.permissions?.defaultMode === 'acceptEdits' && kit.permissions?.defaultMode === 'plan') {
+        result.permissions = {
             ...merged.permissions,
             defaultMode: 'plan'
-        }
-    };
+        };
+    }
+
+    if (merged.model === 'opusplan' && kit.model === 'opus') {
+        result.model = 'opus';
+    }
+
+    return result;
 }
 
 // The merged file content, or null when either side is not a JSON object (the caller falls back to a proposal).
@@ -274,7 +279,7 @@ function mergedSettings(current, kit) {
         }
 
         return {
-            merged: migrateDefaultMode(mergeSettings(dropKitEntries(mine, theirs), theirs), theirs),
+            merged: migrateDefaults(mergeSettings(dropKitEntries(mine, theirs), theirs), theirs),
             mine
         };
     } catch {
