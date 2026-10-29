@@ -365,7 +365,7 @@ test('a language typed with a quote still installs a valid settings.json', async
     const settings = JSON.parse(readFileSync(join(cwd, '.claude/settings.json'), 'utf8'));
 
     assert.equal(settings.language, replyLanguage);
-    assert.equal(settings.model, 'opusplan');
+    assert.equal(settings.model, 'opus');
 });
 
 test('a personal choice merges into settings.local.json and spares a broken file', () => {
@@ -2368,6 +2368,43 @@ test('an edited settings.json keeps another default mode', async () => {
 
     assert.equal(statuses(result)[SETTINGS], 'kept');
     assert.equal(JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')).permissions.defaultMode, 'bypassPermissions');
+});
+
+const editedWithModel = async (model) => {
+    const { cwd, stackDir } = await installed({
+        [SETTINGS]: JSON.stringify({ model: 'opusplan' })
+    });
+
+    writeFileSync(join(cwd, SETTINGS), JSON.stringify({ model, language: 'fr' }));
+    writeFileSync(join(stackDir, SETTINGS), JSON.stringify({ model: 'opus' }));
+
+    const result = await runInit({
+        cwd,
+        yes: true,
+        stackDir,
+        version: '2.0.0'
+    });
+
+    return {
+        cwd,
+        result
+    };
+};
+
+test('an edited settings.json moves the old opusplan model to opus', async () => {
+    const { cwd, result } = await editedWithModel('opusplan');
+
+    assert.equal(statuses(result)[SETTINGS], 'merged');
+    assert.deepEqual(JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')), {
+        model: 'opus',
+        language: 'fr'
+    });
+});
+
+test('an edited settings.json keeps another model', async () => {
+    const { cwd } = await editedWithModel('sonnet');
+
+    assert.equal(JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')).model, 'sonnet');
 });
 
 test('a migrated default mode is stable on the next run', async () => {
