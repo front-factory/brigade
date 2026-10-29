@@ -335,7 +335,7 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
 
         const text = readFileSync(target, 'utf8');
         const current = sha(text);
-        const settings = path === SETTINGS_PATH && current !== wanted ? mergedSettings(text, content) : null;
+        const settings = path === SETTINGS_PATH && current !== wanted && recorded !== wanted ? mergedSettings(text, content) : null;
 
         if (WRITE_ONCE.has(path)) {
             report.push({
@@ -370,13 +370,12 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
                 status: 'updated'
             });
         } else if (settings) {
-            // The developer's entries stay, the kit's new ones are added. The recorded hash stays the kit's, so the
-            // next update merges again instead of taking the file for an untouched one.
+            // Only when the kit's settings changed since the last install (or none is recorded). The developer's
+            // entries stay, the kit's are added. The kit's hash is recorded, so the next run with the same kit finds
+            // it unchanged (`kept`) and does not add back what the developer removed.
             const { merged, mine } = settings;
 
-            if (recorded) {
-                hashes[path] = recorded;
-            }
+            hashes[path] = wanted;
 
             if (existsSync(proposed)) {
                 removals.push(proposed);

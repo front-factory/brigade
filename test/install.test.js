@@ -2363,8 +2363,114 @@ test('an edited settings.json is merged by keys, not proposed', async () => {
 
     assert.ok(!existsSync(join(cwd, `${SETTINGS}.proposed`)));
     assert.equal(manifestOf(cwd).files[SETTINGS], sha(settingsKit([
-        'a'
+        'a',
+        'b'
     ])));
+});
+
+const denyKit = (deny, extra = []) => JSON.stringify({
+    permissions: {
+        allow: [
+            'a',
+            ...extra
+        ],
+        deny
+    }
+});
+
+test('a kit deny rule the developer removed stays removed while the kit is unchanged', async () => {
+    const { cwd, stackDir } = await installed({
+        [SETTINGS]: denyKit([
+            'Bash(rm:*)',
+            'Bash(sudo:*)'
+        ])
+    });
+
+    const mine = {
+        permissions: {
+            allow: [
+                'a',
+                'mine'
+            ],
+            deny: [
+                'Bash(sudo:*)'
+            ]
+        }
+    };
+
+    writeFileSync(join(cwd, SETTINGS), JSON.stringify(mine));
+
+    const again = await runInit({
+        cwd,
+        yes: true,
+        stackDir,
+        version: '2.0.0'
+    });
+
+    assert.equal(statuses(again)[SETTINGS], 'kept');
+    assert.deepEqual(JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')), mine);
+});
+
+test('a changed kit settings.json merges once, then leaves the developer\'s removals alone', async () => {
+    const { cwd, stackDir } = await installed({
+        [SETTINGS]: denyKit([
+            'Bash(rm:*)',
+            'Bash(sudo:*)'
+        ])
+    });
+
+    writeFileSync(join(cwd, SETTINGS), JSON.stringify({
+        permissions: {
+            allow: [
+                'a'
+            ],
+            deny: [
+                'Bash(sudo:*)'
+            ]
+        }
+    }));
+
+    writeFileSync(join(stackDir, SETTINGS), denyKit([
+        'Bash(rm:*)',
+        'Bash(sudo:*)',
+        'Bash(dd:*)'
+    ], [
+        'b'
+    ]));
+
+    const result = await runInit({
+        cwd,
+        yes: true,
+        stackDir,
+        version: '2.0.0'
+    });
+
+    assert.equal(statuses(result)[SETTINGS], 'merged');
+
+    const merged = JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8'));
+
+    assert.deepEqual(merged.permissions.allow, [
+        'a',
+        'b'
+    ]);
+
+    assert.ok(merged.permissions.deny.includes('Bash(dd:*)'));
+
+    // Known limit: the previous kit content is not stored, so removed kit entries come back on a kit change.
+    assert.ok(merged.permissions.deny.includes('Bash(rm:*)'));
+
+    merged.permissions.deny = merged.permissions.deny.filter((rule) => rule !== 'Bash(rm:*)');
+    writeFileSync(join(cwd, SETTINGS), JSON.stringify(merged));
+
+    const again = await runInit({
+        cwd,
+        yes: true,
+        stackDir,
+        version: '2.0.0'
+    });
+
+    assert.equal(statuses(again)[SETTINGS], 'kept');
+    assert.ok(!JSON.parse(readFileSync(join(cwd, SETTINGS), 'utf8')).permissions.deny.includes('Bash(rm:*)'));
 });
 
 test('a merged settings.json is stable on the next run', async () => {

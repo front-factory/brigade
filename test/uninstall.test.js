@@ -108,6 +108,30 @@ test('settings.json keeps the developer entries and loses the kit ones', async (
     });
 });
 
+test('settings.json edited after a re-run with the same kit is still stripped', async () => {
+    const cwd = await installed();
+    const file = join(cwd, SETTINGS);
+    const settings = JSON.parse(readFileSync(file, 'utf8'));
+
+    settings.custom = true;
+    writeFileSync(file, JSON.stringify(settings, null, 4));
+
+    await runInit({
+        cwd,
+        yes: true
+    });
+
+    const result = await runUninstall({
+        cwd,
+        yes: true
+    });
+
+    assert.equal(statuses(result)[SETTINGS], 'stripped');
+    assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), {
+        custom: true
+    });
+});
+
 test('settings.json loses the hook entries of an older kit and keeps the developer\'s', async () => {
     const cwd = await installed();
     const file = join(cwd, SETTINGS);
