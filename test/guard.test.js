@@ -35,6 +35,84 @@ test('reads are never touched', () => {
     }), null);
 });
 
+test('more pure reads are not writes for the main session', () => {
+    for (const command of [
+        'git check-ignore -v a',
+        'git check-attr -a a',
+        'git check-ref-format refs/heads/x',
+        'git diff-tree -r HEAD',
+        'git diff-index HEAD',
+        'git diff-files',
+        'git name-rev HEAD',
+        'git cherry main',
+        'git range-diff a...b',
+        'git whatchanged',
+        'git help commit',
+        'git version',
+        'git var -l',
+        'git count-objects -v',
+        'git verify-commit HEAD',
+        'git verify-tag v1',
+        'git stash list',
+        'git stash show -p',
+        'git remote',
+        'git remote -v',
+        'git remote get-url origin',
+        'git remote show origin',
+        'git config user.name',
+        'git config --get user.name',
+        'git config --get-all x',
+        'git config --list',
+        'git config -l',
+        'git config get user.name',
+        'git config list',
+        'git config --global user.name',
+        'git config --local --show-origin user.name',
+        'git config --file .gitmodules user.name',
+        'git symbolic-ref HEAD',
+        'git symbolic-ref --short -q HEAD',
+        'git worktree list'
+    ]) {
+        assert.equal(run(command, {
+            agent: ''
+        }), null, command);
+    }
+});
+
+test('the write forms of those commands are still denied for the main session', () => {
+    for (const command of [
+        'git config user.name x',
+        'git config --global user.name x',
+        'git config --unset x',
+        'git config --unset-all x',
+        'git config --add x y',
+        'git config --replace-all x y',
+        'git config --edit',
+        'git config -e',
+        'git config --rename-section a b',
+        'git config --remove-section a',
+        'git config set x y',
+        'git config unset x',
+        'git config edit',
+        'git config --file f x y',
+        'git config',
+        'git symbolic-ref HEAD refs/heads/x',
+        'git symbolic-ref -d HEAD',
+        'git symbolic-ref --delete HEAD',
+        'git stash drop',
+        'git stash pop',
+        'git remote add o u',
+        'git remote remove o',
+        'git remote set-url o u',
+        'git worktree add ../x',
+        'git worktree remove ../x'
+    ]) {
+        assert.equal(run(command, {
+            agent: ''
+        }), 'deny', command);
+    }
+});
+
 test('harmless reads are not writes for the main session', () => {
     for (const command of [
         'git merge-base a b',

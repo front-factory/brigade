@@ -24,7 +24,23 @@ const READ = new Set([
     'for-each-ref',
     'show-ref',
     'ls-remote',
-    'fetch'
+    'fetch',
+    'check-ignore',
+    'check-attr',
+    'check-ref-format',
+    'diff-tree',
+    'diff-index',
+    'diff-files',
+    'name-rev',
+    'cherry',
+    'range-diff',
+    'whatchanged',
+    'help',
+    'version',
+    'var',
+    'count-objects',
+    'verify-commit',
+    'verify-tag'
 ]);
 
 const ASK = new Set([
@@ -98,6 +114,7 @@ const SHELL_ARG = '("(?:[^"\\\\]|\\\\.)*"|\'[^\']*\'|[^;&|\\n]+)';
 function heredocs(command) {
     const bodies = [];
     const pending = [];
+
     const stack = [
         {
             kind: 'code',
@@ -315,6 +332,47 @@ function gitCommands(command, depth = 0) {
     ];
 }
 
+// `git config`: a read is a listing, a `--get*` or a single key. Anything else, or anything unclear, is a write.
+function configWrites(rest) {
+    const tokens = rest.split(/\s+/).filter(Boolean);
+
+    const valued = new Set([
+        '--file',
+        '-f',
+        '--blob',
+        '--type',
+        '--default'
+    ]);
+    const positional = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+        if (valued.has(tokens[i])) {
+            i++;
+        } else if (!tokens[i].startsWith('-')) {
+            positional.push(tokens[i]);
+        }
+    }
+
+    if (tokens.some((token) => /^(--unset(-all)?|--add|--replace-all|--edit|-e|--rename-section|--remove-section)$/.test(token))
+        || /^(set|unset|edit|rename-section|remove-section)$/.test(positional[0] ?? '')) {
+        return true;
+    }
+
+    if (tokens.some((token) => /^(--get[\w-]*|--list|-l)$/.test(token)) || /^(get|list)$/.test(positional[0] ?? '')) {
+        return false;
+    }
+
+    return positional.length !== 1;
+}
+
+// `git symbolic-ref`: reading one name; two names (set) or a delete is a write.
+function symbolicRefWrites(rest) {
+    const tokens = rest.split(/\s+/).filter(Boolean);
+
+    return tokens.some((token) => token.startsWith('-') && !/^(-q|--quiet|--short|--recurse|--no-recurse)$/.test(token))
+        || tokens.filter((token) => !token.startsWith('-')).length !== 1;
+}
+
 // `git branch`, `tag`, `remote`... only read when listing: no mutating flag, no name to create.
 function writes({ sub, rest }) {
     if (READ.has(sub)) {
@@ -342,15 +400,23 @@ function writes({ sub, rest }) {
     }
 
     if (sub === 'remote') {
-        return !/^(-v|--verbose)?\s*$/.test(rest);
+        return !/^((-v|--verbose)?\s*$|(get-url|show)\b)/.test(rest);
     }
 
     if (sub === 'config') {
-        return !/(^|\s)(--get|--list|-l)\b/.test(rest);
+        return configWrites(rest);
+    }
+
+    if (sub === 'symbolic-ref') {
+        return symbolicRefWrites(rest);
+    }
+
+    if (sub === 'worktree') {
+        return !/^list\b/.test(rest);
     }
 
     if (sub === 'stash') {
-        return !/^list\b/.test(rest);
+        return !/^(list|show)\b/.test(rest);
     }
 
     return true;
