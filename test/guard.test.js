@@ -521,7 +521,7 @@ test('the protected-branch check follows switches inside the command', () => {
     assert.equal(run('git switch "$B" && git commit -m x'), 'ask');
     assert.equal(run('git switch feat/y && git commit -m x', {
         branch: 'main'
-    }), 'allow');
+    }), 'ask');
 
     assert.equal(run('git commit -m x && git switch main', {
         branch: 'feat/x'
@@ -531,8 +531,8 @@ test('the protected-branch check follows switches inside the command', () => {
     assert.equal(run('git switch feat/y && git switch main && git commit -m x'), 'ask');
 });
 
-test('an ambiguous checkout keeps the previous branches among the possible ones', () => {
-    assert.equal(run('git checkout feat/y && git commit -m x'), 'allow');
+test('a switch or checkout that creates no branch makes the branch unknown', () => {
+    assert.equal(run('git checkout feat/y && git commit -m x'), 'ask');
     assert.equal(run('git checkout develop && git pull'), 'ask');
     assert.equal(run('git checkout file.md && git commit -m x', {
         branch: 'main'
@@ -548,7 +548,7 @@ test('an ambiguous checkout keeps the previous branches among the possible ones'
 
     assert.equal(run('git checkout -b feat/y && git checkout file.md && git commit -m x', {
         branch: 'main'
-    }), 'allow');
+    }), 'ask');
 
     assert.equal(run('git checkout - && git commit -m x'), 'ask');
 });

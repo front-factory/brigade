@@ -6,80 +6,16 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-const READ = new Set([
-    'status',
-    'diff',
-    'log',
-    'show',
-    'blame',
-    'rev-parse',
-    'ls-files',
-    'ls-tree',
-    'grep',
-    'describe',
-    'shortlog',
-    'cat-file',
-    'merge-base',
-    'rev-list',
-    'for-each-ref',
-    'show-ref',
-    'ls-remote',
-    'fetch',
-    'check-ignore',
-    'check-attr',
-    'check-ref-format',
-    'diff-tree',
-    'diff-index',
-    'diff-files',
-    'name-rev',
-    'cherry',
-    'range-diff',
-    'whatchanged',
-    'help',
-    'version',
-    'var',
-    'count-objects',
-    'verify-commit',
-    'verify-tag'
-]);
+const words = (list) => new Set(list.split(' '));
 
-const ASK = new Set([
-    'push',
-    'merge',
-    'rebase'
-]);
-
-const ON_PROTECTED = new Set([
-    'commit',
-    'cherry-pick',
-    'revert',
-    'am',
-    'pull',
-    'reset',
-    'rm'
-]);
+const READ = words('status diff log show blame rev-parse ls-files ls-tree grep describe shortlog cat-file merge-base rev-list for-each-ref show-ref ls-remote fetch check-ignore check-attr check-ref-format diff-tree diff-index diff-files name-rev cherry range-diff whatchanged help version var count-objects verify-commit verify-tag');
+const ASK = words('push merge rebase');
+const ON_PROTECTED = words('commit cherry-pick revert am pull reset rm');
 
 // Known safe writes for git-operator; any other write subcommand (aliases included) is asked.
 const SAFE = new Set([
-    'add',
-    'commit',
-    'restore',
-    'switch',
-    'checkout',
-    'branch',
-    'tag',
-    'stash',
-    'mv',
-    'rm',
-    'cherry-pick',
-    'revert',
-    'am',
-    'pull',
-    'reset',
-    'init',
-    'clone',
-    'submodule',
-    'notes'
+    ...ON_PROTECTED,
+    ...words('add restore switch checkout branch tag stash mv init clone submodule notes')
 ]);
 
 const RANK = {
@@ -253,13 +189,7 @@ function nestedTexts(command) {
 
     for (const [
         , arg
-    ] of command.matchAll(new RegExp(`\\b(?:ba|z|da)?sh\\s+(?:-\\w+\\s+)*-\\w*c\\s+${SHELL_ARG}`, 'g'))) {
-        texts.push(unquote(arg));
-    }
-
-    for (const [
-        , arg
-    ] of command.matchAll(new RegExp(`\\beval\\s+${SHELL_ARG}`, 'g'))) {
+    ] of command.matchAll(new RegExp(`\\b(?:(?:ba|z|da)?sh\\s+(?:-\\w+\\s+)*-\\w*c|eval)\\s+${SHELL_ARG}`, 'g'))) {
         texts.push(unquote(arg));
     }
 
@@ -373,6 +303,17 @@ function symbolicRefWrites(rest) {
         || tokens.filter((token) => !token.startsWith('-')).length !== 1;
 }
 
+// True when `rest` holds one of the flags (a regex source), as a whole word.
+const flag = (rest, names, end = '\\s|$') => new RegExp(`(^|\\s)(${names})(${end})`).test(rest);
+
+// Subcommands read when their arguments match; any other form is a write.
+const READ_FORMS = {
+    reflog: /^(?!(expire|delete)\b)/,
+    remote: /^((-v|--verbose)?\s*$|(get-url|show)\b)/,
+    worktree: /^list\b/,
+    stash: /^(list|show)\b/
+};
+
 // `git branch`, `tag`, `remote`... only read when listing: no mutating flag, no name to create.
 function writes({ sub, rest }) {
     if (READ.has(sub)) {
@@ -380,27 +321,23 @@ function writes({ sub, rest }) {
     }
 
     if (sub === 'branch') {
-        if (/(^|\s)(-\w*[dDmMcCuft]\w*|--delete|--move|--copy|--force|--track|--set-upstream-to|--unset-upstream|--edit-description)(\s|=|$)/.test(rest)) {
+        if (flag(rest, '-\\w*[dDmMcCuft]\\w*|--delete|--move|--copy|--force|--track|--set-upstream-to|--unset-upstream|--edit-description', '\\s|=|$')) {
             return true;
         }
 
-        return !/(^|\s)(-l|-a|-r|-v+|--list|--all|--remotes|--verbose|--show-current|--contains|--merged|--no-merged|--points-at)(\s|$)/.test(rest) && /(^|\s)[^-\s]/.test(rest);
+        return !flag(rest, '-l|-a|-r|-v+|--list|--all|--remotes|--verbose|--show-current|--contains|--merged|--no-merged|--points-at') && /(^|\s)[^-\s]/.test(rest);
     }
 
     if (sub === 'tag') {
-        if (/(^|\s)(-\w*[dasfumF]\w*|--delete|--annotate|--sign|--force|--local-user|--message|--file)(\s|$)/.test(rest)) {
+        if (flag(rest, '-\\w*[dasfumF]\\w*|--delete|--annotate|--sign|--force|--local-user|--message|--file')) {
             return true;
         }
 
-        return rest !== '' && !/(^|\s)(-l|-n\d*|--list|--contains|--points-at|--merged|--no-merged)(\s|$)/.test(rest);
+        return rest !== '' && !flag(rest, '-l|-n\\d*|--list|--contains|--points-at|--merged|--no-merged');
     }
 
-    if (sub === 'reflog') {
-        return /^(expire|delete)\b/.test(rest);
-    }
-
-    if (sub === 'remote') {
-        return !/^((-v|--verbose)?\s*$|(get-url|show)\b)/.test(rest);
+    if (Object.hasOwn(READ_FORMS, sub)) {
+        return !READ_FORMS[sub].test(rest);
     }
 
     if (sub === 'config') {
@@ -409,14 +346,6 @@ function writes({ sub, rest }) {
 
     if (sub === 'symbolic-ref') {
         return symbolicRefWrites(rest);
-    }
-
-    if (sub === 'worktree') {
-        return !/^list\b/.test(rest);
-    }
-
-    if (sub === 'stash') {
-        return !/^(list|show)\b/.test(rest);
     }
 
     return true;
@@ -428,20 +357,20 @@ function destructive({ sub, rest }) {
         || (sub === 'clean' && /(^|\s)-\w*f/.test(rest))
         || (sub === 'branch' && /(^|\s)-D\b/.test(rest))
         // Commands that destroy uncommitted work.
-        || (sub === 'checkout' && /(^|\s)(--|-f|--force|\.)(\s|$)/.test(rest))
-        || (sub === 'restore' && (!/(^|\s)(--staged|-S)(\s|$)/.test(rest) || /(^|\s)(--worktree|-W)(\s|$)/.test(rest)))
-        || (sub === 'switch' && /(^|\s)(--discard-changes|-f|--force)(\s|$)/.test(rest))
+        || (sub === 'checkout' && flag(rest, '--|-f|--force|\\.'))
+        || (sub === 'restore' && (!flag(rest, '--staged|-S') || flag(rest, '--worktree|-W')))
+        || (sub === 'switch' && flag(rest, '--discard-changes|-f|--force'))
         || (sub === 'stash' && /^(drop|clear)\b/.test(rest))
         // Commands that delete refs or history for good.
-        || (sub === 'tag' && /(^|\s)(-\w*d\w*|--delete)(\s|$)/.test(rest))
+        || (sub === 'tag' && flag(rest, '-\\w*d\\w*|--delete'))
         || (sub === 'update-ref' && /(^|\s)-d\b/.test(rest))
         || sub === 'filter-branch'
         || (sub === 'reflog' && /^(expire|delete)\b/.test(rest))
         || (sub === 'gc' && /--prune/.test(rest));
 }
 
-// Branches the next commands may write on after a `switch` or `checkout`; null when the target cannot be told (`-`, `--detach`, `$VAR`...).
-// `checkout <x>` may be a file restore: `x` is added to the possible branches instead of replacing them.
+// Branches the next commands may write on after a `switch` or `checkout`: the created branch, otherwise null (unknown).
+// A plain `switch` or `checkout <x>` is not followed (`x` may be a file), and a name that cannot be read (`$VAR`, `-`...) is unknown too.
 function branchesAfter({ sub, rest }, branches) {
     if (sub !== 'switch' && sub !== 'checkout') {
         return branches;
@@ -449,40 +378,10 @@ function branchesAfter({ sub, rest }, branches) {
 
     const tokens = rest.split(/\s+/).filter(Boolean);
     const create = tokens.findIndex((token) => (sub === 'switch' ? /^(-[cC]|--(force-)?create|--orphan)$/ : /^(-[bB]|--orphan)$/).test(token));
-    const unknown = (name) => name === '' || /^-|[$`"'*?[\\]/.test(name);
+    const name = tokens[create + 1] ?? '';
 
-    if (create !== -1) {
-        const name = tokens[create + 1] ?? '';
-
-        return unknown(name) ? null : [
-            name
-        ];
-    }
-
-    if (tokens.some((token) => /^(-|--detach|-d|--track|-t)$/.test(token))) {
-        return null;
-    }
-
-    // `checkout -- <path>` and `checkout <path> <path>` restore files: the branches stay.
-    const names = tokens.filter((token) => !token.startsWith('-'));
-
-    if (names.length === 0 || (sub === 'checkout' && (tokens.includes('--') || tokens.includes('.') || names.length > 1))) {
-        return branches;
-    }
-
-    if (unknown(names[0])) {
-        return null;
-    }
-
-    if (sub === 'switch') {
-        return [
-            names[0]
-        ];
-    }
-
-    return branches === null ? null : [
-        ...branches,
-        names[0]
+    return create === -1 || /^$|^-|[$`"'*?[\\]/.test(name) ? null : [
+        name
     ];
 }
 
@@ -526,10 +425,8 @@ export function decide({ command, agent, branch: initial, protectedBranches }) {
             raise('ask', 'Nested git command that cannot be analysed: confirm.');
         } else if (ASK.has(git.sub)) {
             raise('ask', `git ${git.sub} always needs the user's confirmation.`);
-        } else if (git.sub === 'tag' && /(^|\s)(-\w*f\w*|--force)(\s|$)/.test(git.rest)) {
-            raise('ask', 'git tag --force moves an existing tag: confirm.');
-        } else if (git.sub === 'branch' && /(^|\s)(-\w*f\w*|--force)(\s|$)/.test(git.rest)) {
-            raise('ask', 'git branch --force moves an existing branch: confirm.');
+        } else if ((git.sub === 'tag' || git.sub === 'branch') && flag(git.rest, '-\\w*f\\w*|--force')) {
+            raise('ask', `git ${git.sub} --force moves an existing ${git.sub}: confirm.`);
         } else if (ON_PROTECTED.has(git.sub) && protectedBranches === null) {
             raise('ask', 'Protected branches unknown (.claude/brigade.json missing or invalid): confirm.');
         } else if (ON_PROTECTED.has(git.sub) && here === null) {
@@ -582,20 +479,16 @@ export function protectedBranches(root, env = process.env) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-    let input;
+    let parsed;
 
     try {
-        input = JSON.parse(readFileSync(0, 'utf8'));
+        parsed = JSON.parse(readFileSync(0, 'utf8'));
     } catch {
-        input = null;
+        parsed = null;
     }
 
-    const valid = input !== null && typeof input === 'object' && !Array.isArray(input);
-
-    if (!valid) {
-        input = {};
-    }
-
+    const valid = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed);
+    const input = valid ? parsed : {};
     const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
 
     // An unreadable payload must not crash the hook (exit 1 lets the command through).
