@@ -374,7 +374,53 @@ function destructive({ sub, rest }) {
         || (sub === 'gc' && /--prune/.test(rest));
 }
 
-export function decide({ command, agent, branch, protectedBranches }) {
+// Branches the next commands may write on after a `switch` or `checkout`; null when the target cannot be told (`-`, `--detach`, `$VAR`...).
+// `checkout <x>` may be a file restore: `x` is added to the possible branches instead of replacing them.
+function branchesAfter({ sub, rest }, branches) {
+    if (sub !== 'switch' && sub !== 'checkout') {
+        return branches;
+    }
+
+    const tokens = rest.split(/\s+/).filter(Boolean);
+    const create = tokens.findIndex((token) => (sub === 'switch' ? /^(-[cC]|--(force-)?create|--orphan)$/ : /^(-[bB]|--orphan)$/).test(token));
+    const unknown = (name) => name === '' || /^-|[$`"'*?[\\]/.test(name);
+
+    if (create !== -1) {
+        const name = tokens[create + 1] ?? '';
+
+        return unknown(name) ? null : [
+            name
+        ];
+    }
+
+    if (tokens.some((token) => /^(-|--detach|-d|--track|-t)$/.test(token))) {
+        return null;
+    }
+
+    // `checkout -- <path>` and `checkout <path> <path>` restore files: the branches stay.
+    const names = tokens.filter((token) => !token.startsWith('-'));
+
+    if (names.length === 0 || (sub === 'checkout' && (tokens.includes('--') || tokens.includes('.') || names.length > 1))) {
+        return branches;
+    }
+
+    if (unknown(names[0])) {
+        return null;
+    }
+
+    if (sub === 'switch') {
+        return [
+            names[0]
+        ];
+    }
+
+    return branches === null ? null : [
+        ...branches,
+        names[0]
+    ];
+}
+
+export function decide({ command, agent, branch: initial, protectedBranches }) {
     let decision = {
         permissionDecision: 'allow',
         reason: ''
@@ -395,7 +441,17 @@ export function decide({ command, agent, branch, protectedBranches }) {
         return null;
     }
 
+    // The commands run in order: a `switch` changes the branch the next ones write on.
+    let branches = [
+        initial
+    ];
+
     for (const git of found) {
+        const here = branches;
+        const hit = here?.find((name) => protectedBranches?.includes(name));
+
+        branches = branchesAfter(git, branches);
+
         if (agent !== 'git-operator') {
             raise('deny', 'Only git-operator writes to git: delegate to it, after the user\'s go.');
         } else if (destructive(git)) {
@@ -410,8 +466,10 @@ export function decide({ command, agent, branch, protectedBranches }) {
             raise('ask', 'git branch --force moves an existing branch: confirm.');
         } else if (ON_PROTECTED.has(git.sub) && protectedBranches === null) {
             raise('ask', 'Protected branches unknown (.claude/brigade.json missing or invalid): confirm.');
-        } else if (ON_PROTECTED.has(git.sub) && protectedBranches.includes(branch)) {
-            raise('ask', `"${branch}" is a protected branch: confirm before writing on it.`);
+        } else if (ON_PROTECTED.has(git.sub) && here === null) {
+            raise('ask', 'Branch unknown after a switch or checkout that cannot be analysed: confirm.');
+        } else if (ON_PROTECTED.has(git.sub) && hit !== undefined) {
+            raise('ask', `"${hit}" is a protected branch: confirm before writing on it.`);
         } else if (!SAFE.has(git.sub)) {
             raise('ask', `git ${git.sub}: not in the known safe list, confirm.`);
         } else {

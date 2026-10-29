@@ -433,6 +433,48 @@ test('a heredoc that only mentions git is not a git write for the main session',
     }
 });
 
+test('the protected-branch check follows switches inside the command', () => {
+    assert.equal(run('git switch main && git commit -m x'), 'ask');
+    assert.equal(run('git checkout develop && git pull'), 'ask');
+    assert.equal(run('git switch -c feat/y && git commit -m x'), 'allow');
+    assert.equal(run('git checkout -b feat/y main && git commit -m x'), 'allow');
+    assert.equal(run('git switch - && git commit -m x'), 'ask');
+    assert.equal(run('git switch --detach && git commit -m x'), 'ask');
+    assert.equal(run('git switch "$B" && git commit -m x'), 'ask');
+    assert.equal(run('git switch feat/y && git commit -m x', {
+        branch: 'main'
+    }), 'allow');
+
+    assert.equal(run('git commit -m x && git switch main', {
+        branch: 'feat/x'
+    }), 'allow');
+
+    assert.equal(run('git switch main && git switch -c feat/y && git commit -m x'), 'allow');
+    assert.equal(run('git switch feat/y && git switch main && git commit -m x'), 'ask');
+});
+
+test('an ambiguous checkout keeps the previous branches among the possible ones', () => {
+    assert.equal(run('git checkout feat/y && git commit -m x'), 'allow');
+    assert.equal(run('git checkout develop && git pull'), 'ask');
+    assert.equal(run('git checkout file.md && git commit -m x', {
+        branch: 'main'
+    }), 'ask');
+
+    assert.equal(run('git checkout -- file.md && git commit -m x', {
+        branch: 'main'
+    }), 'deny');
+
+    assert.equal(run('git checkout a.md b.md && git commit -m x', {
+        branch: 'main'
+    }), 'ask');
+
+    assert.equal(run('git checkout -b feat/y && git checkout file.md && git commit -m x', {
+        branch: 'main'
+    }), 'allow');
+
+    assert.equal(run('git checkout - && git commit -m x'), 'ask');
+});
+
 test('a << inside quotes or an arithmetic expression does not open a heredoc', () => {
     assert.equal(run('git commit -m "a << b"\ngit push --force'), 'deny');
     assert.equal(run('git commit -m \'a <<EOF\'\ngit push --force'), 'deny');
