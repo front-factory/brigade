@@ -275,8 +275,8 @@ function parseGit(text) {
         i += VALUED_OPTIONS.has(tokens[i]) ? 2 : 1;
     }
 
-    // A subcommand built at run time (`$(...)`, `$SUB`, backticks) cannot be analysed.
-    if (/^[$`]/.test(tokens[i] ?? '')) {
+    // A subcommand built at run time (`$(...)`, `$SUB`, backticks) or quoted (blanked by strip()) cannot be analysed.
+    if (/^[$`"]/.test(tokens[i] ?? '')) {
         return UNKNOWN;
     }
 
@@ -291,7 +291,7 @@ function parseGit(text) {
 }
 
 // Grouping, keywords and wrapper commands that may come before `git` in a segment.
-const LEADING = /^(?:[(!]|\{(?=\s)|(?:then|else|elif|do|if|while|until)\b|env\s+(?:(?:-u\s+\S+|-\S+|\w+=\S+)\s+)*|(?:command|exec|time|nohup|nice|sudo)\s+(?:(?:-n\s+\d+|-\S+)\s+)*|\w+=\S+\s+)\s*/;
+const LEADING = /^(?:[(!]|\{(?=\s)|(?:then|else|elif|do|if|while|until)\b|env\s+(?:(?:-u\s+\S+|-\S+|\w+=\S+)\s+)*|(?:command|exec|time|nohup|nice|sudo)\s+(?:(?:-n\s+\d+|-\S+)\s+)*|timeout\s+(?:(?:-[ks]\s+\S+|--(?:kill-after|signal)\s+\S+|-\S+)\s+)*\d[\w.]*\s+|stdbuf\s+(?:(?:-[ioe]\s+\S+|-\S+)\s+)*|\w+=\S+\s+)\s*/;
 
 function gitSegment(segment) {
     let text = segment.trim();
@@ -318,7 +318,7 @@ function gitCommands(command, depth = 0) {
     ].flatMap((nestedText) => gitCommands(nestedText, depth + 1));
 
     const direct = strip(text)
-        .split(/&&|\|\||;|\||\n|[()]/)
+        .split(/&&|\|\||;|\||\n|[()]|(?<![>&<])&(?![>&])/)
         .map(gitSegment)
         .filter(Boolean)
         .map(([

@@ -616,3 +616,38 @@ test('BRIGADE_UNPROTECT_REFERENCE_BRANCH=1 lifts the reference branch only', asy
         });
     }
 });
+
+test('timeout, stdbuf, a background & and a quoted subcommand are caught', () => {
+    for (const command of [
+        'timeout 10 git commit -m x',
+        'timeout -k 5 10 git commit -m x',
+        'timeout --signal KILL 10s git commit -m x',
+        'stdbuf -oL git commit -m x',
+        'stdbuf -o L git commit -m x',
+        'sleep 1 & git commit -m x',
+        'git \'commit\' -m x',
+        'git "commit" -m x'
+    ]) {
+        assert.equal(run(command, {
+            agent: ''
+        }), 'deny', command);
+    }
+
+    assert.equal(run('git \'commit\' -m x'), 'ask');
+    assert.equal(run('timeout 10 git commit -m x'), 'allow');
+});
+
+test('redirections and && are not split as a background &', () => {
+    for (const command of [
+        'git log 2>&1 | head',
+        'git status &>/dev/null',
+        'git status >&2',
+        'git log &>>out.txt'
+    ]) {
+        assert.equal(run(command, {
+            agent: ''
+        }), null, command);
+    }
+
+    assert.equal(run('git commit -m x && git push'), 'ask');
+});
