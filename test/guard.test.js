@@ -392,6 +392,55 @@ test('wrapped reads and mere mentions of git are not touched', () => {
     }
 });
 
+test('heredoc bodies are not read as commands', () => {
+    // Backticks in an unquoted body really run: only the quoted variants carry them.
+    const message = (open, tick = '`') => `git commit -m "$(cat <<${open}\nfix(guard): deny ${tick}git reset --hard${tick}\n\ngit checkout -- . is now denied, the kit's way\nEOF\n)"`;
+
+    for (const open of [
+        '\'EOF\'',
+        '"EOF"',
+        '-\'EOF\''
+    ]) {
+        assert.equal(run(message(open)), 'allow', open);
+    }
+
+    for (const open of [
+        'EOF',
+        '-EOF'
+    ]) {
+        assert.equal(run(message(open, '\'')), 'allow', open);
+    }
+
+    assert.equal(run(`${message('\'EOF\'')} && git push --force`), 'deny');
+    assert.equal(run(`${message('\'EOF\'')}\ngit push --force`), 'deny');
+    assert.equal(run(`${message('EOF', '\'')}\ngit push --force`), 'deny');
+});
+
+test('an unquoted heredoc still runs its substitutions', () => {
+    assert.equal(run('cat <<EOF\n$(git reset --hard)\nEOF'), 'deny');
+    assert.equal(run('cat <<EOF\n`git push`\nEOF'), 'ask');
+    assert.equal(run('cat <<\'EOF\'\n$(git reset --hard)\nEOF'), null);
+});
+
+test('a heredoc that only mentions git is not a git write for the main session', () => {
+    for (const command of [
+        'cat > notes.md <<\'EOF\'\ngit push\nEOF',
+        'cat > notes.md <<EOF\ngit push --force\nEOF'
+    ]) {
+        assert.equal(run(command, {
+            agent: ''
+        }), null);
+    }
+});
+
+test('a << inside quotes or an arithmetic expression does not open a heredoc', () => {
+    assert.equal(run('git commit -m "a << b"\ngit push --force'), 'deny');
+    assert.equal(run('git commit -m \'a <<EOF\'\ngit push --force'), 'deny');
+    assert.equal(run('echo $((1<<2))\ngit push --force'), 'deny');
+    assert.equal(run('echo "$((1<<2))"\ngit push --force'), 'deny');
+    assert.equal(run('git commit -m "$(cat <<\'EOF\'\nit\'s a << b\nEOF\n)"\ngit push --force'), 'deny');
+});
+
 test('BRIGADE_UNPROTECT_REFERENCE_BRANCH=1 lifts the reference branch only', async () => {
     const { mkdtempSync, mkdirSync, writeFileSync, rmSync } = await import('node:fs');
     const { tmpdir } = await import('node:os');

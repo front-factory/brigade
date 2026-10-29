@@ -92,10 +92,121 @@ const VALUED_OPTIONS = new Set([
 ]);
 const SHELL_ARG = '("(?:[^"\\\\]|\\\\.)*"|\'[^\']*\'|[^;&|\\n]+)';
 
-// Text run by `$(...)`, backticks, `sh -c` and `eval`, taken before strip() blanks quotes.
-function nestedTexts(command) {
+// Heredoc bodies are data, not commands: cut them out before any parsing.
+// An unquoted delimiter (`<<EOF`) still runs `$(...)` and backticks in its body: those bodies are returned apart.
+// Only `<<` in code counts: not in quotes, not in `$((...))`, but yes in a `$(...)` inside double quotes.
+function heredocs(command) {
+    const bodies = [];
+    const pending = [];
+    const stack = [
+        {
+            kind: 'code',
+            depth: 0
+        }
+    ];
+    let text = '';
+
+    for (let i = 0; i < command.length; i++) {
+        const char = command[i];
+        const top = stack[stack.length - 1];
+
+        text += char;
+
+        if (char === '\n' && pending.length > 0) {
+            let at = i + 1;
+
+            for (const { dash, quote, word } of pending) {
+                const body = [];
+
+                while (at < command.length) {
+                    const end = command.indexOf('\n', at) === -1 ? command.length : command.indexOf('\n', at);
+                    const line = command.slice(at, end);
+
+                    at = end + 1;
+
+                    if ((dash ? line.replace(/^\t+/, '') : line) === word) {
+                        break;
+                    }
+
+                    body.push(line);
+                }
+
+                if (!quote) {
+                    bodies.push(body.join('\n'));
+                }
+            }
+
+            pending.length = 0;
+            i = at - 1;
+        } else if (char === '\\' && top.kind !== 'arith') {
+            text += command[i + 1] ?? '';
+            i++;
+        } else if (top.kind === 'arith') {
+            top.depth += char === '(' ? 1 : char === ')' ? -1 : 0;
+
+            if (top.depth === 0) {
+                stack.pop();
+            }
+        } else if (char === '$' && command[i + 1] === '(') {
+            const arith = command[i + 2] === '(';
+
+            stack.push({
+                kind: arith ? 'arith' : 'code',
+                depth: arith ? 2 : 1
+            });
+
+            text += arith ? '((' : '(';
+            i += arith ? 2 : 1;
+        } else if (top.kind === 'dq') {
+            if (char === '"') {
+                stack.pop();
+            }
+        } else if (char === '"') {
+            stack.push({
+                kind: 'dq'
+            });
+        } else if (char === '\'') {
+            const end = command.indexOf('\'', i + 1) === -1 ? command.length - 1 : command.indexOf('\'', i + 1);
+
+            text += command.slice(i + 1, end + 1);
+            i = end;
+        } else if (char === '(') {
+            top.depth++;
+        } else if (char === ')') {
+            top.depth--;
+
+            if (top.depth === 0 && stack.length > 1) {
+                stack.pop();
+            }
+        } else if (char === '<' && command[i + 1] === '<' && command[i - 1] !== '<' && command[i + 2] !== '<') {
+            const [
+                , dash,
+                quote,
+                word
+            ] = command.slice(i + 2).match(/^(-?)[ \t]*(["']?)([\w-]+)\2/) ?? [];
+
+            if (word) {
+                pending.push({
+                    dash,
+                    quote,
+                    word
+                });
+            }
+
+            text += '<';
+            i++;
+        }
+    }
+
+    return {
+        text,
+        bodies
+    };
+}
+
+// Text run by `$(...)` and backticks, taken before strip() blanks quotes.
+function substitutions(command) {
     const texts = [];
-    const unquote = (arg) => (/^["']/.test(arg) ? arg.slice(1, -1).replace(/\\"/g, '"') : arg);
     const bare = command.replace(/'[^']*'/g, '\'\'');
 
     for (let at = bare.indexOf('$('); at !== -1; at = bare.indexOf('$(', at + 2)) {
@@ -114,6 +225,14 @@ function nestedTexts(command) {
     ] of bare.matchAll(/`([^`]*)`/g)) {
         texts.push(inner);
     }
+
+    return texts;
+}
+
+// Text run by `$(...)`, backticks, `sh -c` and `eval`, taken before strip() blanks quotes.
+function nestedTexts(command) {
+    const texts = substitutions(command);
+    const unquote = (arg) => (/^["']/.test(arg) ? arg.slice(1, -1).replace(/\\"/g, '"') : arg);
 
     for (const [
         , arg
@@ -174,15 +293,20 @@ function gitCommands(command, depth = 0) {
         ] : [];
     }
 
-    const nested = nestedTexts(command).flatMap((text) => gitCommands(text, depth + 1));
+    const { text, bodies } = heredocs(command);
 
-    const direct = strip(command)
+    const nested = [
+        ...nestedTexts(text),
+        ...bodies.flatMap(substitutions)
+    ].flatMap((nestedText) => gitCommands(nestedText, depth + 1));
+
+    const direct = strip(text)
         .split(/&&|\|\||;|\||\n|[()]/)
         .map(gitSegment)
         .filter(Boolean)
         .map(([
-            , text
-        ]) => parseGit(text ?? ''))
+            , args
+        ]) => parseGit(args ?? ''))
         .filter(Boolean);
 
     return [
