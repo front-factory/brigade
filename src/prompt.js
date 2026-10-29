@@ -66,7 +66,9 @@ export function createPrompter({ interactive }) {
             initialValue: options[0].value
         }));
 
-        return value === OTHER ? text(`${message} (type it)`) : value;
+        return value === OTHER ? text(`${message} (type it)`, '', {
+            required: true
+        }) : value;
     }
 
     // A detected value is proposed first; Enter keeps it, "no" goes on to `pick`.

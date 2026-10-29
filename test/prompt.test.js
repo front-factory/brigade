@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { stripVTControlCharacters } from 'node:util';
@@ -169,4 +169,48 @@ test('without a terminal a confirmation is a yes', async () => {
     assert.equal(await createPrompter({
         interactive: false
     }).confirm('Go on?'), true);
+});
+
+// Picks "Other…" on a real prompt fed through stdin: a blank answer is refused, then "dev" is accepted.
+// Each key group is written after a pause, because clack drops what arrives before the next prompt exists.
+test('an "Other…" answer cannot be blank', async () => {
+    const script = `
+        import { createPrompter } from './src/prompt.js';
+
+        const options = [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }];
+
+        console.log('result:' + JSON.stringify(await createPrompter({ interactive: true }).choose('Branch', options)));
+    `;
+
+    const child = spawn(process.execPath, [
+        '--input-type=module',
+        '-e',
+        script
+    ], {
+        cwd: fileURLToPath(new URL('..', import.meta.url))
+    });
+
+    let out = '';
+
+    child.stdout.on('data', (chunk) => {
+        out += chunk;
+    });
+
+    const closed = new Promise((resolve) => child.on('close', resolve));
+
+    for (const keys of [
+        '\x1b[B\x1b[B\r',
+        '\r',
+        'dev\r'
+    ]) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        child.stdin.write(keys);
+    }
+
+    child.stdin.end();
+
+    assert.equal(await closed, 0);
+    out = stripVTControlCharacters(out);
+    assert.match(out, /Please type something\./);
+    assert.match(out, /result:"dev"/);
 });
