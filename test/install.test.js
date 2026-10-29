@@ -11,7 +11,7 @@ import { test } from 'node:test';
 import './git-env.js';
 import { runInit } from '../src/init.js';
 import {
-    appendMissingLines, mergeSettings, planExtras, readManifest, render, sha, writeAtomic, writeLocalSettings
+    appendMissingLines, dropKitEntries, mergeSettings, planExtras, readManifest, render, sha, writeAtomic, writeLocalSettings
 } from '../src/install.js';
 import { CONVENTIONS } from '../src/conventions.js';
 import { OPTIONS } from '../src/options.js';
@@ -2210,6 +2210,106 @@ test('mergeSettings keeps the developer\'s entries, adds the kit\'s and never du
     });
 
     assert.deepEqual(mergeSettings(mergeSettings(mine, kit), kit), mergeSettings(mine, kit));
+});
+
+const kitHook = (script) => ({
+    type: 'command',
+    command: `sh "$CLAUDE_PROJECT_DIR/.claude/hooks/run-node.sh" "$CLAUDE_PROJECT_DIR/.claude/hooks/${script}"`
+});
+
+const kitSettings = {
+    statusLine: {
+        type: 'command',
+        command: kitHook('statusline.mjs').command
+    },
+    hooks: {
+        PreToolUse: [
+            {
+                matcher: 'Bash',
+                hooks: [
+                    kitHook('git-guard.mjs')
+                ]
+            }
+        ]
+    }
+};
+
+test('an old kit hook command is replaced by the current one, the developer\'s hook stays', () => {
+    const mine = {
+        hooks: {
+            PreToolUse: [
+                {
+                    matcher: 'Bash',
+                    hooks: [
+                        {
+                            type: 'command',
+                            command: 'node .claude/hooks/git-guard.mjs'
+                        },
+                        {
+                            type: 'command',
+                            command: 'make check'
+                        }
+                    ]
+                },
+                {
+                    hooks: [
+                        {
+                            type: 'command',
+                            command: '"$CLAUDE_PROJECT_DIR/.claude/hooks/git-guard.mjs"'
+                        }
+                    ]
+                }
+            ],
+            Stop: [
+                {
+                    hooks: [
+                        {
+                            type: 'command',
+                            command: 'node .claude/hooks/mine.mjs'
+                        }
+                    ]
+                }
+            ]
+        }
+    };
+
+    const merged = mergeSettings(dropKitEntries(mine, kitSettings), kitSettings);
+
+    assert.deepEqual(merged.hooks, {
+        PreToolUse: [
+            {
+                matcher: 'Bash',
+                hooks: [
+                    {
+                        type: 'command',
+                        command: 'make check'
+                    }
+                ]
+            },
+            kitSettings.hooks.PreToolUse[0]
+        ],
+        Stop: mine.hooks.Stop
+    });
+});
+
+test('an old statusLine of the kit is replaced, a custom one is kept', () => {
+    const old = {
+        statusLine: {
+            type: 'command',
+            command: 'node .claude/hooks/statusline.mjs'
+        }
+    };
+
+    assert.deepEqual(mergeSettings(dropKitEntries(old, kitSettings), kitSettings).statusLine, kitSettings.statusLine);
+
+    const custom = {
+        statusLine: {
+            type: 'command',
+            command: 'my-status --short'
+        }
+    };
+
+    assert.deepEqual(mergeSettings(dropKitEntries(custom, kitSettings), kitSettings).statusLine, custom.statusLine);
 });
 
 const SETTINGS = '.claude/settings.json';

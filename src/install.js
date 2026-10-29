@@ -102,6 +102,82 @@ const isObject = (value) => value !== null && typeof value === 'object' && !Arra
 
 const isSame = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+// A command belongs to the kit when the script it finally runs (the last `.claude/hooks/<name>` path, so a wrapper like
+// run-node.sh does not count) is one the kit's own hooks and statusLine run.
+function kitScripts(kit) {
+    const last = (command) => String(command).match(/\.claude\/hooks\/([\w.-]+)(?![\s\S]*\.claude\/hooks\/)/)?.[1];
+    const names = new Set();
+
+    const collect = (value) => {
+        if (typeof value === 'string') {
+            names.add(last(value));
+        } else if (value && typeof value === 'object') {
+            Object.values(value).forEach(collect);
+        }
+    };
+
+    collect(kit.statusLine?.command);
+    collect(kit.hooks);
+    names.delete(undefined);
+
+    return (command) => typeof command === 'string' && names.has(last(command));
+}
+
+// The developer's settings without the entries that run a kit script, whatever their version: older kit commands are
+// dropped too, so the merge does not keep both and the strip leaves nothing behind. The developer's own hooks stay.
+export function dropKitEntries(mine, kit) {
+    const owned = kitScripts(kit);
+
+    const rest = {
+        ...mine
+    };
+
+    if (isObject(rest.statusLine) && owned(rest.statusLine.command)) {
+        delete rest.statusLine;
+    }
+
+    if (isObject(rest.hooks)) {
+        rest.hooks = {};
+
+        for (const [
+            event,
+            groups
+        ] of Object.entries(mine.hooks)) {
+            if (!Array.isArray(groups)) {
+                rest.hooks[event] = groups;
+                continue;
+            }
+
+            const left = groups.flatMap((group) => {
+                if (!isObject(group) || !Array.isArray(group.hooks)) {
+                    return [
+                        group
+                    ];
+                }
+
+                const hooks = group.hooks.filter((hook) => !(isObject(hook) && owned(hook.command)));
+
+                return hooks.length === 0 && group.hooks.length > 0 ? [] : [
+                    {
+                        ...group,
+                        hooks
+                    }
+                ];
+            });
+
+            if (left.length > 0 || groups.length === 0) {
+                rest.hooks[event] = left;
+            }
+        }
+
+        if (Object.keys(rest.hooks).length === 0) {
+            delete rest.hooks;
+        }
+    }
+
+    return rest;
+}
+
 // The developer's settings plus what the kit adds. Objects merge by key, arrays are a union (the developer's entries
 // first, the kit's missing ones after, compared by value), any other value stays the developer's.
 export function mergeSettings(mine, kit) {
@@ -198,7 +274,7 @@ function mergedSettings(current, kit) {
         }
 
         return {
-            merged: migrateDefaultMode(mergeSettings(mine, theirs), theirs),
+            merged: migrateDefaultMode(mergeSettings(dropKitEntries(mine, theirs), theirs), theirs),
             mine
         };
     } catch {

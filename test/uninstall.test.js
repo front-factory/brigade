@@ -108,6 +108,44 @@ test('settings.json keeps the developer entries and loses the kit ones', async (
     });
 });
 
+test('settings.json loses the hook entries of an older kit and keeps the developer\'s', async () => {
+    const cwd = await installed();
+    const file = join(cwd, SETTINGS);
+    const settings = JSON.parse(readFileSync(file, 'utf8'));
+
+    settings.hooks.PreToolUse[0].hooks.push({
+        type: 'command',
+        command: 'make check'
+    }, {
+        type: 'command',
+        command: 'node .claude/hooks/git-guard.mjs'
+    });
+
+    settings.statusLine.command = 'node .claude/hooks/statusline.mjs';
+    writeFileSync(file, JSON.stringify(settings, null, 4));
+
+    await runUninstall({
+        cwd,
+        yes: true
+    });
+
+    assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), {
+        hooks: {
+            PreToolUse: [
+                {
+                    matcher: 'Bash',
+                    hooks: [
+                        {
+                            type: 'command',
+                            command: 'make check'
+                        }
+                    ]
+                }
+            ]
+        }
+    });
+});
+
 test('a settings.json holding only kit entries is removed, an unparseable one is kept', async () => {
     const cwd = await installed();
     const file = join(cwd, SETTINGS);

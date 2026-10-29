@@ -5,7 +5,7 @@ import {
     join, resolve, sep
 } from 'node:path';
 import {
-    applyPlan, LEGACY_BASE_DIR, MANIFEST, OPTIONS_FILE, readManifest, render, renderOptions, SETTINGS_PATH, sha, stripSettings, WRITE_ONCE
+    applyPlan, dropKitEntries, LEGACY_BASE_DIR, MANIFEST, OPTIONS_FILE, readManifest, render, renderOptions, SETTINGS_PATH, sha, stripSettings, WRITE_ONCE
 } from './install.js';
 import { createPrompter } from './prompt.js';
 import { DEFAULT_STACK, STACKS } from './stacks.js';
@@ -26,7 +26,7 @@ function planSettings({ target, text, kitText }) {
             };
         }
 
-        const rest = stripSettings(mine, kit);
+        const rest = stripSettings(dropKitEntries(mine, kit), kit);
 
         if (Object.keys(rest).length === 0) {
             return {
