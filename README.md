@@ -82,8 +82,12 @@ What happens to your files:
   unless the kit changes that file again. Diff, take what you want, delete it.
 - A kit file you deleted is recreated.
 - A file the kit no longer ships is removed if untouched, otherwise kept and reported at each update.
-- `.claude/settings.json` is merged by keys: your values win and nothing is duplicated. A kit entry removed or changed
-  is not removed from your file; remove the old one yourself.
+- `.claude/settings.json` is merged only when the kit's version of it changed since the last install; otherwise your
+  file is kept as it is, and what you removed stays removed. When the merge runs, your values win, nothing is
+  duplicated and the kit's new entries are added (a kit entry you removed comes back). A hook or `statusLine` that runs
+  a kit hook script belongs to the kit: an older version of it is replaced by the current one, your own hooks stay.
+  Other kit entries the kit removed or changed (permission rules, for example) are not removed from your file; remove
+  them yourself.
 - `decisions.md` and `architecture.md` are written once and then belong to you.
 - `.gitignore` and `.gitattributes` only get the lines they miss.
 
