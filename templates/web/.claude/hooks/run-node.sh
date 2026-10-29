@@ -16,12 +16,21 @@ node_in() {
 }
 
 # Prints the node of the highest version among the directories matching a glob (first argument: pattern, unquoted).
+# The version is the last `/vMAJOR.MINOR.PATCH/` of the path (other dots of the path do not matter). Each directory is
+# printed with a zero-padded numeric key, the keys are sorted, and the last directory with a usable node wins.
 latest_in() {
-    for dir in $(ls -d $1 2>/dev/null | sort -t. -k1.1,1n -k2,2n -k3,3n); do
-        found=$(node_in "$dir") || continue
-        latest=$found
-    done
-    [ -n "$latest" ] && printf '%s\n' "$latest"
+    ls -d $1 2>/dev/null | while IFS= read -r dir; do
+        version=$(printf '%s\n' "$dir" | sed -n 's|.*/v\([0-9][0-9]*\)\.\([0-9][0-9]*\)\.\([0-9][0-9]*\)/.*|\1 \2 \3|p')
+        [ -n "$version" ] || continue
+        set -- $version
+        printf '%09d%09d%09d %s\n' "$1" "$2" "$3" "$dir"
+    done | sort | {
+        best=
+        while IFS= read -r entry; do
+            found=$(node_in "${entry#* }") && best=$found
+        done
+        [ -n "$best" ] && printf '%s\n' "$best"
+    }
 }
 
 find_node() {
@@ -33,11 +42,8 @@ find_node() {
         "$home/.fnm/aliases/default/bin"; do
         node_in "$dir" && return 0
     done
-    latest=
     latest_in "${NVM_DIR:-$home/.nvm}/versions/node/v*/bin" && return 0
-    latest=
     latest_in "$home/.local/share/fnm/node-versions/v*/installation/bin" && return 0
-    latest=
     latest_in "$home/.fnm/node-versions/v*/installation/bin" && return 0
     oldIFS=$IFS
     IFS=:
