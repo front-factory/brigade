@@ -1,0 +1,20 @@
+# Audit: bugs and robustness
+
+Date: 2026-10-29
+Baseline commit: af78a36
+Scope: `src/`, `templates/web/.claude/hooks/` (correctness and robustness of the lib at 1.7.1)
+Status: open
+
+## Findings
+
+| ID | Severity | File | Problem | Status | Notes (commit / reason) |
+|----|----------|------|---------|--------|-------------------------|
+| B1 | high | templates/web/.claude/hooks/git-guard.mjs (`nestedTexts`, `gitCommands`) | A commit message body is parsed as commands. With the standard heredoc style `-m "$(cat <<'EOF' ... EOF)"`, a body line starting with `git ...`, or a backticked `` `git reset --hard` `` in the body, makes `decide()` return deny ("destructive command") for git-operator, blocking commits that describe git commands. Same for the main session on any heredoc that mentions git. | open | Reproduced with decide(): heredoc body with backticked `git reset --hard` gives deny for git-operator; body line `git checkout -- . is now denied` gives deny. |
+| B2 | high | templates/web/.claude/hooks/git-guard.mjs (`decide`, `currentBranch`) | The protected-branch check uses the branch read before the command runs, so `git switch main && git commit -m x` or `git checkout develop && git pull` is allowed for git-operator from a feature branch: the confirmation on protected branches is bypassed. | open | Reproduced with decide() (branch feat/x, protected main and develop): both return allow. |
+| B3 | medium | src/install.js (`mergeSettings`) | When the kit changes a hook command, the array union keeps the old entry next to the new one, so the hook runs twice. After uninstall, `stripSettings` only removes the current kit entry: the old one stays and points to a deleted script. Already noted in the 2026-10-23 simplification review, still present. | open | Reproduced: mergeSettings(old PreToolUse hook, new kit hook) returns both entries. |
+| B4 | medium | src/install.js (`planFiles`, settings branch) | The merge runs at every init or update once settings.json is edited, even when the kit did not change it: a kit allow or deny rule or hook the developer removed on purpose is added back each time. | open | From reading the branch order in planFiles; not reproduced with a test. |
+| B5 | medium | templates/web/.claude/hooks/git-guard.mjs (`READ`, `writes`) | False positives for the main session (deny on reads): `git stash show`, `git remote get-url` or `show`, `git config <key>`, `git check-ignore`, `git symbolic-ref`, `git worktree list`, `git help`, `git diff-tree`, `git name-rev`, `git cherry`. | open | Reproduced with decide(), agent empty: each returns deny. |
+| B6 | low | templates/web/.claude/hooks/git-guard.mjs (`LEADING`, segment split) | Not detected (decide returns null): `timeout 10 git commit`, `sleep 1 & git commit` (`&` is not a separator), `git 'commit'`. The guard is a safety net (team decision), but `timeout` and `&` can happen by accident. | open | Reproduced with decide(), agent empty. |
+| B7 | low | templates/web/.claude/hooks/run-node.sh (`latest_in`) | `sort -t. -k1.1,1n -k2,2n -k3,3n` splits the whole path on dots (`.nvm`, the version), so it sorts on the wrong fields: among v18.20.4, v22.11.0 and v24.2.0 it picks v18, while the comment promises the highest version. | open | Reproduced by piping the three nvm paths through the same sort. |
+| B8 | low | src/uninstall.js (`planUninstall`) | A manifest that is an object without `answers` (hand-edited) crashes `render()` with a raw TypeError; `readManifest` only checks the object shape. | open | From reading; not run. |
+| B9 | low | src/prompt.js (`choose` with "Other…") | An empty "Other…" answer is accepted (`text` without `required`): `baseBranch: ""` silently drops its protection, or an empty language lands in brigade-options.md. | open | From reading; not run. |
