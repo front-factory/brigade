@@ -238,6 +238,24 @@ test('without a manifest it throws, without --yes and without a terminal too', a
     assert.ok(existsSync(join(cwd, '.claude/brigade.json')));
 });
 
+test('a manifest without answers throws a clear error and removes nothing', async () => {
+    const cwd = await installed();
+    const path = join(cwd, '.claude/brigade.json');
+    const manifest = JSON.parse(readFileSync(path, 'utf8'));
+
+    delete manifest.answers;
+    writeFileSync(path, JSON.stringify(manifest));
+
+    await assert.rejects(runUninstall({
+        cwd,
+        yes: true
+    }), /has no "answers" object/);
+
+    assert.ok(existsSync(path));
+    assert.ok(existsSync(join(cwd, RULES)));
+    assert.ok(existsSync(join(cwd, '.claude/hooks/git-guard.mjs')));
+});
+
 test('--dry-run lists the plan and writes nothing', async () => {
     const cwd = await installed();
 

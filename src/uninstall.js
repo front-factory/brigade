@@ -176,6 +176,10 @@ export async function runUninstall({ cwd, yes = false, dryRun = false, version =
         throw new Error(`Brigade is not installed here (no ${MANIFEST}).`);
     }
 
+    if (!manifest.answers || typeof manifest.answers !== 'object' || Array.isArray(manifest.answers)) {
+        throw new Error(`${MANIFEST} has no "answers" object. Fix it or delete it, then remove the kit files by hand.`);
+    }
+
     if (!interactive && !yes && !dryRun) {
         throw new Error('uninstall needs --yes without a terminal');
     }
