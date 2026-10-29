@@ -172,7 +172,7 @@ test('without a terminal a confirmation is a yes', async () => {
 });
 
 // Picks "Other…" on a real prompt fed through stdin: a blank answer is refused, then "dev" is accepted.
-// Each key group is written after a pause, because clack drops what arrives before the next prompt exists.
+// Each key group is written once its prompt text has appeared, because clack drops what arrives before the prompt exists.
 test('an "Other…" answer cannot be blank', async () => {
     const script = `
         import { createPrompter } from './src/prompt.js';
@@ -198,13 +198,32 @@ test('an "Other…" answer cannot be blank', async () => {
 
     const closed = new Promise((resolve) => child.on('close', resolve));
 
-    for (const keys of [
-        '\x1b[B\x1b[B\r',
-        '\r',
-        'dev\r'
-    ]) {
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        child.stdin.write(keys);
+    const waitFor = (text) => new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            clearInterval(poll);
+            reject(new Error(`Timed out waiting for "${text}". Output so far: ${stripVTControlCharacters(out)}`));
+        }, 10000);
+
+        const poll = setInterval(() => {
+            if (stripVTControlCharacters(out).includes(text)) {
+                clearTimeout(timer);
+                clearInterval(poll);
+                resolve();
+            }
+        }, 20);
+    });
+
+    try {
+        await waitFor('Branch');
+        child.stdin.write('\x1b[B\x1b[B\r');
+        await waitFor('(type it)');
+        child.stdin.write('\r');
+        await waitFor('Please type something.');
+        child.stdin.write('dev\r');
+        await waitFor('result:');
+    } catch (error) {
+        child.kill();
+        throw error;
     }
 
     child.stdin.end();
