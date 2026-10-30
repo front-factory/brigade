@@ -17,3 +17,4 @@
 - `rules/brigade.md` is pure kit (no placeholders); project options live in the generated `rules/brigade-options.md`, so kit updates never conflict.
 - Manifest `answers` hold only the user's choices; kit-owned text is resolved at render time (like `commitFormatOf`): an update always brings the latest kit, whatever the options.
 - `node_modules` stays readable: a targeted read of the installed version beats web docs; broad searches skip it through `.gitignore`.
+- `defaultMode: plan` stays: the main session must never edit files, even if plain questions go through the plan workflow.
