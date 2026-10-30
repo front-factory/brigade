@@ -9,7 +9,9 @@
             "Bash(git diff:*)",
             "Bash(git log:*)",
             "Bash(git show:*)",
-            "Bash(__PACKAGE_MANAGER__ run:*)"
+            "Bash(__PACKAGE_MANAGER__ run:*)",
+            "Bash(__PACKAGE_MANAGER__ test:*)",
+            "Bash(__PACKAGE_MANAGER__ install:*)"
         ],
         "ask": [
             "Bash(git push:*)",
@@ -32,10 +34,6 @@
             "Read(./yarn.lock)",
             "Read(./bun.lock)",
             "Read(./bun.lockb)",
-            "Read(./dist/**)",
-            "Read(./build/**)",
-            "Read(./.next/**)",
-            "Read(./coverage/**)",
             "Read(./.git/**)",
             "Read(./**/*.map)",
             "Read(./**/*.min.js)"

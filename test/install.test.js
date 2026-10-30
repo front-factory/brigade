@@ -307,7 +307,9 @@ test('a malicious packageManager or stored answer never extends settings.json', 
         'Bash(git diff:*)',
         'Bash(git log:*)',
         'Bash(git show:*)',
-        'Bash(npm run:*)'
+        'Bash(npm run:*)',
+        'Bash(npm test:*)',
+        'Bash(npm install:*)'
     ]);
 
     const stored = project();

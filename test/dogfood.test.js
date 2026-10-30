@@ -112,6 +112,14 @@ test('the settings do not deny node_modules', () => {
     const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
 
     assert.deepEqual(settings.permissions.deny.filter((rule) => rule.includes('node_modules')), []);
+    assert.deepEqual(settings.permissions.deny.filter((rule) => /\/(dist|build|\.next|coverage)\//.test(rule)), []);
+});
+
+test('the settings allow the test and install scripts of the package manager', () => {
+    const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
+
+    assert.ok(settings.permissions.allow.includes('Bash(__PACKAGE_MANAGER__ test:*)'));
+    assert.ok(settings.permissions.allow.includes('Bash(__PACKAGE_MANAGER__ install:*)'));
 });
 
 test('the settings wire the status line and the session start hook to scripts of the kit', () => {
