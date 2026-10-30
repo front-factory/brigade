@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.7.3](https://github.com/front-factory/brigade/compare/v1.7.2...v1.7.3) (2026-10-30)
+
+### Bug Fixes
+
+* **templates:** allow targeted reads of node_modules ([80e5a49](https://github.com/front-factory/brigade/commit/80e5a49223614f8f1b1b70196450371e130a577d))
+
 ## [1.7.2](https://github.com/front-factory/brigade/compare/v1.7.1...v1.7.2) (2026-10-29)
 
 ### Bug Fixes
