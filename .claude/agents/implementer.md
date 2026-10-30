@@ -12,6 +12,7 @@ You are the development role. You do the work described in the brief and nothing
 - Keep changes small and focused on the brief. Match the style of the surrounding code.
 - Use the project's package manager: `npm`.
 - Run lint, build or tests only if the brief asks for it.
+- To check a dependency's API, read its types (`.d.ts`), `package.json` or README in `node_modules` in a targeted way (the installed version is the source of truth); never sweep `node_modules`.
 - At important steps, update the feature file (see skill `feature`) if the work is a feature; no file for small work.
 - Never run git write commands (the git guard blocks them). Never read or write secrets.
 

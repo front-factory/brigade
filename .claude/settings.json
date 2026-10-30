@@ -27,7 +27,6 @@
             "Read(./.env*)",
             "Read(./**/*.pem)",
             "Read(./**/*.key)",
-            "Read(./node_modules/**)",
             "Read(./package-lock.json)",
             "Read(./pnpm-lock.yaml)",
             "Read(./yarn.lock)",

@@ -12,7 +12,7 @@
     },
     "files": {
         ".claude/agents/git-operator.md": "3019cafa74b4f2c1a179998153b264c7d3b1c01251e3dde6497860e1ef72e478",
-        ".claude/agents/implementer.md": "92d1779ddd3d7ff0d64ff9b45571eea8485d0147c27758afe887d8a635fe1f79",
+        ".claude/agents/implementer.md": "41eee7a216164473d3cc9ee86565b1a7d2b3284e86e8533ae5793e1bc3fc8da8",
         ".claude/commands/brigade-effort.md": "95250fce81b53018293146dc2566cdd8a19c9b6a05b23022ca49aa82d266bee8",
         ".claude/commands/brigade-language.md": "838fab3e4c8748ca9ac143ccd54619a72f6208196e2ea15eb0d7d863326a1f31",
         ".claude/commands/brigade-reference-branch.md": "2dd4e06a7a1c3a29f554337c5c172607addaac6d994449e9a4551007b9d6639d",
@@ -25,7 +25,7 @@
         ".claude/hooks/session-start.mjs": "0930836fc3caa0c35f1fffe14b0773683876187b5a6bd66a224100c1344e8564",
         ".claude/hooks/statusline.mjs": "37ed6960cf3e85cd3d2c509c0e80854bdc53c0884f03ddd8447dbb7394f21da6",
         ".claude/rules/brigade.md": "f97456a0f649e953bb621ca716466de8905f133d4490eb53639a6a80e8aca3b0",
-        ".claude/settings.json": "2d394798c9d9b3b198a24bd3a60fedee216ca3e45789c78c21d6f6d8091939b0",
+        ".claude/settings.json": "1648369605b50a1a6898c5a2df6304756a3bd187b5357493a1ac5ad9c28c6a8d",
         ".claude/skills/audit/SKILL.md": "96af6da83aa98221bcd05c48b67d05300a062262968cc0b3a0892c3f10cc2167",
         ".claude/skills/feature/SKILL.md": "5faed5be1068fc5bb1578d6b395f4750c4e14a2bb075d9412f896469f7cc19b5",
         ".claude/skills/session-start/SKILL.md": "90f32cb8b652cc12118c78a71ae029bff48e3ec25259971d36a8ce989d3ff004"

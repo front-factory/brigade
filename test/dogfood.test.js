@@ -108,6 +108,12 @@ test('the settings deny the lockfiles of every supported package manager', () =>
     }
 });
 
+test('the settings do not deny node_modules', () => {
+    const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
+
+    assert.deepEqual(settings.permissions.deny.filter((rule) => rule.includes('node_modules')), []);
+});
+
 test('the settings wire the status line and the session start hook to scripts of the kit', () => {
     const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
 
