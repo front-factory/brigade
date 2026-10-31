@@ -2,6 +2,13 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+export const MANAGERS = [
+    'npm',
+    'pnpm',
+    'yarn',
+    'bun'
+];
+
 const LOCKFILES = {
     'pnpm-lock.yaml': 'pnpm',
     'yarn.lock': 'yarn',
@@ -10,14 +17,7 @@ const LOCKFILES = {
     'package-lock.json': 'npm'
 };
 
-export const PACKAGE_MANAGERS = [
-    'npm',
-    'pnpm',
-    'yarn',
-    'bun'
-];
-
-function git(cwd, ...args) {
+const git = (cwd, ...args) => {
     try {
         return execFileSync('git', args, {
             cwd,
@@ -31,64 +31,36 @@ function git(cwd, ...args) {
     } catch {
         return '';
     }
-}
+};
 
-function readJson(file) {
+// The parsed file, or null when it is missing or not valid JSON.
+export const readJson = (file) => {
     try {
         return JSON.parse(readFileSync(file, 'utf8'));
     } catch {
         return null;
     }
-}
+};
 
-export function isGitRepo(cwd) {
-    return git(cwd, 'rev-parse', '--is-inside-work-tree') === 'true';
-}
+export const isGitRepo = (cwd) => git(cwd, 'rev-parse', '--is-inside-work-tree') === 'true';
 
-export function localBranches(cwd) {
-    return git(cwd, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').filter(Boolean);
-}
+export const localBranches = (cwd) => git(cwd, 'for-each-ref', '--format=%(refname:short)', 'refs/heads').split('\n').filter(Boolean);
 
 // Remote HEAD first, then `init.defaultBranch`, then the current branch. Empty when nothing is found.
-export function detectDefaultBranch(cwd) {
-    const remote = git(cwd, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace(/^origin\//, '');
+export const detectDefaultBranch = (cwd) => git(cwd, 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD').replace(/^origin\//, '')
+    || git(cwd, 'config', 'init.defaultBranch')
+    || git(cwd, 'symbolic-ref', '--short', 'HEAD');
 
-    if (remote) {
-        return remote;
-    }
-
-    const configured = git(cwd, 'config', 'init.defaultBranch');
-
-    if (configured) {
-        return configured;
-    }
-
-    return git(cwd, 'symbolic-ref', '--short', 'HEAD');
-}
-
-// `packageManager` wins when it names a known manager; several lockfiles are a leftover, so `value` stays empty and the candidates are listed.
+// The `packageManager` field wins when it names a known manager (anything else is ignored: the value ends up in
+// settings.json permission rules). Otherwise one lockfile decides; several are a leftover, so `value` stays empty.
 export function detectPackageManager(cwd) {
     const field = readJson(join(cwd, 'package.json'))?.packageManager;
-    // Anything but a known manager is ignored: the value ends up in settings.json permission rules.
     const declared = typeof field === 'string' ? field.split('@')[0] : '';
 
-    if (PACKAGE_MANAGERS.includes(declared)) {
-        return {
-            value: declared,
-            candidates: [
-                declared
-            ]
-        };
-    }
-
-    const candidates = [
-        ...new Set(
-            Object.entries(LOCKFILES).filter(([
-                file
-            ]) => existsSync(join(cwd, file))).map(([
-                , name
-            ]) => name)
-        )
+    const candidates = MANAGERS.includes(declared) ? [
+        declared
+    ] : [
+        ...new Set(Object.keys(LOCKFILES).filter((file) => existsSync(join(cwd, file))).map((file) => LOCKFILES[file]))
     ];
 
     return {
@@ -110,9 +82,5 @@ export function detectCommitConvention(cwd) {
         return '';
     }
 
-    if (deps['@commitlint/config-angular']) {
-        return 'angular';
-    }
-
-    return deps['@commitlint/config-conventional'] ? 'conventional' : '';
+    return (deps['@commitlint/config-angular'] && 'angular') || (deps['@commitlint/config-conventional'] && 'conventional') || '';
 }

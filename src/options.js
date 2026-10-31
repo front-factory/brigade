@@ -1,645 +1,257 @@
-import { CONVENTIONS, commitFormatOf } from './conventions.js';
 import {
-    PACKAGE_MANAGERS,
-    detectCommitConvention,
-    detectDefaultBranch,
-    detectPackageManager,
-    localBranches
+    detectCommitConvention, detectDefaultBranch, detectPackageManager, localBranches, MANAGERS
 } from './detect.js';
+import { CONVENTIONS, convention } from './render.js';
+import { item } from './prompt.js';
+import { card } from './ui.js';
 
-const LANGUAGES = [
-    'English',
-    'French',
-    'Spanish',
-    'German',
-    'Italian',
-    'Portuguese',
-    'Dutch',
-    'Japanese',
-    'Chinese',
-    'Korean'
-];
-const ENGLISH = LANGUAGES[0];
-const DIFFERENT = '__different__';
+const words = (text) => text.split(' ');
+const LANGUAGES = words('English French Spanish German Italian Portuguese Dutch Japanese Chinese Korean');
+const APART = '__apart__';
 
-const LANGUAGE_KEYS = [
-    'replyLanguage',
-    'codeLanguage',
-    'docsLanguage'
+// The values, the preferred one first and without duplicates.
+const unique = (...values) => [
+    ...new Set(values.flat().filter(Boolean))
 ];
 
-// A stored manager that is not a known one (hand-edited manifest) counts as not stored.
-const storedManager = (previous) => (PACKAGE_MANAGERS.includes(previous.packageManager) ? previous.packageManager : '');
+const languages = (first) => unique(first, LANGUAGES).map((value) => item(value));
 
-const languages = (current) => [
-    ...new Set([
-        current,
-        ...LANGUAGES
-    ].filter(Boolean))
-].map((value) => ({
-    value,
-    label: value
-}));
+const one = (key, value) => (value ? {
+    [key]: value
+} : null);
 
-// The options of the kit, in the order they are asked. `keys` are the names stored in the manifest `answers`: a group
-// is missing when any of its keys is. `ask(ctx)` returns the values of its keys. Every answer is detected first, then
-// validated by the dev; a previous answer wins over detection. `detect(ctx)` returns the same values without asking
-// (express install), or null when they cannot be told.
-// ctx: { cwd, prompter, previous (stored answers), current (answers being edited), answers (decided so far), full (asked from scratch), personal }
-// The answers hold the dev's choices only: what comes from the kit is computed when the files are rendered.
-// An option stores only the dev's choice, never kit text: kit-owned text goes through a resolver called at render time
-// (like `commitFormatOf`), so an update never keeps a stale kit value.
+// The options of the kit, in the order they are asked. `keys` are the names stored in the manifest `answers`.
+// `detect(ctx)` returns the values without asking (a stored answer wins over detection), or null when they cannot be
+// told. `ask(ctx, found)` asks and returns the values; `found` is what `detect` told, preselected first. Without a
+// terminal every question resolves to its first choice, so `ask` doubles as the default. `valid` tells whether a set of
+// answers holds a usable value. ctx: { cwd, p, stored, answers (decided so far), personal, full }.
+// Answers hold the dev's choices only: kit text is computed when files are rendered, never stored.
 export const OPTIONS = [
     {
-        keys: [
-            'defaultBranch'
-        ],
-        detect: ({ cwd, previous }) => {
-            const defaultBranch = previous.defaultBranch || detectDefaultBranch(cwd);
-
-            return defaultBranch ? {
-                defaultBranch
-            } : null;
-        },
-        ask: async ({ cwd, prompter: { validate, text }, previous, current }) => ({
-            defaultBranch: await validate(
-                'Default branch of the repository',
-                previous.defaultBranch || detectDefaultBranch(cwd),
-                () => text('Default branch of the repository', current.defaultBranch || 'main')
-            )
-        })
+        keys: words('defaultBranch'),
+        label: 'Default branch',
+        detect: ({ cwd, stored }) => one('defaultBranch', stored.defaultBranch || detectDefaultBranch(cwd)),
+        ask: async ({ p }, found) => one('defaultBranch', await p.text('Default branch of the repository', found.defaultBranch || 'main')),
+        recap: (a) => `Default branch|${a.defaultBranch}`
     },
     {
-        keys: [
-            'baseBranch'
-        ],
-        detect: ({ previous, answers }) => {
-            const baseBranch = previous.baseBranch || answers.defaultBranch;
-
-            return baseBranch ? {
-                baseBranch
-            } : null;
-        },
-        ask: async ({ cwd, prompter: { choose }, previous, current, answers }) => {
+        keys: words('baseBranch'),
+        label: 'Reference branch',
+        detect: ({ stored, answers }) => one('baseBranch', stored.baseBranch || answers.defaultBranch),
+        ask: async ({ cwd, p, answers }, found) => {
             const { defaultBranch } = answers;
+            const names = unique(found.baseBranch, defaultBranch, localBranches(cwd).includes('develop') && 'develop');
 
-            const baseCandidates = [
-                current.baseBranch,
-                previous.baseBranch,
-                defaultBranch,
-                localBranches(cwd).includes('develop') && 'develop'
-            ].filter(Boolean);
-
-            return {
-                baseBranch: await choose(
-                    'Reference branch of the work',
-                    [
-                        ...new Set(baseCandidates)
-                    ].map((value) => ({
-                        value,
-                        label: value,
-                        hint: value === defaultBranch ? 'default branch' : 'feature branches start from it'
-                    }))
-                )
-            };
-        }
-    },
-    {
-        keys: [
-            'packageManager'
-        ],
-        detect: ({ cwd, previous }) => {
-            const packageManager = storedManager(previous) || detectPackageManager(cwd).value;
-
-            return packageManager ? {
-                packageManager
-            } : null;
+            return one('baseBranch', await p.choose('Reference branch of the work', names.map((name) => item(name, name === defaultBranch ? 'default branch' : 'feature branches start from it')), true));
         },
-        ask: async ({ cwd, prompter: { validate, choose }, previous, current }) => {
-            const manager = detectPackageManager(cwd);
-
-            const managers = [
-                ...new Set([
-                    current.packageManager,
-                    ...manager.candidates,
-                    ...PACKAGE_MANAGERS
-                ].filter(Boolean))
-            ];
-
-            return {
-                packageManager: await validate(
-                    'Package manager',
-                    storedManager(previous) || manager.value,
-                    () => choose(
-                        'Package manager',
-                        managers.map((value) => ({
-                            value,
-                            label: value,
-                            hint: manager.candidates.includes(value) ? 'found in the project' : undefined
-                        })),
-                        {
-                            other: false
-                        }
-                    )
-                )
-            };
-        }
+        recap: (a) => `Reference branch|${a.baseBranch}`
     },
     {
-        keys: [
-            'commitConvention'
-        ],
-        detect: ({ cwd, previous }) => {
-            const commitConvention = previous.commitConvention || detectCommitConvention(cwd) || 'conventional';
+        keys: words('packageManager'),
+        label: 'Package manager',
+        // Only the known managers are accepted: the value ends up in settings.json permission rules.
+        valid: (a) => MANAGERS.includes(a.packageManager),
+        detect: ({ cwd, stored }) => one('packageManager', MANAGERS.includes(stored.packageManager) ? stored.packageManager : detectPackageManager(cwd).value),
+        ask: async ({ cwd, p }, found) => {
+            const { candidates } = detectPackageManager(cwd);
 
-            if (commitConvention === 'custom') {
-                return previous.commitFormat ? {
-                    commitConvention,
-                    commitFormat: previous.commitFormat
+            return one('packageManager', await p.choose('Package manager', unique(found.packageManager, candidates, MANAGERS).map((name) => item(name, candidates.includes(name) ? 'found in the project' : undefined))));
+        },
+        recap: (a) => `Package manager|${a.packageManager}`
+    },
+    {
+        keys: words('commitConvention'),
+        label: 'Commit format',
+        valid: (a) => Boolean(convention(a.commitConvention) || (a.commitConvention === 'custom' && a.commitFormat)),
+        detect: ({ cwd, stored }) => {
+            const name = stored.commitConvention || detectCommitConvention(cwd) || 'conventional';
+
+            if (name === 'custom') {
+                return stored.commitFormat ? {
+                    commitConvention: name,
+                    commitFormat: stored.commitFormat
                 } : null;
             }
 
-            return CONVENTIONS[commitConvention] ? {
-                commitConvention
+            return convention(name) ? {
+                commitConvention: name
             } : null;
         },
-        ask: async ({ cwd, prompter: { validate, choose, text }, previous, current }) => {
-            const start = previous.commitConvention || current.commitConvention || detectCommitConvention(cwd) || 'conventional';
+        ask: async ({ cwd, p, stored }, found) => {
+            const start = found.commitConvention || detectCommitConvention(cwd) || 'conventional';
 
-            const commitConvention = await validate(
-                'Commit convention',
-                start,
-                () => choose(
-                    'Commit convention',
-                    [
-                        ...Object.entries(CONVENTIONS).map(([
-                            value,
-                            { label, example }
-                        ]) => ({
-                            value,
-                            label,
-                            hint: example
-                        })),
-                        {
-                            value: 'custom',
-                            label: 'Custom',
-                            hint: 'you describe it in one sentence'
-                        }
-                    ].sort((a, b) => (b.value === current.commitConvention) - (a.value === current.commitConvention)),
-                    {
-                        other: false
-                    }
-                ),
-                CONVENTIONS[start]?.label
-            );
+            const choices = Object.entries(CONVENTIONS).map(([
+                value,
+                { label, example }
+            ]) => item(value, example, label));
 
-            const custom = commitConvention === 'custom'
-                ? await text('Describe your commit format in one sentence', previous.commitFormat || current.commitFormat, {
-                    required: true
-                })
-                : '';
+            choices.push(item('custom', 'you describe it in one sentence', 'Custom'));
+            choices.sort((a, b) => (b.value === start) - (a.value === start));
+
+            const name = await p.choose('Commit convention', choices);
+            const format = name === 'custom' ? await p.text('Describe your commit format in one sentence', stored.commitFormat ?? '', true) : '';
 
             // A blank custom format (no terminal) falls back to the default convention, never to an empty line.
-            if (commitConvention === 'custom' && custom) {
-                return {
-                    commitConvention,
-                    commitFormat: custom
-                };
-            }
-
-            return {
-                commitConvention: CONVENTIONS[commitConvention] ? commitConvention : 'conventional'
-            };
-        }
-    },
-    {
-        keys: LANGUAGE_KEYS,
-        // The recommended setup: stored values first, English otherwise.
-        detect: ({ previous }) => {
-            const codeLanguage = previous.codeLanguage || ENGLISH;
-
-            return {
-                replyLanguage: previous.replyLanguage || ENGLISH,
-                codeLanguage,
-                docsLanguage: previous.docsLanguage || codeLanguage
+            return format ? {
+                commitConvention: name,
+                commitFormat: format
+            } : {
+                commitConvention: convention(name) ? name : 'conventional'
             };
         },
-        ask: async (ctx) => {
-            const { prompter: { choose }, previous, current } = ctx;
+        recap: (a) => `Commit format|${convention(a.commitConvention)?.label ?? 'Custom'}`
+    },
+    {
+        keys: words('replyLanguage codeLanguage docsLanguage'),
+        label: 'Languages',
+        detect: ({ stored }) => ({
+            replyLanguage: stored.replyLanguage || 'English',
+            codeLanguage: stored.codeLanguage || 'English',
+            docsLanguage: stored.docsLanguage || stored.codeLanguage || 'English'
+        }),
+        ask: async ({ p, personal, full }, found) => {
+            const replyLanguage = await p.choose('Language of Claude\'s replies for this project (each developer can use their own later)', languages(found.replyLanguage), true);
+            const together = found.codeLanguage === found.docsLanguage;
 
-            const known = {
-                ...current,
-                ...previous
-            };
+            const same = unique(together && found.codeLanguage, 'English', replyLanguage).map((value) => item(value));
+            const apart = item(APART, 'you choose each language', 'Different for code and docs');
 
-            // First question: replies. Stored values lead, English is preselected otherwise.
-            const replyOptions = languages(known.replyLanguage || ENGLISH);
+            const both = await p.choose('Language of the code, comments, commit messages and documentation', together ? [
+                ...same,
+                apart
+            ] : [
+                apart,
+                ...same
+            ]);
 
-            if (!known.replyLanguage) {
-                replyOptions[0].hint = 'recommended';
+            let codeLanguage = both;
+            let docsLanguage = both;
+
+            if (both === APART) {
+                codeLanguage = await p.choose('Language of the code, comments and commit messages (shared by the team)', languages(found.codeLanguage), true);
+                docsLanguage = await p.choose('Language of the documentation (shared by the team)', languages(found.docsLanguage || codeLanguage), true);
             }
 
-            const replyLanguage = await choose(
-                'Language of Claude\'s replies for this project (each developer can use their own later)',
-                replyOptions,
-                {
-                    other: false
-                }
-            );
+            // The personal choice lives in settings.local.json, not in the manifest: only asked on a full install.
+            delete personal.language;
 
-            // Second question: code and docs together, or apart. A stored split keeps "Different" first.
-            const together = known.codeLanguage && known.codeLanguage === known.docsLanguage ? known.codeLanguage : undefined;
-            const split = known.codeLanguage && known.docsLanguage && !together;
-
-            const sameChoices = [
-                ...new Set([
-                    ENGLISH,
-                    replyLanguage
-                ])
-            ].map((value) => ({
-                value,
-                label: value
-            }));
-
-            if (together && !sameChoices.some(({ value }) => value === together)) {
-                sameChoices.push({
-                    value: together,
-                    label: together
-                });
-            }
-
-            const different = {
-                value: DIFFERENT,
-                label: 'Different for code and docs',
-                hint: 'you choose each language'
-            };
-            const first = split ? different : sameChoices.find(({ value }) => value === (together || ENGLISH));
-
-            const codeDocs = await choose(
-                'Language of the code, comments, commit messages and documentation',
-                [
-                    first,
-                    ...[
-                        ...sameChoices,
-                        different
-                    ].filter((option) => option !== first)
-                ],
-                {
-                    other: false
-                }
-            );
-
-            let languagesChosen;
-
-            if (codeDocs === DIFFERENT) {
-                const codeLanguage = await choose(
-                    'Language of the code, comments and commit messages (shared by the team)',
-                    languages(known.codeLanguage)
-                );
-
-                const docsLanguage = await choose(
-                    'Language of the documentation (shared by the team)',
-                    languages(known.docsLanguage || codeLanguage)
-                );
-
-                languagesChosen = {
-                    replyLanguage,
-                    codeLanguage,
-                    docsLanguage
-                };
-            } else {
-                languagesChosen = {
-                    replyLanguage,
-                    codeLanguage: codeDocs,
-                    docsLanguage: codeDocs
-                };
-            }
-
-            // The personal choice lives in settings.local.json, not in the manifest: only asked from scratch.
-            delete ctx.personal.language;
-
-            if (ctx.full) {
-                const { replyLanguage } = languagesChosen;
-
-                const mine = await choose(
-                    'And for you? This stays on your machine',
-                    [
-                        {
-                            value: 'keep',
-                            label: `Keep the project language (${replyLanguage})`
-                        },
-                        {
-                            value: 'own',
-                            label: 'Use another language for me'
-                        }
-                    ],
-                    {
-                        other: false
-                    }
-                );
+            if (full && p.interactive) {
+                const mine = await p.choose('And for you? This stays on your machine', [
+                    item('keep', undefined, `Keep the project language (${replyLanguage})`),
+                    item('own', undefined, 'Use another language for me')
+                ]);
 
                 if (mine === 'own') {
-                    ctx.personal.language = await choose(
-                        'Your own reply language',
-                        languages().filter(({ value }) => value !== replyLanguage)
-                    );
+                    personal.language = await p.choose('Your own reply language', languages().filter(({ value }) => value !== replyLanguage), true);
                 }
             }
 
-            return languagesChosen;
-        }
+            return {
+                replyLanguage,
+                codeLanguage,
+                docsLanguage
+            };
+        },
+        recap: (a) => `Replies|${a.replyLanguage} (project default)\nCode|${a.codeLanguage}\nDocumentation|${a.docsLanguage}`
     }
 ];
 
-// The answers as the dev reads them, before and after the files are written. Missing ones are still to be chosen.
-export function recapRows(answers) {
-    const show = (value, text = value) => (value === undefined ? 'to choose' : text);
+// Whether the answers hold a usable value for every key of the option.
+export const has = (option, answers) => option.keys.every((key) => answers[key]) && (option.valid?.(answers) ?? true);
 
-    return [
-        [
-            'Default branch',
-            show(answers.defaultBranch)
-        ],
-        [
-            'Reference branch',
-            show(answers.baseBranch)
-        ],
-        [
-            'Package manager',
-            show(answers.packageManager)
-        ],
-        [
-            'Commit format',
-            show(answers.commitConvention, CONVENTIONS[answers.commitConvention]?.label ?? 'Custom')
-        ],
-        [
-            'Replies',
-            show(answers.replyLanguage, `${answers.replyLanguage} (project default)`)
-        ],
-        [
-            'Code',
-            show(answers.codeLanguage)
-        ],
-        [
-            'Documentation',
-            show(answers.docsLanguage)
-        ]
-    ];
-}
+// The recap rows ("label|value") of the answers; an option without a value shows "to choose".
+export const recapRows = (answers) => OPTIONS.flatMap((option) => (has(option, answers) ? option.recap(answers) : `${option.label}|to choose`).split('\n'));
 
-// The answers as written in the manifest: a known convention has no stored text (an older manifest may still hold one).
-const manifestAnswers = ({ commitFormat, ...answers }) => (CONVENTIONS[answers.commitConvention] || commitFormat === undefined ? answers : {
-    ...answers,
-    commitFormat
-});
+const askOne = (option, ctx) => option.ask(ctx, option.detect(ctx) ?? {});
 
-// `previous`: the stored answers. Returns the options (groups of keys) that have no stored value yet.
-export const missingOptions = (previous = {}) => OPTIONS.filter(({ keys }) => keys.some((key) => previous[key] === undefined) || (keys.includes('packageManager') && !storedManager(previous)) || (keys.includes('commitConvention') && !commitFormatOf(previous)));
-
-// What each option would be without asking. The ones that cannot be told are left out of the state.
-function propose(ctx) {
-    const answers = {};
-
-    for (const option of OPTIONS) {
-        const found = option.detect({
-            ...ctx,
-            answers
-        });
-
-        for (const [
-            key,
-            value
-        ] of Object.entries(found ?? {})) {
-            if (value !== undefined) {
-                answers[key] = value;
-            }
-        }
-    }
-
-    return answers;
-}
-
-// The groups the dev can re-open from the recap, each covering some options of OPTIONS.
-const GROUPS = [
-    {
-        value: 'branches',
-        label: 'Branches',
-        options: [
-            0,
-            1
-        ]
-    },
-    {
-        value: 'packageManager',
-        label: 'Package manager',
-        options: [
-            2
-        ]
-    },
-    {
-        value: 'commit',
-        label: 'Commit format',
-        options: [
-            3
-        ]
-    },
-    {
-        value: 'languages',
-        label: 'Languages',
-        options: [
-            4
-        ]
-    }
-];
-
-// Asks the given options in order, each one seeing the answers decided so far.
-async function askEach(options, ctx) {
-    for (const option of options) {
-        Object.assign(ctx.answers, await option.ask(ctx));
-    }
-}
-
-// A first install with a dev to ask. Everything is detected and shown in one card; "Install as is" takes it (the
-// options that cannot be told are still asked), "Customize" asks every option. After a customization, or when
-// something had to be asked, the recap can be edited group by group until it is right. Nothing is written before it
-// returns, so cancelling leaves the project untouched.
-async function askInteractive({ cwd, prompter, previous }) {
-    prompter.step(1, 3, 'Detection');
-    const personal = {};
-
-    const answers = propose({
+// Decides every option and returns { answers, personal, added } where `added` lists the keys the stored answers
+// lacked. `full`: every question is asked (first install, same version); otherwise only the missing options are.
+// Unknown stored keys are kept. Without a terminal nothing is asked: stored, detected or default values.
+export async function gather({ cwd, p, stored, full }) {
+    const ctx = {
         cwd,
-        prompter,
-        previous,
-        current: {},
+        p,
+        stored,
+        full,
         answers: {},
-        full: true,
-        personal
-    });
-    const unresolved = OPTIONS.filter(({ keys }) => keys.some((key) => answers[key] === undefined));
-
-    prompter.step(2, 3, 'Review');
-    prompter.card('Here is what will be set up', recapRows(answers));
-
-    const mode = await prompter.choose(
-        'How do you want to set up Brigade?',
-        [
-            {
-                value: 'asis',
-                label: 'Install as is',
-                hint: unresolved.length ? 'the options still to choose will be asked' : undefined
-            },
-            {
-                value: 'customize',
-                label: 'Customize',
-                hint: 'every option, one by one'
-            }
-        ],
-        {
-            other: false
-        }
-    );
-
-    let reviewed = false;
-
-    if (mode === 'customize') {
-        for (const key of Object.keys(answers)) {
-            delete answers[key];
-        }
-
-        await askEach(OPTIONS, {
-            cwd,
-            prompter,
-            previous,
-            current: {},
-            answers,
-            full: true,
-            personal
-        });
-
-        reviewed = true;
-    } else if (unresolved.length) {
-        await askEach(unresolved, {
-            cwd,
-            prompter,
-            previous,
-            current: {},
-            answers,
-            full: false,
-            personal
-        });
-
-        reviewed = true;
-    } else {
-        prompter.info('Installing as detected.');
-    }
-
-    while (reviewed) {
-        prompter.card('Your setup', recapRows(answers));
-
-        const verdict = await prompter.choose(
-            'Is the setup right?',
-            [
-                {
-                    value: 'ok',
-                    label: 'Everything is right'
-                },
-                {
-                    value: 'change',
-                    label: 'Change something'
-                }
-            ],
-            {
-                other: false
-            }
-        );
-
-        if (verdict === 'ok') {
-            break;
-        }
-
-        const chosen = await prompter.multi('What do you want to change?', GROUPS.map(({ value, label }) => ({
-            value,
-            label
-        })));
-
-        // Re-asked options skip "Is that right?" and start from the current values.
-        const editor = {
-            ...prompter,
-            validate: async (_message, _detected, pick) => pick()
-        };
-
-        const current = {
-            ...answers
-        };
-        const options = GROUPS.filter(({ value }) => chosen.includes(value)).flatMap(({ options }) => options.map((index) => OPTIONS[index]));
-
-        await askEach(options, {
-            cwd,
-            prompter: editor,
-            previous: {},
-            current,
-            answers,
-            full: true,
-            personal
-        });
-    }
-
-    return {
-        answers: manifestAnswers({
-            ...previous,
-            ...answers
-        }),
-        personal,
-        asked: []
+        personal: {}
     };
-}
 
-// Asks the options in order. From scratch (`full`) every option is asked; otherwise only the missing ones and the
-// others keep their stored answers. Keys the kit does not know (older version) are kept as they are.
-// Without a dev to ask (`prompter.interactive` false) every question resolves to its default.
-export async function askOptions({ cwd, prompter, previous = {}, full }) {
-    if (full && prompter.interactive) {
-        return askInteractive({
-            cwd,
-            prompter,
-            previous
-        });
-    }
+    const missing = OPTIONS.filter((option) => !has(option, stored));
+    const hasStored = Object.keys(stored).length > 0;
 
-    const missing = new Set(missingOptions(previous));
-    const answers = {};
-    const personal = {};
-    const asked = [];
+    const ask = async (options) => {
+        for (const option of options) {
+            Object.assign(ctx.answers, await askOne(option, ctx));
+        }
+    };
 
-    for (const option of OPTIONS) {
-        if (full || missing.has(option)) {
-            Object.assign(answers, await option.ask({
-                cwd,
-                prompter,
-                previous,
-                current: {},
-                answers,
-                full,
-                personal
+    if (full && p.interactive) {
+        const found = {};
+
+        for (const option of OPTIONS) {
+            Object.assign(found, option.detect({
+                ...ctx,
+                answers: found
             }));
+        }
 
-            if (!full) {
-                asked.push(option.keys);
-            }
+        const todo = OPTIONS.filter((option) => !has(option, found));
+
+        console.log(card('Here is what will be set up', recapRows(found)));
+
+        const mode = await p.choose('How do you want to set up Brigade?', [
+            item('asis', todo.length ? 'the options still to choose will be asked' : undefined, 'Install as is'),
+            item('customize', 'every option, one by one', 'Customize')
+        ]);
+
+        let reviewed = mode === 'customize' || todo.length > 0;
+
+        if (mode === 'customize') {
+            await ask(OPTIONS);
         } else {
-            for (const key of option.keys) {
-                answers[key] = previous[key];
+            ctx.answers = found;
+            await ask(todo);
+        }
+
+        while (reviewed) {
+            console.log(card('Your setup', recapRows(ctx.answers)));
+
+            if (await p.choose('Is the setup right?', [
+                item('ok', undefined, 'Everything is right'),
+                item('redo', undefined, 'Change something: ask everything again')
+            ]) === 'ok') {
+                reviewed = false;
+            } else {
+                ctx.answers = {};
+                await ask(OPTIONS);
+            }
+        }
+    } else {
+        for (const option of OPTIONS) {
+            if (full || missing.includes(option)) {
+                await ask([
+                    option
+                ]);
+            } else {
+                Object.assign(ctx.answers, ...option.keys.map((key) => one(key, stored[key])));
             }
         }
     }
 
+    const answers = {
+        ...stored,
+        ...ctx.answers
+    };
+
+    // A known convention carries no stored text.
+    if (convention(answers.commitConvention)) {
+        delete answers.commitFormat;
+    }
+
     return {
-        answers: manifestAnswers({
-            ...previous,
-            ...answers
-        }),
-        personal,
-        asked
+        answers,
+        personal: ctx.personal,
+        added: hasStored ? missing.flatMap(({ keys }) => keys) : []
     };
 }

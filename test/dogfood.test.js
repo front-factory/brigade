@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
     OPTIONS_FILE, render, renderOptions, sha
-} from '../src/install.js';
+} from '../src/render.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TEMPLATES = join(ROOT, 'templates', 'web');

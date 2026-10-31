@@ -1,80 +1,49 @@
-import { createHash } from 'node:crypto';
 import {
-    chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, rmdirSync, statSync, writeFileSync
+    chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync
 } from 'node:fs';
 import {
-    dirname, join, relative, resolve, sep
+    dirname, join, resolve, sep
 } from 'node:path';
-import { commitFormatOf } from './conventions.js';
+import { isGitRepo, readJson } from './detect.js';
+import {
+    detectStack, kitFiles, WRITE_ONCE
+} from './kit.js';
+import { gather } from './options.js';
+import { item } from './prompt.js';
+import {
+    OPTIONS_FILE, renderOptions, sha
+} from './render.js';
+import { lines, QUIET } from './ui.js';
 
+export const VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 export const MANIFEST = '.claude/brigade.json';
-export const OPTIONS_FILE = '.claude/rules/brigade-options.md';
+export const SETTINGS = '.claude/settings.json';
+const LOCAL_SETTINGS = '.claude/settings.local.json';
+
 // Folder of base copies left by Brigade 1.3.0, removed at every update.
-export const LEGACY_BASE_DIR = '.claude/brigade-base';
+export const LEGACY_DIR = '.claude/brigade-base';
 
 // Lines Brigade appends to the project files when missing. Existing lines are never touched or duplicated.
-export const APPENDS = {
-    '.gitignore': [
-        '.claude/settings.local.json',
-        'CLAUDE.local.md'
-    ],
-    '.gitattributes': [
-        '.claude/hooks/* text eol=lf'
-    ]
+const APPENDS = {
+    '.gitignore': '.claude/settings.local.json\nCLAUDE.local.md',
+    '.gitattributes': '.claude/hooks/* text eol=lf'
 };
 
-const RULES_PATH = '.claude/rules/brigade.md';
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const json = (value) => `${JSON.stringify(value, null, 4)}\n`;
+const readText = (file) => readFileSync(file, 'utf8');
 
-export const SETTINGS_PATH = '.claude/settings.json';
-const MIGRATION_NOTE = 'The kit\'s brigade.md no longer holds your options: they moved to .claude/rules/brigade-options.md. Merge brigade.md.proposed into your file, or delete your file\'s edits and re-run to take the new one.';
+const collator = new Intl.Collator('en', {
+    numeric: true
+});
 
-// Written once, then the team's own: never updated, never proposed over.
-export const WRITE_ONCE = new Set([
-    '.claude/context/decisions.md',
-    '.claude/context/architecture.md'
-]);
+// Positive when `a` is newer than `b`. Build metadata is ignored; a pre-release is older than its release, and
+// pre-release identifiers compare numerically when numeric.
+export function compareVersions(a, b) {
+    const x = a.split('+')[0].split(/-(.*)/s);
+    const y = b.split('+')[0].split(/-(.*)/s);
 
-// Line endings do not count: a CRLF checkout of a kit file is the same file.
-export const sha = (content) => createHash('sha256').update(content.replace(/\r\n/g, '\n')).digest('hex');
-
-function listFiles(dir) {
-    return readdirSync(dir, {
-        withFileTypes: true
-    }).flatMap((entry) => {
-        const abs = join(dir, entry.name);
-
-        if (entry.isDirectory()) {
-            return listFiles(abs);
-        }
-
-        return entry.name === '.DS_Store' ? [] : [
-            abs
-        ];
-    });
-}
-
-// True when the project already holds at least one file of the kit.
-export function hasKitFiles({ cwd, stackDir }) {
-    return listFiles(stackDir).some((source) => existsSync(join(cwd, relative(stackDir, source))));
-}
-
-// Angular states its own body rule (required except for `docs`); every other format leaves the body optional.
-const bodyRule = ({ commitConvention }) => (commitConvention === 'angular' ? '' : ' Add a body when the "why" is not obvious.');
-
-// `json`: the values go inside JSON strings, so quotes, backslashes and control characters are escaped.
-export function render(content, answers, json = false) {
-    const values = {
-        DEFAULT_BRANCH: answers.defaultBranch,
-        BASE_BRANCH: answers.baseBranch,
-        PACKAGE_MANAGER: answers.packageManager,
-        COMMIT_FORMAT: commitFormatOf(answers) + bodyRule(answers),
-        REPLY_LANGUAGE: answers.replyLanguage,
-        CODE_LANGUAGE: answers.codeLanguage,
-        DOCS_LANGUAGE: answers.docsLanguage
-    };
-    const escape = (value) => (json ? JSON.stringify(String(value)).slice(1, -1) : value);
-
-    return content.replace(/__([A-Z_]+)__/g, (match, key) => (values[key] === undefined ? match : escape(values[key])));
+    return collator.compare(x[0], y[0]) || Boolean(y[1]) - Boolean(x[1]) || collator.compare(x[1] ?? '', y[1] ?? '');
 }
 
 // A missing manifest means a first install. An unreadable one is an error: guessing would overwrite the install.
@@ -85,409 +54,126 @@ export function readManifest(cwd) {
         return null;
     }
 
-    try {
-        const manifest = JSON.parse(readFileSync(file, 'utf8'));
+    const manifest = readJson(file);
 
-        if (manifest && typeof manifest === 'object' && !Array.isArray(manifest)) {
-            return manifest;
-        }
-    } catch {
-        // Reported below, same as a valid JSON of the wrong shape.
+    if (!isObject(manifest)) {
+        throw new Error(`${MANIFEST} is corrupted. Fix it or delete it to start over (Brigade will then treat this as a first install).`);
     }
 
-    throw new Error(`${MANIFEST} is corrupted. Fix it or delete it to start over (Brigade will then treat this as a first install).`);
+    return manifest;
 }
 
-const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+// The script a command finally runs: the last `.claude/hooks/<name>` path, so a wrapper like run-node.sh does not count.
+const script = (command) => (typeof command === 'string' ? [
+    ...command.matchAll(/\.claude\/hooks\/([\w.-]+)/g)
+].at(-1)?.[1] : undefined);
 
-const isSame = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const isEmpty = (value) => (Array.isArray(value) || isObject(value)) && Object.keys(value).length === 0;
 
-// A command belongs to the kit when the script it finally runs (the last `.claude/hooks/<name>` path, so a wrapper like
-// run-node.sh does not count) is one the kit's own hooks and statusLine run.
-function kitScripts(kit) {
-    const last = (command) => String(command).match(/\.claude\/hooks\/([\w.-]+)(?![\s\S]*\.claude\/hooks\/)/)?.[1];
-    const names = new Set();
-
-    const collect = (value) => {
-        if (typeof value === 'string') {
-            names.add(last(value));
-        } else if (value && typeof value === 'object') {
-            Object.values(value).forEach(collect);
-        }
-    };
-
-    collect(kit.statusLine?.command);
-    collect(kit.hooks);
-    names.delete(undefined);
-
-    return (command) => typeof command === 'string' && names.has(last(command));
-}
-
-// The developer's settings without the entries that run a kit script, whatever their version: older kit commands are
-// dropped too, so the merge does not keep both and the strip leaves nothing behind. The developer's own hooks stay.
+// The developer's settings without the entries that run a kit hook script, whatever their version: older kit commands
+// are dropped too, so a merge does not keep both and an uninstall leaves nothing behind. The developer's own stay.
 export function dropKitEntries(mine, kit) {
-    const owned = kitScripts(kit);
+    const names = new Set([
+        kit.statusLine?.command,
+        ...Object.values(kit.hooks ?? {}).flat().flatMap((group) => group.hooks?.map((hook) => hook.command) ?? [])
+    ].map(script));
 
-    const rest = {
-        ...mine
-    };
+    const owned = (command) => script(command) !== undefined && names.has(script(command));
+    const rest = structuredClone(mine);
 
-    if (isObject(rest.statusLine) && owned(rest.statusLine.command)) {
+    if (owned(rest.statusLine?.command)) {
         delete rest.statusLine;
     }
 
-    if (isObject(rest.hooks)) {
-        rest.hooks = {};
+    for (const event of Object.keys(isObject(rest.hooks) ? rest.hooks : {})) {
+        const groups = rest.hooks[event];
 
-        for (const [
-            event,
-            groups
-        ] of Object.entries(mine.hooks)) {
-            if (!Array.isArray(groups)) {
-                rest.hooks[event] = groups;
-                continue;
-            }
+        if (Array.isArray(groups)) {
+            rest.hooks[event] = groups.filter((group) => {
+                const before = group?.hooks?.length;
 
-            const left = groups.flatMap((group) => {
-                if (!isObject(group) || !Array.isArray(group.hooks)) {
-                    return [
-                        group
-                    ];
+                if (Array.isArray(group?.hooks)) {
+                    group.hooks = group.hooks.filter((hook) => !owned(hook?.command));
                 }
 
-                const hooks = group.hooks.filter((hook) => !(isObject(hook) && owned(hook.command)));
-
-                return hooks.length === 0 && group.hooks.length > 0 ? [] : [
-                    {
-                        ...group,
-                        hooks
-                    }
-                ];
+                return !before || group.hooks.length > 0;
             });
 
-            if (left.length > 0 || groups.length === 0) {
-                rest.hooks[event] = left;
+            if (groups.length > 0 && rest.hooks[event].length === 0) {
+                delete rest.hooks[event];
             }
         }
+    }
 
-        if (Object.keys(rest.hooks).length === 0) {
-            delete rest.hooks;
+    if (isEmpty(rest.hooks)) {
+        delete rest.hooks;
+    }
+
+    return rest;
+}
+
+// Objects merge by key, arrays are a union (the developer's entries first, compared by value), the developer's scalars win.
+export function mergeSettings(mine, kit) {
+    if (Array.isArray(mine) && Array.isArray(kit)) {
+        return mine.concat(kit.filter((entry) => !mine.some((own) => same(own, entry))));
+    }
+
+    if (!isObject(mine) || !isObject(kit)) {
+        return mine;
+    }
+
+    const merged = structuredClone(mine);
+
+    for (const key of Object.keys(kit)) {
+        merged[key] = key in mine ? mergeSettings(mine[key], kit[key]) : kit[key];
+    }
+
+    return merged;
+}
+
+// The inverse of mergeSettings: array items and keys equal to the kit's are dropped, and so are the objects and
+// arrays left empty.
+export function stripSettings(mine, kit) {
+    if (Array.isArray(mine) && Array.isArray(kit)) {
+        return mine.filter((entry) => !kit.some((own) => same(own, entry)));
+    }
+
+    if (!isObject(mine) || !isObject(kit)) {
+        return mine;
+    }
+
+    const rest = {};
+
+    for (const key of Object.keys(mine)) {
+        const left = key in kit ? stripSettings(mine[key], kit[key]) : mine[key];
+
+        if (!(key in kit && (same(mine[key], kit[key]) || isEmpty(left)))) {
+            rest[key] = left;
         }
     }
 
     return rest;
 }
 
-// The developer's settings plus what the kit adds. Objects merge by key, arrays are a union (the developer's entries
-// first, the kit's missing ones after, compared by value), any other value stays the developer's.
-export function mergeSettings(mine, kit) {
-    if (Array.isArray(mine) && Array.isArray(kit)) {
-        const known = new Set(mine.map((item) => JSON.stringify(item)));
-
-        return [
-            ...mine,
-            ...kit.filter((item) => !known.has(JSON.stringify(item)))
-        ];
-    }
-
-    if (isObject(mine) && isObject(kit)) {
-        const merged = {
-            ...mine
-        };
-
-        for (const [
-            key,
-            value
-        ] of Object.entries(kit)) {
-            merged[key] = key in mine ? mergeSettings(mine[key], value) : value;
-        }
-
-        return merged;
-    }
-
-    return mine;
-}
-
-// The inverse of mergeSettings: what is left of the developer's settings once the kit's entries are gone. Array items
-// equal to a kit item and keys equal to the kit's are dropped, and so are the objects and arrays left empty.
-export function stripSettings(mine, kit) {
-    if (Array.isArray(mine) && Array.isArray(kit)) {
-        const known = new Set(kit.map((item) => JSON.stringify(item)));
-
-        return mine.filter((item) => !known.has(JSON.stringify(item)));
-    }
-
-    if (isObject(mine) && isObject(kit)) {
-        const rest = {};
-
-        for (const [
-            key,
-            value
-        ] of Object.entries(mine)) {
-            if (!(key in kit)) {
-                rest[key] = value;
-                continue;
-            }
-
-            if (isSame(value, kit[key])) {
-                continue;
-            }
-
-            const left = stripSettings(value, kit[key]);
-            const empty = (Array.isArray(left) && left.length === 0) || (isObject(left) && Object.keys(left).length === 0);
-
-            if (!empty) {
-                rest[key] = left;
-            }
-        }
-
-        return rest;
-    }
-
-    return mine;
-}
-
-// The old kit defaults (mode, model) move to the new ones, since mergeSettings keeps the developer's value and would
-// leave them behind forever. Any other value is the developer's choice and stays.
-function migrateDefaults(merged, kit) {
-    const result = {
-        ...merged
-    };
+// The developer's settings plus the current kit entries: the kit's hook entries are replaced, then merged. The old kit
+// defaults (mode, model) move to the new ones, since the merge keeps the developer's value and would leave them forever.
+export function mergeKit(mine, kit) {
+    const merged = mergeSettings(dropKitEntries(mine, kit), kit);
 
     if (merged.permissions?.defaultMode === 'acceptEdits' && kit.permissions?.defaultMode === 'plan') {
-        result.permissions = {
-            ...merged.permissions,
-            defaultMode: 'plan'
-        };
+        merged.permissions.defaultMode = 'plan';
     }
 
     if (merged.model === 'opusplan' && kit.model === 'opus') {
-        result.model = 'opus';
+        merged.model = 'opus';
     }
 
-    return result;
+    return merged;
 }
 
-// The merged file content, or null when either side is not a JSON object (the caller falls back to a proposal).
-function mergedSettings(current, kit) {
-    try {
-        const mine = JSON.parse(current);
-        const theirs = JSON.parse(kit);
-
-        if (!isObject(mine) || !isObject(theirs)) {
-            return null;
-        }
-
-        return {
-            merged: migrateDefaults(mergeSettings(dropKitEntries(mine, theirs), theirs), theirs),
-            mine
-        };
-    } catch {
-        return null;
-    }
-}
-
-// Walks up from a removed file and drops the directories it left empty, never going above the project.
-function pruneEmptyDirs(cwd, file) {
-    const root = resolve(cwd);
-
-    for (let dir = dirname(resolve(file)); dir.startsWith(root + sep); dir = dirname(dir)) {
-        if (!existsSync(dir) || readdirSync(dir).length > 0) {
-            return;
-        }
-
-        rmdirSync(dir);
-    }
-}
-
-// Never overwrites a file that differs from what Brigade last wrote: an edited file gets a `.proposed` next to it when
-// the kit changed it. Everything is planned first (reads only), then written, so an error while planning leaves the
-// project untouched.
-export function planFiles({ cwd, stackDir, answers, previous }) {
-    const report = [];
-    const kit = new Set();
-    const hashes = {};
-    const writes = [];
-    const removals = [];
-
-    for (const source of listFiles(stackDir)) {
-        const path = relative(stackDir, source).split('\\').join('/');
-
-        kit.add(path);
-        const target = join(cwd, path);
-        const content = render(readFileSync(source, 'utf8'), answers, path.endsWith('.json'));
-        const mode = statSync(source).mode & 0o777;
-        const wanted = sha(content);
-        const proposed = `${target}.proposed`;
-
-        const write = (file) => writes.push({
-            file,
-            content,
-            mode
-        });
-        const recorded = previous?.files?.[path];
-
-        if (!existsSync(target)) {
-            write(target);
-            hashes[path] = wanted;
-            report.push({
-                path,
-                status: 'created'
-            });
-
-            continue;
-        }
-
-        const text = readFileSync(target, 'utf8');
-        const current = sha(text);
-        const settings = path === SETTINGS_PATH && current !== wanted && recorded !== wanted ? mergedSettings(text, content) : null;
-
-        if (WRITE_ONCE.has(path)) {
-            report.push({
-                path,
-                status: current === wanted ? 'unchanged' : 'kept'
-            });
-
-            continue;
-        }
-
-        if (current === wanted) {
-            // The target caught up with the kit: an old proposal is stale.
-            if (existsSync(proposed)) {
-                removals.push(proposed);
-            }
-
-            hashes[path] = current;
-            report.push({
-                path,
-                status: 'unchanged'
-            });
-        } else if (recorded === current) {
-            write(target);
-
-            if (existsSync(proposed)) {
-                removals.push(proposed);
-            }
-
-            hashes[path] = wanted;
-            report.push({
-                path,
-                status: 'updated'
-            });
-        } else if (settings) {
-            // Only when the kit's settings changed since the last install (or none is recorded). The developer's
-            // entries stay, the kit's are added. The kit's hash is recorded, so the next run with the same kit finds
-            // it unchanged (`kept`) and does not add back what the developer removed.
-            const { merged, mine } = settings;
-
-            hashes[path] = wanted;
-
-            if (existsSync(proposed)) {
-                removals.push(proposed);
-            }
-
-            if (isSame(merged, mine)) {
-                report.push({
-                    path,
-                    status: 'kept'
-                });
-            } else {
-                writes.push({
-                    file: target,
-                    content: `${JSON.stringify(merged, null, 4)}\n`,
-                    mode
-                });
-
-                report.push({
-                    path,
-                    status: 'merged'
-                });
-            }
-        } else if (recorded === wanted) {
-            // The kit did not change this file since the last install: nothing new to propose. A proposal left by an
-            // earlier version stays, it is the developer's file now.
-            hashes[path] = wanted;
-            report.push({
-                path,
-                status: 'kept'
-            });
-        } else {
-            // The developer's file is never touched. The proposal is delivered once: the kit's hash is recorded, so the
-            // next run finds the kit unchanged (`kept`) and leaves the `.proposed` alone as a reminder, even if it was
-            // deleted. It is written again only when the kit changes the file again.
-            const same = existsSync(proposed) && sha(readFileSync(proposed, 'utf8')) === wanted;
-
-            if (!same) {
-                write(proposed);
-            }
-
-            hashes[path] = wanted;
-
-            const entry = {
-                path,
-                status: 'proposed'
-            };
-
-            if (path === RULES_PATH && !text.includes('brigade-options.md')) {
-                entry.note = MIGRATION_NOTE;
-            }
-
-            report.push(entry);
-        }
-    }
-
-    // Recorded in the manifest but no longer in the kit: removed if untouched, kept and reported if edited.
-    for (const [
-        path,
-        recorded
-    ] of Object.entries(previous?.files ?? {})) {
-        if (kit.has(path) || WRITE_ONCE.has(path)) {
-            continue;
-        }
-
-        const target = resolve(cwd, path);
-
-        // Only files inside the project, whatever the manifest says.
-        if (!target.startsWith(resolve(cwd) + sep) || !existsSync(target) || !statSync(target).isFile()) {
-            continue;
-        }
-
-        if (sha(readFileSync(target, 'utf8')) === recorded) {
-            removals.push(target);
-            report.push({
-                path,
-                status: 'removed'
-            });
-        } else {
-            hashes[path] = recorded;
-            report.push({
-                path,
-                status: 'obsolete'
-            });
-        }
-    }
-
-    // The base copies of Brigade 1.3.0 are of no use anymore.
-    const legacy = join(cwd, LEGACY_BASE_DIR);
-
-    if (existsSync(legacy) && statSync(legacy).isDirectory()) {
-        removals.push(legacy);
-        report.push({
-            path: `${LEGACY_BASE_DIR}/`,
-            status: 'removed'
-        });
-    }
-
-    return {
-        report,
-        hashes,
-        writes,
-        removals
-    };
-}
-
-// Writes to a temp file next to the target, then renames it over: a reader never sees a half-written file, and a failed
-// write leaves the target as it was. Without a `mode`, the target keeps its own.
+// Writes to a temp file next to the target, then renames it over: a reader never sees a half-written file, and a
+// failed write leaves the target as it was. Without a `mode`, the target keeps its own.
 export function writeAtomic(file, content, mode) {
     mkdirSync(dirname(file), {
         recursive: true
@@ -495,12 +181,10 @@ export function writeAtomic(file, content, mode) {
 
     const temp = `${file}.${process.pid}.tmp`;
 
-    mode ??= existsSync(file) ? statSync(file).mode & 0o777 : undefined;
-
     try {
         writeFileSync(temp, content);
 
-        if (mode !== undefined) {
+        if ((mode ??= existsSync(file) ? statSync(file).mode & 0o777 : undefined) !== undefined) {
             chmodSync(temp, mode);
         }
 
@@ -514,8 +198,11 @@ export function writeAtomic(file, content, mode) {
     }
 }
 
-// The only step that writes. Directories left empty by a removal are cleaned.
-export function applyPlan(cwd, { writes, removals }) {
+// The only step that writes: the writes in order (the manifest is the last one), then the removals, then the
+// directories they left empty, never going above the project.
+export function apply(cwd, { writes, removals }) {
+    const root = resolve(cwd);
+
     for (const { file, content, mode } of writes) {
         writeAtomic(file, content, mode);
     }
@@ -526,194 +213,268 @@ export function applyPlan(cwd, { writes, removals }) {
             recursive: true
         });
 
-        pruneEmptyDirs(cwd, file);
+        for (let dir = dirname(resolve(file)); dir.startsWith(root + sep) && existsSync(dir) && readdirSync(dir).length === 0; dir = dirname(dir)) {
+            rmdirSync(dir);
+        }
     }
 }
 
-export function installFiles(options) {
-    const plan = planFiles(options);
-
-    applyPlan(options.cwd, plan);
-
-    return {
-        report: plan.report,
-        hashes: plan.hashes
-    };
-}
-
-// The project's answers in plain English. Not a kit file: generated from the answers at every install, always overwritten.
-export function renderOptions(answers) {
-    return `# Brigade options
-
-<!-- Generated by Brigade from .claude/brigade.json. Do not edit: changes are overwritten at the next install or update. -->
-
-Options of this project, referred to by \`.claude/rules/brigade.md\`.
-
-- Default branch: \`${answers.defaultBranch}\`.
-- Reference branch of the work: \`${answers.baseBranch}\`.
-- Package manager: \`${answers.packageManager}\`.
-- Commit format: ${commitFormatOf(answers)}
-- Code, comments and commit messages language: ${answers.codeLanguage}.
-- Documentation language: ${answers.docsLanguage}.
-- Reply language, project default: ${answers.replyLanguage}.
-`;
-}
-
-// Reads only: the report entry and the write (none when the file is already right).
-function planOptionsFile({ cwd, answers }) {
-    const file = join(cwd, OPTIONS_FILE);
-    const content = renderOptions(answers);
-    const exists = existsSync(file);
-
-    if (exists && sha(readFileSync(file, 'utf8')) === sha(content)) {
-        return {
-            entry: {
-                path: OPTIONS_FILE,
-                status: 'unchanged'
-            },
-            writes: []
-        };
-    }
-
-    return {
-        entry: {
-            path: OPTIONS_FILE,
-            status: exists ? 'updated' : 'created'
-        },
-        writes: [
-            {
-                file,
-                content
-            }
-        ]
-    };
-}
-
-const normalize = (line) => line.trim().replace(/^\//, '');
-
-// Reads only: the missing lines are reported and turned into writes.
-function planAppends(cwd) {
-    const ignored = [];
+// Reads only: what an install or update would write, as { report, writes, removals, warnings }. Never overwrites a file
+// that differs from what Brigade last wrote: an edited file gets a `.proposed` when the kit changed it.
+export function planInstall({ cwd, stack, answers, stored, personal = {} }) {
+    const report = [];
     const writes = [];
+    const removals = [];
+    const warnings = [];
+    const hashes = {};
+    const files = kitFiles(stack, answers);
+    const shipped = new Set(files.map(({ path }) => path));
 
-    for (const [
+    const put = (file, content, mode) => writes.push({
+        file,
+        content,
+        mode
+    });
+
+    const add = (path, status, detail) => report.push({
         path,
-        lines
-    ] of Object.entries(APPENDS)) {
-        const file = join(cwd, path);
-        const existing = existsSync(file) ? readFileSync(file, 'utf8') : '';
-        const known = new Set(existing.split(/\r?\n/).map(normalize));
-        const missing = lines.filter((line) => !known.has(normalize(line)));
+        status,
+        detail
+    });
 
-        if (missing.length === 0) {
-            ignored.push({
-                path,
-                status: 'unchanged'
-            });
+    for (const { path, content, mode } of files) {
+        const target = join(cwd, path);
+        const proposal = `${target}.proposed`;
+        const wanted = sha(content);
+        const recorded = stored?.files?.[path];
+
+        const write = (file = target) => put(file, content, mode);
+        const unpropose = () => existsSync(proposal) && removals.push(proposal);
+
+        if (!existsSync(target)) {
+            write();
+            hashes[path] = wanted;
+            add(path, 'created');
 
             continue;
         }
 
-        // Keep the file's own line endings.
-        const eol = existing.includes('\r\n') ? '\r\n' : '\n';
-        const separator = existing === '' || existing.endsWith('\n') ? '' : eol;
-        const gap = existing === '' ? '' : eol;
+        const text = readText(target);
+        const current = sha(text);
 
-        writes.push({
-            file,
-            content: `${existing}${separator}${gap}${missing.join(eol)}${eol}`
-        });
+        if (WRITE_ONCE.has(path)) {
+            if (recorded || current === wanted) {
+                hashes[path] = recorded ?? wanted;
+            }
 
-        ignored.push({
-            path,
-            status: 'updated',
-            added: missing
-        });
-    }
+            add(path, current === wanted ? 'unchanged' : 'kept');
 
-    return {
-        ignored,
-        writes
-    };
-}
-
-export function appendMissingLines(cwd) {
-    const { ignored, writes } = planAppends(cwd);
-
-    applyPlan(cwd, {
-        writes,
-        removals: []
-    });
-
-    return ignored;
-}
-
-// The rest of the install, planned after the kit files: the options file, the ignore lines and the manifest. The
-// manifest comes last, so a failed write leaves the previous install described.
-export function planExtras({ cwd, version, stack, answers, hashes }) {
-    const options = planOptionsFile({
-        cwd,
-        answers
-    });
-    const { ignored, writes } = planAppends(cwd);
-
-    // Plain code-unit order, so the manifest does not depend on the locale.
-    const files = Object.fromEntries(Object.entries(hashes).sort(([
-        a
-    ], [
-        b
-    ]) => {
-        if (a === b) {
-            return 0;
+            continue;
         }
 
-        return a < b ? -1 : 1;
+        // Only when the kit's settings changed since the last install (or none is recorded). The kit's hash is
+        // recorded, so the next run finds it unchanged and does not add back what the developer removed.
+        const mine = path === SETTINGS && current !== wanted && recorded !== wanted && recorded !== current ? readJson(target) : null;
+        const merged = isObject(mine) ? mergeKit(mine, JSON.parse(content)) : null;
+
+        hashes[path] = wanted;
+
+        if (current === wanted) {
+            unpropose();
+            hashes[path] = current;
+            add(path, 'unchanged');
+        } else if (recorded === current) {
+            write();
+            unpropose();
+            add(path, 'updated');
+        } else if (merged) {
+            unpropose();
+
+            if (same(merged, mine)) {
+                add(path, 'kept');
+            } else {
+                put(target, json(merged), mode);
+                add(path, 'merged');
+            }
+        } else if (recorded === wanted) {
+            // The kit did not change this file since the last install: nothing new to propose.
+            add(path, 'kept');
+        } else {
+            // Delivered once: the kit's hash is recorded, so the proposal is written again only when the kit
+            // changes the file again.
+            if (!(existsSync(proposal) && sha(readText(proposal)) === wanted)) {
+                write(proposal);
+            }
+
+            add(path, 'proposed');
+        }
+    }
+
+    // Recorded in the manifest but no longer in the kit: removed if untouched, kept and reported if edited.
+    for (const path of Object.keys(stored?.files ?? {})) {
+        const recorded = stored.files[path];
+        const target = resolve(cwd, path);
+
+        // Only files inside the project, whatever the manifest says.
+        if (shipped.has(path) || WRITE_ONCE.has(path) || !target.startsWith(resolve(cwd) + sep) || !(existsSync(target) && statSync(target).isFile())) {
+            continue;
+        }
+
+        if (sha(readText(target)) === recorded) {
+            removals.push(target);
+            add(path, 'removed');
+        } else {
+            hashes[path] = recorded;
+            add(path, 'obsolete');
+        }
+    }
+
+    if (existsSync(join(cwd, LEGACY_DIR))) {
+        removals.push(join(cwd, LEGACY_DIR));
+        add(`${LEGACY_DIR}/`, 'removed');
+    }
+
+    // The options file is generated from the answers, not recorded.
+    const options = join(cwd, OPTIONS_FILE);
+    const optionsText = renderOptions(answers);
+    const optionsState = !existsSync(options) ? 'created' : (sha(readText(options)) === sha(optionsText) ? 'unchanged' : 'updated');
+
+    if (optionsState !== 'unchanged') {
+        put(options, optionsText);
+    }
+
+    add(OPTIONS_FILE, optionsState);
+
+    for (const path of Object.keys(APPENDS)) {
+        const file = join(cwd, path);
+        const existing = existsSync(file) ? readText(file) : '';
+        const known = new Set(existing.split(/\r?\n/).map((line) => line.trim().replace(/^\//, '')));
+        const missing = APPENDS[path].split('\n').filter((line) => !known.has(line));
+
+        if (missing.length > 0) {
+            // Keep the file's own line endings.
+            const eol = existing.includes('\r\n') ? '\r\n' : '\n';
+            const gap = existing === '' ? '' : (existing.endsWith('\n') ? eol : eol + eol);
+
+            put(file, `${existing}${gap}${missing.join(eol)}${eol}`);
+            add(path, 'appended', missing.join(', '));
+        }
+    }
+
+    // The personal reply language goes to the developer's own local settings. A broken file is left alone.
+    if (personal.language) {
+        const file = join(cwd, LOCAL_SETTINGS);
+        const current = existsSync(file) ? readJson(file) : {};
+
+        if (isObject(current)) {
+            put(file, json({
+                ...current,
+                language: personal.language
+            }));
+        } else {
+            warnings.push(`${LOCAL_SETTINGS} is not valid JSON: it was left untouched, so your own reply language was not saved. Fix it and rerun.`);
+        }
+    }
+
+    // Plain code-unit order, so the manifest does not depend on the locale. Last, so a failed write leaves the
+    // previous install described.
+    put(join(cwd, MANIFEST), json({
+        version: VERSION,
+        stack,
+        answers,
+        files: Object.fromEntries(Object.keys(hashes).sort().map((path) => [
+            path,
+            hashes[path]
+        ]))
     }));
 
-    const manifest = {
-        file: join(cwd, MANIFEST),
-        content: `${JSON.stringify({
-            version,
-            stack,
-            answers,
-            files
-        }, null, 4)}\n`
-    };
-
     return {
-        report: [
-            options.entry
-        ],
-        ignored,
-        writes: [
-            ...options.writes,
-            ...writes,
-            manifest
-        ]
+        report,
+        writes,
+        removals,
+        warnings
     };
 }
 
-// Personal answers go to the developer's own local settings, never to the shared files. A broken file is left alone.
-export function writeLocalSettings(cwd, patch) {
-    const file = join(cwd, '.claude', 'settings.local.json');
-    let current = {};
+// Asked whenever Brigade is already installed. Without a terminal the first choice, "update", is taken.
+function chooseVersion(p, installed) {
+    const same = installed === VERSION;
+    const verb = compareVersions(VERSION, installed) > 0 ? 'Update' : 'Switch';
 
-    if (existsSync(file)) {
-        try {
-            current = JSON.parse(readFileSync(file, 'utf8'));
-        } catch {
-            return {
-                status: 'skipped'
-            };
+    p.say(`Brigade ${installed} is installed here, this is Brigade ${VERSION}.`);
+
+    return p.choose(same ? 'What do you want to do?' : `${verb} to ${VERSION}?`, [
+        item('update', same ? 'the questions are asked again, files only change if an answer does' : 'new kit files, your answers are kept and only new options are asked', same ? 'Change my options' : `${verb} to ${VERSION}`),
+        item('keep', 'nothing is written', same ? 'Leave it as it is' : `Keep ${installed}`)
+    ]);
+}
+
+// `dryRun`: nothing is asked and nothing is written, the result lists what a real run would do.
+export async function runInit({ cwd, p, stack, dryRun }) {
+    const name = stack ?? detectStack(cwd);
+    const stored = readManifest(cwd);
+    const installed = typeof stored?.version === 'string' ? stored.version : undefined;
+    const repo = isGitRepo(cwd);
+
+    const kept = {
+        kept: installed
+    };
+
+    p.banner(VERSION);
+    p.say(`Stack: ${name}${stack ? '' : ' (the only one available for now)'}.`);
+
+    if (installed && await chooseVersion(p, installed) === 'keep') {
+        return kept;
+    }
+
+    if (!repo) {
+        p.warn('No git repository here. Brigade will not create one: run `git init` when you are ready. The branch names below are kept for then.');
+    }
+
+    if (!stored && kitFiles(name, {}).some(({ path }) => existsSync(join(cwd, path)))) {
+        p.warn(`${MANIFEST} is missing but Brigade files already exist here. Nothing is overwritten: files identical to the kit are adopted and files that differ are kept, and get a .proposed only when the kit changed them. If the manifest exists in your team's repo, restore it from git first.`);
+    }
+
+    const { answers, personal, added } = await gather({
+        cwd,
+        p,
+        stored: stored?.answers ?? {},
+        full: !installed || installed === VERSION
+    });
+
+    const plan = planInstall({
+        cwd,
+        stack: name,
+        answers,
+        stored,
+        personal
+    });
+
+    const result = {
+        ...plan,
+        stack: name,
+        answers,
+        personal,
+        added,
+        repo
+    };
+
+    // An update shows what it will change before writing anything.
+    if (!dryRun && stored && p.interactive) {
+        const changes = plan.report.filter(({ status }) => !QUIET.has(status));
+        const others = plan.report.length - changes.length;
+
+        p.say(`What this update will do:\n${lines(changes, true)}`);
+        p.say(`${others} other file${others === 1 ? '' : 's'} already up to date or yours, left alone.`);
+
+        if (changes.length > 0 && !await p.confirm('Apply these changes?')) {
+            return kept;
         }
     }
 
-    writeAtomic(file, `${JSON.stringify({
-        ...current,
-        ...patch
-    }, null, 4)}\n`);
+    if (!dryRun) {
+        apply(cwd, plan);
+    }
 
-    return {
-        status: 'written'
-    };
+    return result;
 }

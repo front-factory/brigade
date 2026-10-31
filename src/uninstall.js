@@ -1,165 +1,106 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve, sep } from 'node:path';
 import {
-    existsSync, readFileSync, statSync
-} from 'node:fs';
-import {
-    join, resolve, sep
-} from 'node:path';
-import {
-    applyPlan, dropKitEntries, LEGACY_BASE_DIR, MANIFEST, OPTIONS_FILE, readManifest, render, renderOptions, SETTINGS_PATH, sha, stripSettings, WRITE_ONCE
+    apply, dropKitEntries, LEGACY_DIR, MANIFEST, readManifest, SETTINGS, stripSettings, VERSION
 } from './install.js';
-import { createPrompter } from './prompt.js';
-import { DEFAULT_STACK, STACKS } from './stacks.js';
-import { VERSION } from './version.js';
-import { UNINSTALL_PREVIEW_WORDS } from './words.js';
+import {
+    DEFAULT_STACK, kitFiles, STACKS, WRITE_ONCE
+} from './kit.js';
+import {
+    OPTIONS_FILE, renderOptions, sha
+} from './render.js';
+import { lines } from './ui.js';
 
-const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
-
-// What is left of an edited settings file once the kit's entries are gone: a removal, a write, or kept as it is.
-function planSettings({ target, text, kitText }) {
-    try {
-        const mine = JSON.parse(text);
-        const kit = JSON.parse(kitText);
-
-        if (!isObject(mine) || !isObject(kit)) {
-            return {
-                status: 'kept'
-            };
-        }
-
-        const rest = stripSettings(dropKitEntries(mine, kit), kit);
-
-        if (Object.keys(rest).length === 0) {
-            return {
-                status: 'removed'
-            };
-        }
-
-        if (JSON.stringify(rest) === JSON.stringify(mine)) {
-            return {
-                status: 'kept'
-            };
-        }
-
-        return {
-            status: 'stripped',
-            write: {
-                file: target,
-                content: `${JSON.stringify(rest, null, 4)}\n`
-            }
-        };
-    } catch {
-        return {
-            status: 'kept'
-        };
-    }
-}
+const readText = (file) => readFileSync(file, 'utf8');
 
 // Reads only. Removes what is still exactly what Brigade wrote, keeps and reports what the developer changed.
-export function planUninstall({ cwd, stackDir, manifest }) {
+export function planUninstall({ cwd, manifest }) {
+    const kit = {};
+
+    for (const { path, content } of kitFiles(manifest.stack ?? DEFAULT_STACK, manifest.answers)) {
+        kit[path] = content;
+    }
+
     const report = [];
     const writes = [];
     const removals = [];
-    const root = resolve(cwd) + sep;
+    const abs = (path) => resolve(cwd, path);
 
-    // A file of the kit: removed when untouched, kept when edited. A leftover proposal is the kit's, never the developer's.
-    const plan = (path, status) => {
+    const decide = (path, status, content) => {
         report.push({
             path,
             status
         });
 
-        if (status === 'removed') {
-            removals.push(resolve(cwd, path));
+        if (status === 'deleted') {
+            removals.push(abs(path));
+        } else if (content) {
+            writes.push({
+                file: abs(path),
+                content
+            });
         }
     };
 
-    for (const [
-        path,
-        recorded
-    ] of Object.entries(manifest.files ?? {})) {
-        const target = resolve(cwd, path);
+    // A file that exists inside the project, whatever the manifest says.
+    const present = (path) => existsSync(abs(path)) && abs(path).startsWith(resolve(cwd) + sep);
 
-        // Only files inside the project, whatever the manifest says.
-        if (!target.startsWith(root) || !existsSync(target) || !statSync(target).isFile()) {
+    for (const path of Object.keys(manifest.files ?? {})) {
+        if (WRITE_ONCE.has(path) || !present(path)) {
             continue;
         }
 
-        const proposed = `${target}.proposed`;
+        const text = readText(abs(path));
 
-        if (existsSync(proposed)) {
-            removals.push(proposed);
-            report.push({
-                path: `${path}.proposed`,
-                status: 'removed'
-            });
+        // A leftover proposal is the kit's, never the developer's.
+        if (existsSync(`${abs(path)}.proposed`)) {
+            decide(`${path}.proposed`, 'deleted');
         }
 
-        const text = readFileSync(target, 'utf8');
+        if (sha(text) === manifest.files[path]) {
+            decide(path, 'deleted');
+        } else if (path === SETTINGS && kit[path]) {
+            // The kit's entries are removed, the developer's stay; the file goes when nothing of theirs is left.
+            try {
+                const mine = JSON.parse(text);
+                const rest = stripSettings(dropKitEntries(mine, JSON.parse(kit[path])), JSON.parse(kit[path]));
 
-        if (sha(text) === recorded) {
-            plan(path, 'removed');
-            continue;
-        }
-
-        const source = join(stackDir, path);
-
-        if (path === SETTINGS_PATH && existsSync(source)) {
-            const kitText = render(readFileSync(source, 'utf8'), manifest.answers, true);
-
-            const { status, write } = planSettings({
-                target,
-                text,
-                kitText
-            });
-
-            if (write) {
-                writes.push(write);
+                if (Object.keys(rest).length === 0) {
+                    decide(path, 'deleted');
+                } else if (JSON.stringify(rest) === JSON.stringify(mine)) {
+                    decide(path, 'left');
+                } else {
+                    decide(path, 'stripped', `${JSON.stringify(rest, null, 4)}\n`);
+                }
+            } catch {
+                decide(path, 'left');
             }
-
-            plan(path, status);
-            continue;
+        } else {
+            decide(path, 'left');
         }
-
-        plan(path, 'kept');
     }
 
-    // Written once, then the team's own: removed only while still identical to the template.
-    const owned = (path, content) => {
-        const target = resolve(cwd, path);
-
-        if (!existsSync(target) || !statSync(target).isFile()) {
-            return;
-        }
-
-        plan(path, sha(readFileSync(target, 'utf8')) === sha(content) ? 'removed' : 'kept');
+    // Written once, then the team's own, and the generated options file: removed only while identical to the template.
+    const templates = {
+        [OPTIONS_FILE]: renderOptions(manifest.answers)
     };
 
     for (const path of WRITE_ONCE) {
-        const source = join(stackDir, path);
+        templates[path] = kit[path];
+    }
 
-        if (existsSync(source)) {
-            owned(path, render(readFileSync(source, 'utf8'), manifest.answers));
+    for (const path of Object.keys(templates)) {
+        if (present(path)) {
+            decide(path, sha(readText(abs(path))) === sha(templates[path] ?? '') ? 'deleted' : 'left');
         }
     }
 
-    owned(OPTIONS_FILE, renderOptions(manifest.answers));
-
-    const legacy = join(cwd, LEGACY_BASE_DIR);
-
-    if (existsSync(legacy) && statSync(legacy).isDirectory()) {
-        removals.push(legacy);
-        report.push({
-            path: `${LEGACY_BASE_DIR}/`,
-            status: 'removed'
-        });
+    if (existsSync(abs(LEGACY_DIR))) {
+        decide(`${LEGACY_DIR}/`, 'deleted');
     }
 
     // Last, so a failed run leaves the install described.
-    removals.push(join(cwd, MANIFEST));
-    report.push({
-        path: MANIFEST,
-        status: 'removed'
-    });
+    decide(MANIFEST, 'deleted');
 
     return {
         report,
@@ -168,8 +109,8 @@ export function planUninstall({ cwd, stackDir, manifest }) {
     };
 }
 
-// `dryRun`: nothing is asked and nothing is written. Without a terminal, `yes` is required.
-export async function runUninstall({ cwd, yes = false, dryRun = false, version = VERSION, interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY) && !yes && !dryRun, prompter }) {
+// `dryRun`: nothing is asked and nothing is removed. Without a terminal, `yes` is required.
+export async function runUninstall({ cwd, p, yes, dryRun }) {
     const manifest = readManifest(cwd);
 
     if (!manifest) {
@@ -180,55 +121,37 @@ export async function runUninstall({ cwd, yes = false, dryRun = false, version =
         throw new Error(`${MANIFEST} has no "answers" object. Fix it or delete it, then remove the kit files by hand.`);
     }
 
-    if (!interactive && !yes && !dryRun) {
-        throw new Error('uninstall needs --yes without a terminal');
-    }
-
-    const stackDir = STACKS[manifest.stack ?? DEFAULT_STACK]?.dir;
-
-    if (!stackDir) {
+    if (!Object.hasOwn(STACKS, manifest.stack ?? DEFAULT_STACK)) {
         throw new Error(`Unknown stack in ${MANIFEST}: ${manifest.stack}`);
     }
 
-    prompter ??= createPrompter({
-        interactive: Boolean(interactive)
-    });
+    if (!p.interactive && !yes && !dryRun) {
+        throw new Error('uninstall needs --yes without a terminal');
+    }
 
-    prompter.banner(version);
+    p.banner(VERSION);
 
     const plan = planUninstall({
         cwd,
-        stackDir,
         manifest
     });
 
-    const result = {
-        dryRun,
-        report: plan.report,
-        prompter
-    };
-
     if (dryRun) {
-        return result;
+        return plan;
     }
 
-    if (interactive) {
-        prompter.info('What this will do:');
-        prompter.files(plan.report.map(({ path, status }) => ({
-            done: status !== 'kept',
-            label: path,
-            detail: UNINSTALL_PREVIEW_WORDS[status]
-        })));
+    if (p.interactive) {
+        p.say(`What this will do:\n${lines(plan.report, true)}`);
 
-        if (!await prompter.confirm('Remove Brigade?')) {
+        if (!await p.confirm('Remove Brigade?')) {
             return {
-                ...result,
+                ...plan,
                 aborted: true
             };
         }
     }
 
-    applyPlan(cwd, plan);
+    apply(cwd, plan);
 
-    return result;
+    return plan;
 }
