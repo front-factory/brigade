@@ -11,8 +11,8 @@ Rewrite the CLI, the git guard and the kit from scratch with far less code (src/
 
 ## Steps
 
-- [ ] 0. Commit the alignment audit; create this file.
-- [ ] 1. Contract tests `test/contract/*.test.js` (black-box: CLI in temp dirs, guard via stdin), passing on v1 first.
+- [x] 0. Commit the alignment audit; create this file.
+- [x] 1. Contract tests `test/contract/*.test.js` (black-box: CLI in temp dirs, guard via stdin), passing on v1 first.
 - [ ] 2. New `src/` (cli, detect, options, render, kit, install, uninstall, prompt/ui), until contract tests pass; remove internal tests.
 - [ ] 3. Rewritten git guard (~150 lines; nested git in `$(...)`/backticks/`sh -c`/`eval` = deny for main session and implementer, ask for git-operator; `--no-verify` destructive); list the stricter cases here.
 - [ ] 4. Kit rewrite + audit fixes: options `checks` and `audits`, useful SessionStart hook (injects decisions.md, branch/sync, feature file, stale feature files), status line removed, settings.json `$schema`, env/key denies, dependency installs to `ask`; fixes M1, M2, M3, M5, M7, L2, H2, H3, L4, H4, M4, M6; re-render the dogfood `.claude/`.
@@ -26,6 +26,8 @@ Rewrite the CLI, the git guard and the kit from scratch with far less code (src/
 - `defaultMode: plan` kept (H1 deferred).
 
 ## Notes
+
+- v1 quirk frozen by `test/contract/install.test.js`: the first re-run of `init` drops the write-once files (`decisions.md`, `architecture.md`) from the manifest `files`; the manifest is stable afterwards. Not a documented promise: the rewrite may keep them recorded (then relax that test).
 
 - The v1 contract is the README (Update, Uninstall, Git guard sections) and `.claude/context/decisions.md`.
 - The full plan was discussed in the session of 2026-10-31.

@@ -5,8 +5,8 @@
     "type": "module",
     "scripts": {
         "prepare": "husky",
-        "test": "node --test \"test/*.test.js\"",
-        "test:coverage": "node --test --experimental-test-coverage \"test/*.test.js\"",
+        "test": "node --test \"test/*.test.js\" \"test/contract/*.test.js\"",
+        "test:coverage": "node --test --experimental-test-coverage \"test/*.test.js\" \"test/contract/*.test.js\"",
         "release": "semantic-release",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix"
