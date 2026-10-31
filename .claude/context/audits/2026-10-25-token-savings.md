@@ -3,7 +3,7 @@
 Date: 2026-10-25
 Baseline commit: 5aa289b
 Scope: context that the Brigade kit injects into Claude sessions (templates/web/.claude/: rules, agents, skills, commands, settings.json, hooks) and the delegation flow, looked at for token savings. The same findings apply to the dogfood copy in .claude/.
-Status: open
+Status: closed
 
 ## Findings
 

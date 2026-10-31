@@ -4,42 +4,41 @@
 
 ## Overview
 
-Brigade is a Node CLI (`npx @frontfactory/brigade`) that installs a Claude Code kit into a project: agents, skills, commands, rules, a git guard hook and settings.
+Brigade is a Node CLI (`npx @frontfactory/brigade`) that installs a Claude Code kit into a project: agents, skills, commands, rules, a git guard hook and settings. Node >= 22.
 
 Layout:
-- `bin/brigade.js`: executable entry, calls `main` from `src/cli.js`.
-- `src/cli.js`: argument parsing, output summary.
-- `src/init.js`: `runInit`, the whole init flow and its questions.
-- `src/detect.js`: detects git repo, default branch, package manager, commit convention, language.
-- `src/stacks.js`: registry of stacks (`templates/<stack>/`) and stack detection (default: `web`).
-- `src/conventions.js`: commit conventions and their `format` text.
-- `src/install.js`: rendering, file installation, manifest, appended lines, local settings.
-- `src/prompt.js`: prompts (`@clack/prompts`), with a non-interactive mode that takes the first option.
-- `src/version.js`: package version and `compareVersions`.
+- `bin/brigade.js`: executable entry, checks the Node version, calls `main` from `src/cli.js`.
+- `src/cli.js`: argument parsing, command dispatch, output.
+- `src/detect.js`: detects git repo, default branch, package manager, commit convention, checks.
+- `src/options.js`: the options (detect, ask, recap, validate) and the stored answers.
+- `src/kit.js`: the stack registry (`templates/<stack>/`), stack detection (default: `web`) and the kit file list.
+- `src/render.js`: placeholders and `renderOptions` (builds `brigade-options.md`).
+- `src/install.js`: install and update: plan, file states, settings merge, manifest, appended lines.
+- `src/uninstall.js`: removal of untouched kit files and kit entries.
+- `src/prompt.js`, `src/ui.js`: prompts (`@clack/prompts`, non-interactive mode) and output tables.
 - `templates/web/`: the kit, copied as is into the project (same relative paths) with placeholders rendered.
-- `test/`: `node:test` suites (`install`, `guard`, `dogfood`).
+- `test/`: `node:test` suites: `contract/` (black-box CLI and guard), `unit`, `kit`, `guard`, `dogfood`, `pack`, `run-node`.
 - `.claude/`: this repo's own install, the rendered copy of `templates/web/`.
 
-Init flow (`runInit`):
+Init flow (`init`):
 1. Detect the stack and read the manifest `.claude/brigade.json` if any.
 2. If already installed, ask: update or keep (keep writes nothing).
-3. Ask the answers (each one detected first, previous answer wins).
-4. `installFiles` renders and writes the kit.
-5. `writeManifest` stores version, stack, answers and file hashes.
-6. `appendMissingLines` adds the Claude lines to `.gitignore` and `.gitattributes`.
-7. `writeLocalSettings` stores the personal reply language in `.claude/settings.local.json`.
+3. Resolve the options (detected first, previous answer wins; only new ones are asked on update).
+4. Plan the kit files, then write them atomically, one by one.
+5. Write the manifest (version, stack, answers, file hashes) last, plus the `.gitignore` and `.gitattributes` lines.
+6. Store the personal reply language in `.claude/settings.local.json`.
 
-File states (`installFiles`):
+File states:
 - `created`: the target does not exist.
 - `unchanged`: the target already equals the rendered content.
 - `updated`: the target equals what Brigade last wrote (manifest hash), so it is overwritten.
 - `proposed`: the target was edited, so the new content goes to `<file>.proposed`.
-- `kept`: write-once file (`.claude/context/decisions.md`) that exists and differs: never touched.
-
-Placeholders: `__DEFAULT_BRANCH__`, `__BASE_BRANCH__`, `__PACKAGE_MANAGER__`, `__COMMIT_FORMAT__`, `__REPLY_LANGUAGE__`, `__CODE_LANGUAGE__`, `__DOCS_LANGUAGE__`. Unknown ones are left as is.
+- `kept`: write-once file (`decisions.md`, `architecture.md`) that exists and differs: never touched.
+- `obsolete`: a file the kit no longer ships: removed if untouched, otherwise kept and reported.
 
 ## Conventions
 
 - ES modules, 4-space indent, single quotes, short English comments.
-- A new stack = a folder in `templates/` plus one entry in `src/stacks.js`.
+- A new stack = a folder in `templates/` plus one entry in the registry of `src/kit.js`.
 - Changing `templates/web/` means re-rendering the same change in `.claude/` (the dogfood test fails otherwise).
+- The v1 contract (commands, flags, `.claude/` paths, manifest) is frozen by `test/contract/`.

@@ -3,7 +3,7 @@
 Date: 2026-10-26
 Baseline commit: 9ee4a99
 Scope: The published lib: README.md, templates/web/.claude/ (rules, skills, settings, hooks, agents), src/ and bin/. This repo's own `.claude/` (dogfood copy, features, audits, architecture.md) is out of scope.
-Status: open
+Status: closed
 
 ## Findings
 

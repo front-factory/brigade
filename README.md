@@ -31,10 +31,12 @@ Plus base rules for work, security and efficiency, adapted to the stack (web for
 project and committed with it. The rest of the kit, all under `.claude/`:
 
 - Skills: `session-start`, `feature` (branch + state file for multi-step work), `audit`.
-- Commands: `/brigade-settings` sets your reply language, your effort per role and the reference-branch protection, all
-  local.
+- Commands: `/brigade-settings` sets your reply language, your effort per role, your checks and the reference-branch
+  protection, all local.
 - Shared context in `context/`: `decisions.md`, `architecture.md` (optional), features and audits.
-- A git guard hook, a status line, a `SessionStart` hook and a launcher that finds `node` (nvm, fnm, volta, asdf).
+- A git guard hook, a `SessionStart` hook and a launcher (`run-node.sh`) that finds `node` (nvm, fnm, volta, asdf). The
+  `SessionStart` hook injects into the session: the team decisions, the branch and its sync with the remote, the current
+  feature file and the stale feature files to remove.
 - `settings.json` permissions.
 
 The guard protects the default branch and the reference branch. To lift the latter for yourself only, run
@@ -57,7 +59,14 @@ Run `npx @frontfactory/brigade init` in your project:
 Replies are in English unless you choose another language (it is not guessed from your locale). The language of code and
 docs is asked next, together or apart. Customize also asks your own reply language, which stays on your machine.
 
-Options:
+Options asked at install (besides branches, package manager, commit convention and languages):
+
+- `checks`: the tests and/or lint run at the end of each task, detected from the `test`/`lint` scripts of
+  `package.json`. Each developer can override them with `/brigade-settings`, which writes `Checks for me:` in
+  `CLAUDE.local.md`.
+- `audits`: the audit skill and audit files, on by default; off means they are not installed. Asked in Customize.
+
+Command-line options:
 
 - `--yes` (or `-y`) accepts everything detected.
 - `--stack <name>` forces the stack instead of detecting it (only `web` for now).
@@ -84,8 +93,9 @@ What happens to your files:
 - A file the kit no longer ships is removed if untouched, otherwise kept and reported at each update.
 - `.claude/settings.json` is merged only when the kit's version of it changed since the last install; otherwise your
   file is kept as it is, and what you removed stays removed. When the merge runs, your values win, nothing is
-  duplicated and the kit's new entries are added (a kit entry you removed comes back). A hook or `statusLine` that runs
-  a kit hook script belongs to the kit: an older version of it is replaced by the current one, your own hooks stay.
+  duplicated and the kit's new entries are added (a kit entry you removed comes back). A hook that runs a kit hook
+  script belongs to the kit: an older version of it is replaced by the current one, your own hooks stay. The status line
+  of older installs is removed when untouched (usual obsolete-file rule) and its `statusLine` entry is dropped.
   Other kit entries the kit removed or changed (permission rules, for example) are not removed from your file; remove
   them yourself.
 - `decisions.md` and `architecture.md` are written once and then belong to you.
@@ -108,6 +118,11 @@ Run `npx @frontfactory/brigade uninstall`. It lists what it will do and asks bef
 
 Removed files remain in your git history.
 
+## Permissions
+
+`settings.json` allows the usual project commands. Installing a dependency (`<pm> install <pkg>`, a bare
+`<pm> install` too, `<pm> add`, `npx`, `dlx`) asks; `<pm> ci` runs without a prompt. `.env` files (not `.env.example`), keys and certificates are denied for read and edit.
+
 ## Troubleshooting
 
 - `Unknown stack` or `Unknown option`: run `npx @frontfactory/brigade --help`.
@@ -120,7 +135,8 @@ Removed files remain in your git history.
 ## Git guard
 
 The hook (`templates/web/.claude/hooks/git-guard.mjs`, PreToolUse on Bash) is a safety net, not a security boundary. It
-parses the text of the command, so it can miss subshells, `bash -c`, aliases and scripts. The real protections are the
+parses the text of the command, so aliases and scripts can still get through. Nested git (`$(...)`, `bash -c`) is not
+analysed but denied or asked (see below). The real protections are the
 `permissions` in `settings.json` and branch protection on the remote. "Never read or write secrets" is a rule given to
 Claude, not an enforcement, beyond the `deny` `Read` rules.
 
@@ -128,20 +144,25 @@ The hooks run through a launcher that looks for `node`. If it finds none, it fai
 session, and Claude Code shows a "node was not found" warning when a hook runs. Add `node` to the PATH of
 non-interactive shells and restart.
 
-Only `git-operator` writes to git. `push`, `merge` and `rebase` ask for confirmation, destructive commands are denied.
+Only `git-operator` writes to git. `push`, `merge` and `rebase` ask for confirmation, destructive commands are denied,
+and so are `--no-verify` and `commit -n`. Nested git (`$(...)`, backticks, `sh -c`, `eval`) is not analysed: it is denied
+for the main session and `implementer`, asked for `git-operator`, and denied when it contains a destructive pattern. A
+branch switch before a commit in the same command asks.
 Brigade proposes a commit once the work is finished and never commits without your go. A feature gets its own branch
 and a state file `.claude/context/features/<branch>.md` (slashes become dashes), committed with the branch.
 
 ## Add a stack
 
-Create `templates/<name>/` with the same layout as `templates/web/`, then add one entry in `src/stacks.js`.
+Create `templates/<name>/` with the same layout as `templates/web/`, then add one entry in the stack registry of `src/kit.js`.
 Placeholders: `__DEFAULT_BRANCH__`, `__BASE_BRANCH__`, `__PACKAGE_MANAGER__`, `__COMMIT_FORMAT__`, `__REPLY_LANGUAGE__`,
 `__CODE_LANGUAGE__`, `__DOCS_LANGUAGE__`. Do not use them in `.claude/rules/brigade.md`: it stays pure kit, and the
-answers reach it through `.claude/rules/brigade-options.md` (see `renderOptions` in `src/install.js`).
+answers reach it through `.claude/rules/brigade-options.md` (see `renderOptions` in `src/render.js`, which also holds the placeholders).
 
 ## Develop
 
-`npm test` runs the tests (`node --test`), `npm run test:coverage` adds the coverage report. Commits follow Conventional Commits, checked by commitlint. Node >= 24.
+`npm test` runs the tests (`node --test`), `npm run test:coverage` adds the coverage report. Suites: `test/contract/`
+(black-box contract of the CLI and the guard, must not break), `test/unit.test.js`, `test/kit.test.js`, guard, dogfood,
+pack and run-node. Commits follow Conventional Commits, checked by commitlint. Node >= 22.
 
 The CI runs the tests on pushes and pull requests to `main`, `develop` and `beta`. On a push to `main` or `beta`,
 semantic-release derives the version from the commits, updates the changelog and publishes to npm.

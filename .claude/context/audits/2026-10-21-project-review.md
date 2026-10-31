@@ -4,7 +4,7 @@ Date: 2026-10-21
 Baseline commit: d9c895b
 Scope: whole project (CLI in `src/`, kit in `templates/web/` and the repo's `.claude/`, tests, CI/release, docs)
 Re-audited 2026-10-22
-Status: open
+Status: closed
 
 ## Findings
 
@@ -37,7 +37,7 @@ Status: open
 | C13 | low | src/stacks.js | Single stack with a trivial `match`. | wontfix (low value) | The mechanism is intentionally ready for more stacks. |
 | C14 | low | `.gitignore` / `.gitattributes` append | The `## Claude` heading appended is unconventional (works as a comment). | fixed | Heading removed: the missing lines are appended without a title; existing `## Claude` blocks are left untouched. |
 | V1 | medium | src/version.js | `compareVersions` ignores pre-release tags: `1.2.0-beta.1` vs `1.2.0` compares equal, so a beta to stable switch is reported "already up to date" (the repo publishes a `beta` channel). | fixed | pre-release precedence implemented in `compareVersions`, tests added. |
-| V2 | low | bin/brigade.js | No runtime Node check: on Node < 24 `styleText`/`parseArgs` fail with a cryptic error; `engines` only warns. Add an explicit message. | open | |
+| V2 | low | bin/brigade.js | No runtime Node check: on Node < 24 `styleText`/`parseArgs` fail with a cryptic error; `engines` only warns. Add an explicit message. | fixed | Node runtime check in `bin/brigade.js` (rewrite). |
 | I1 | low | src/install.js `writeManifest` | `localeCompare` makes the key order locale-dependent; use a plain comparison for a stable manifest. | fixed | Plain code-unit comparison in `planExtras`; test added. |
 | I2 | low | src/install.js | Writes are not atomic (no temp file + rename); extends C5b. | fixed | `writeAtomic` (temp file + rename, temp removed on error); the run as a whole stays non-atomic. |
 | P1 | low | src/prompt.js `text` | A custom commit format can be empty: `brigade-options.md` gets a blank "Commit format:" line. Add validation. | fixed | The custom commit format is required in the prompt; a blank one without a terminal falls back to Conventional Commits; tests added. |
