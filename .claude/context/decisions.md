@@ -5,7 +5,7 @@
 <!-- To change a decision, edit it in place (git keeps the history). -->
 <!-- Keep this file under ~30 lines: move details and replaced decisions to decisions-archive.md. -->
 
-- Node >= 24 (`engines`): `node:test` replaces a test dependency.
+- Node >= 22 (`engines`): `node:test` replaces a test dependency; 22 is the oldest maintained LTS.
 - The CLI never creates a git repository: the user decides when to `git init`.
 - `.claude/brigade.json` stores the version, the answers and the sha256 of written files: untouched files are updated, edited ones get a `.proposed`.
 - `decisions.md` and `architecture.md` are write-once: the project owns them, Brigade never overwrites them.

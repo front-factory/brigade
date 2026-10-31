@@ -24,7 +24,7 @@ jobs:
       # Minimum supported Node (engines) on every OS, plus the latest Node on Linux.
       matrix:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
-        node-version: [ 24 ]
+        node-version: [ 22 ]
         include:
           - os: ubuntu-latest
             node-version: node
@@ -45,11 +45,11 @@ jobs:
 
       # Lint and commitlint run once, not on every matrix entry.
       - name: Lint
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == 24 }}
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == 22 }}
         run: npm run lint
 
       - name: Commitlint
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == 24 }}
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node-version == 22 }}
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
