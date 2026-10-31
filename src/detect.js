@@ -69,6 +69,20 @@ export function detectPackageManager(cwd) {
     };
 }
 
+// The `test` and `lint` scripts of package.json, in that order. npm's placeholder `test` script does not count.
+export function detectChecks(cwd) {
+    const scripts = readJson(join(cwd, 'package.json'))?.scripts;
+
+    if (scripts === null || typeof scripts !== 'object') {
+        return [];
+    }
+
+    return [
+        typeof scripts.test === 'string' && !scripts.test.includes('no test specified') && 'test',
+        typeof scripts.lint === 'string' && 'lint'
+    ].filter(Boolean);
+}
+
 // commitlint counts only when it is a dependency and wired to a `commit-msg` hook.
 export function detectCommitConvention(cwd) {
     const pkg = readJson(join(cwd, 'package.json'));

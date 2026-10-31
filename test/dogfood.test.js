@@ -25,7 +25,12 @@ const ANSWERS = {
     commitConvention: 'conventional',
     replyLanguage: 'French',
     codeLanguage: 'English',
-    docsLanguage: 'English'
+    docsLanguage: 'English',
+    checks: [
+        'test',
+        'lint'
+    ],
+    audits: true
 };
 
 function listFiles(dir) {
@@ -119,13 +124,13 @@ test('the settings allow the test and install scripts of the package manager', (
     const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
 
     assert.ok(settings.permissions.allow.includes('Bash(__PACKAGE_MANAGER__ test:*)'));
-    assert.ok(settings.permissions.allow.includes('Bash(__PACKAGE_MANAGER__ install:*)'));
+    assert.ok(settings.permissions.allow.includes('Bash(__PACKAGE_MANAGER__ install)'));
 });
 
-test('the settings wire the status line and the session start hook to scripts of the kit', () => {
+test('the settings wire the session start and git guard hooks to scripts of the kit', () => {
     const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
 
-    assert.match(settings.statusLine.command, /run-node\.sh.*\.claude\/hooks\/statusline\.mjs/);
+    assert.equal(settings.statusLine, undefined);
     assert.match(settings.hooks.SessionStart[0].hooks[0].command, /run-node\.sh.*\.claude\/hooks\/session-start\.mjs/);
     assert.match(settings.hooks.PreToolUse[0].hooks[0].command, /run-node\.sh.*\.claude\/hooks\/git-guard\.mjs/);
 });

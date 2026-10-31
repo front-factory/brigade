@@ -1,7 +1,9 @@
 import {
-    detectCommitConvention, detectDefaultBranch, detectPackageManager, localBranches, MANAGERS
+    detectChecks, detectCommitConvention, detectDefaultBranch, detectPackageManager, localBranches, MANAGERS
 } from './detect.js';
-import { CONVENTIONS, convention } from './render.js';
+import {
+    CHECKS, CONVENTIONS, checkCommand, convention
+} from './render.js';
 import { item } from './prompt.js';
 import { card } from './ui.js';
 
@@ -24,7 +26,7 @@ const one = (key, value) => (value ? {
 // `detect(ctx)` returns the values without asking (a stored answer wins over detection), or null when they cannot be
 // told. `ask(ctx, found)` asks and returns the values; `found` is what `detect` told, preselected first. Without a
 // terminal every question resolves to its first choice, so `ask` doubles as the default. `valid` tells whether a set of
-// answers holds a usable value. ctx: { cwd, p, stored, answers (decided so far), personal, full }.
+// answers holds a usable value. `silent`: never asked unless the dev customizes (a missing answer takes its detected value). ctx: { cwd, p, stored, answers (decided so far), personal, full }.
 // Answers hold the dev's choices only: kit text is computed when files are rendered, never stored.
 export const OPTIONS = [
     {
@@ -153,16 +155,50 @@ export const OPTIONS = [
             };
         },
         recap: (a) => `Replies|${a.replyLanguage} (project default)\nCode|${a.codeLanguage}\nDocumentation|${a.docsLanguage}`
+    },
+    {
+        keys: words('checks'),
+        label: 'Checks',
+        valid: (a) => Array.isArray(a.checks),
+        detect: ({ cwd, stored }) => ({
+            checks: Array.isArray(stored.checks) ? stored.checks.filter((check) => CHECKS.includes(check)) : detectChecks(cwd)
+        }),
+        ask: async ({ p, answers }, found) => ({
+            checks: await p.multi('Checks run at the end of each task (each developer can change it for themselves later)', CHECKS.map((check) => ({
+                value: check,
+                label: check === 'test' ? 'Tests' : 'Lint',
+                hint: checkCommand(answers.packageManager, check)
+            })), found.checks ?? [])
+        }),
+        recap: (a) => `Checks|${a.checks.length ? a.checks.map((check) => (check === 'test' ? 'Tests' : 'Lint')).join(', ') : 'None'}`
+    },
+    {
+        keys: words('audits'),
+        label: 'Audits',
+        silent: true,
+        valid: (a) => typeof a.audits === 'boolean',
+        detect: ({ stored }) => ({
+            audits: stored.audits ?? true
+        }),
+        ask: async ({ p }, found) => ({
+            audits: await p.confirm('Include the audit workflow (skill + audit files)?', found.audits ?? true)
+        }),
+        recap: (a) => `Audits|${a.audits ? 'Included' : 'Not included'}`
     }
 ];
 
 // Whether the answers hold a usable value for every key of the option.
-export const has = (option, answers) => option.keys.every((key) => answers[key]) && (option.valid?.(answers) ?? true);
+export const has = (option, answers) => option.keys.every((key) => answers[key] !== undefined && answers[key] !== '') && (option.valid?.(answers) ?? true);
 
 // The recap rows ("label|value") of the answers; an option without a value shows "to choose".
 export const recapRows = (answers) => OPTIONS.flatMap((option) => (has(option, answers) ? option.recap(answers) : `${option.label}|to choose`).split('\n'));
 
 const askOne = (option, ctx) => option.ask(ctx, option.detect(ctx) ?? {});
+
+// The stored value of a key, or nothing when it is missing (`false` and `[]` are values).
+const storedValue = (stored, key) => (stored[key] === undefined ? null : {
+    [key]: stored[key]
+});
 
 // Decides every option and returns { answers, personal, added } where `added` lists the keys the stored answers
 // lacked. `full`: every question is asked (first install, same version); otherwise only the missing options are.
@@ -178,6 +214,7 @@ export async function gather({ cwd, p, stored, full }) {
     };
 
     const missing = OPTIONS.filter((option) => !has(option, stored));
+    const asked = missing.filter((option) => !option.silent);
     const hasStored = Object.keys(stored).length > 0;
 
     const ask = async (options) => {
@@ -229,12 +266,14 @@ export async function gather({ cwd, p, stored, full }) {
         }
     } else {
         for (const option of OPTIONS) {
-            if (full || missing.includes(option)) {
+            if (option.silent && !full) {
+                Object.assign(ctx.answers, option.detect(ctx));
+            } else if (full || missing.includes(option)) {
                 await ask([
                     option
                 ]);
             } else {
-                Object.assign(ctx.answers, ...option.keys.map((key) => one(key, stored[key])));
+                Object.assign(ctx.answers, ...option.keys.map((key) => storedValue(stored, key)));
             }
         }
     }
@@ -252,6 +291,6 @@ export async function gather({ cwd, p, stored, full }) {
     return {
         answers,
         personal: ctx.personal,
-        added: hasStored ? missing.flatMap(({ keys }) => keys) : []
+        added: hasStored ? asked.flatMap(({ keys }) => keys) : []
     };
 }

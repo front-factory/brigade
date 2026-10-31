@@ -23,6 +23,9 @@ const LOCAL_SETTINGS = '.claude/settings.local.json';
 // Folder of base copies left by Brigade 1.3.0, removed at every update.
 export const LEGACY_DIR = '.claude/brigade-base';
 
+// The status line of Brigade 1.x, gone from the kit: still recognized so an update drops it from a merged settings.json.
+const LEGACY_STATUSLINE = '.claude/hooks/statusline.mjs';
+
 // Lines Brigade appends to the project files when missing. Existing lines are never touched or duplicated.
 const APPENDS = {
     '.gitignore': '.claude/settings.local.json\nCLAUDE.local.md',
@@ -76,6 +79,7 @@ const isEmpty = (value) => (Array.isArray(value) || isObject(value)) && Object.k
 export function dropKitEntries(mine, kit) {
     const names = new Set([
         kit.statusLine?.command,
+        LEGACY_STATUSLINE,
         ...Object.values(kit.hooks ?? {}).flat().flatMap((group) => group.hooks?.map((hook) => hook.command) ?? [])
     ].map(script));
 

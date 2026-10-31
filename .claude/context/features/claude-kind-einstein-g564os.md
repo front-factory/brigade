@@ -15,7 +15,7 @@ Rewrite the CLI, the git guard and the kit from scratch with far less code (src/
 - [x] 1. Contract tests `test/contract/*.test.js` (black-box: CLI in temp dirs, guard via stdin), passing on v1 first.
 - [x] 2. New `src/` (cli, detect, options, render, kit, install, uninstall, prompt/ui), until contract tests pass; remove internal tests. Done: 110 tests pass, lint clean, `src/` = 1,400 lines (cli 160, detect 86, install 480, kit 41, options 257, prompt 80, render 92, ui 47, uninstall 157; bin 9).
 - [x] 3. Rewritten git guard (~150 lines; nested git in `$(...)`/backticks/`sh -c`/`eval` = deny for main session and implementer, ask for git-operator; `--no-verify` destructive); list the stricter cases here.
-- [ ] 4. Kit rewrite + audit fixes: options `checks` and `audits`, useful SessionStart hook (injects decisions.md, branch/sync, feature file, stale feature files), status line removed, settings.json `$schema`, env/key denies, dependency installs to `ask`; fixes M1, M2, M3, M5, M7, L2, H2, H3, L4, H4, M4, M6; re-render the dogfood `.claude/`.
+- [x] 4. Kit rewrite + audit fixes: options `checks` and `audits`, useful SessionStart hook (injects decisions.md, branch/sync, feature file, stale feature files), status line removed, settings.json `$schema`, env/key denies, dependency installs to `ask`; fixes M1, M2, M3, M5, M7, L2, H2, H3, L4, H4, M4, M6; re-render the dogfood `.claude/`.
 - [ ] 5. README, architecture.md, audit rows to `fixed`; delete this file in the last commit.
 
 ## Step 3 notes (git guard)
@@ -25,6 +25,10 @@ Done: guard = 218 lines after lint (the lint style expands every multi-property 
 - A `switch`/`checkout` earlier in the same command makes the branch unknown: `git switch -c x && git commit`, `git checkout -b x main && git commit` and `git switch main && git switch -c x && git commit` go from allow to ask.
 - New: `--no-verify` anywhere and `commit -n` (also combined, `-anm`) are denied for git-operator.
 - Not covered anymore: nested depth limit (any nested git is unknown).
+
+## Step 4 notes (kit)
+
+Done: options `checks` (detect/ask multi/recap, `checkCommand` in render.js) and `audits` (silent option: asked only in Customize, stored true when missing; off = audit skill and template left out of the kit); shorter kit texts (brigade.md 36 lines, audit rule moved to the audit skill description); session-start hook injects version, decisions, branch sync, feature file, stale feature files; settings.json with `$schema`, explicit env/key denies, installs to ask; status line and `test/statusline.test.js` removed (an old `statusLine` entry running statusline.mjs is still dropped on merge); `/brigade-settings` has the `Checks for me:` setting. Dogfood `.claude/` re-rendered; `test/dogfood.test.js` updated for the removed status line and the exact `install` allow rule. New `test/kit.test.js`. src/ = 1,492 lines.
 
 ## Decisions and open questions
 

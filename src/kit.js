@@ -17,6 +17,12 @@ export const STACKS = {
     }
 };
 
+// Left out of the kit when the `audits` option is off.
+const AUDIT_FILES = new Set([
+    '.claude/skills/audit/SKILL.md',
+    '.claude/context/audits/_template.md'
+]);
+
 export const DEFAULT_STACK = 'web';
 
 // Written once, then the team's own: never updated, never proposed over.
@@ -33,7 +39,7 @@ export function kitFiles(stack, answers) {
 
     return readdirSync(dir, {
         recursive: true
-    }).map((name) => name.split('\\').join('/')).sort().filter((path) => statSync(join(dir, path)).isFile() && basename(path) !== '.DS_Store').map((path) => ({
+    }).map((name) => name.split('\\').join('/')).sort().filter((path) => statSync(join(dir, path)).isFile() && basename(path) !== '.DS_Store' && !(answers.audits === false && AUDIT_FILES.has(path))).map((path) => ({
         path,
         content: render(readFileSync(join(dir, path), 'utf8'), answers, path.endsWith('.json')),
         mode: statSync(join(dir, path)).mode & 0o777

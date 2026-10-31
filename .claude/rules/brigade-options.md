@@ -11,3 +11,4 @@ Options of this project, referred to by `.claude/rules/brigade.md`.
 - Code, comments and commit messages language: English.
 - Documentation language: English.
 - Reply language, project default: French.
+- Checks at the end of each task (project default): `npm test`, `npm run lint`.

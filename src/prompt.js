@@ -63,17 +63,33 @@ export function createPrompter(interactive) {
         return value === OTHER ? text(`${message} (type it)`, '', true) : value;
     };
 
+    // Several values among `options` ([{ value, label, hint? }]), none allowed. `initial` is preselected and is the answer
+    // without a terminal.
+    const multi = async (message, options, initial = []) => {
+        if (!interactive) {
+            return initial;
+        }
+
+        return answer(p.multiselect({
+            message,
+            options,
+            initialValues: initial,
+            required: false
+        }));
+    };
+
     const say = (message) => interactive && console.log(message);
 
     return {
         interactive,
         text,
         choose,
+        multi,
         say,
-        confirm: async (message) => !interactive || answer(p.confirm({
+        confirm: async (message, initial = true) => (interactive ? answer(p.confirm({
             message,
-            initialValue: true
-        })),
+            initialValue: initial
+        })) : initial),
         banner: (version) => say(ui.banner(version)),
         warn: (message) => console.log(`${ui.accent('!')} ${message}`)
     };
