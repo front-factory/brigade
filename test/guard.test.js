@@ -347,10 +347,11 @@ test('nested git commands are analysed', () => {
         agent: ''
     }), 'deny');
 
-    assert.equal(run('bash -c "git add a"'), 'allow');
+    // Nested git is not analysed: a read inside `$(...)` is denied for the main session too.
+    assert.equal(run('bash -c "git add a"'), 'ask');
     assert.equal(run('echo $(git status)', {
         agent: ''
-    }), null);
+    }), 'deny');
 
     assert.equal(run('bash -c "npm test"', {
         agent: ''
@@ -514,8 +515,8 @@ test('a heredoc that only mentions git is not a git write for the main session',
 test('the protected-branch check follows switches inside the command', () => {
     assert.equal(run('git switch main && git commit -m x'), 'ask');
     assert.equal(run('git checkout develop && git pull'), 'ask');
-    assert.equal(run('git switch -c feat/y && git commit -m x'), 'allow');
-    assert.equal(run('git checkout -b feat/y main && git commit -m x'), 'allow');
+    assert.equal(run('git switch -c feat/y && git commit -m x'), 'ask');
+    assert.equal(run('git checkout -b feat/y main && git commit -m x'), 'ask');
     assert.equal(run('git switch - && git commit -m x'), 'ask');
     assert.equal(run('git switch --detach && git commit -m x'), 'ask');
     assert.equal(run('git switch "$B" && git commit -m x'), 'ask');
@@ -527,7 +528,7 @@ test('the protected-branch check follows switches inside the command', () => {
         branch: 'feat/x'
     }), 'allow');
 
-    assert.equal(run('git switch main && git switch -c feat/y && git commit -m x'), 'allow');
+    assert.equal(run('git switch main && git switch -c feat/y && git commit -m x'), 'ask');
     assert.equal(run('git switch feat/y && git switch main && git commit -m x'), 'ask');
 });
 
@@ -650,4 +651,22 @@ test('redirections and && are not split as a background &', () => {
     }
 
     assert.equal(run('git commit -m x && git push'), 'ask');
+});
+
+test('--no-verify and commit -n bypass the commit hooks: denied for git-operator', () => {
+    for (const command of [
+        'git commit --no-verify -m x',
+        'git commit -n -m x',
+        'git commit -anm x',
+        'git push --no-verify',
+        'git merge --no-verify x'
+    ]) {
+        assert.equal(run(command), 'deny', command);
+        assert.equal(run(command, {
+            agent: ''
+        }), 'deny', command);
+    }
+
+    assert.equal(run('git commit -m "docs: explain --no-verify"'), 'allow');
+    assert.equal(run('git commit -am x'), 'allow');
 });
