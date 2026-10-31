@@ -124,7 +124,7 @@ test('the settings allow the test and install scripts of the package manager', (
     const settings = JSON.parse(readFileSync(join(TEMPLATES, '.claude/settings.json'), 'utf8'));
 
     assert.ok(settings.permissions.allow.includes('Bash(__PACKAGE_MANAGER__ test:*)'));
-    assert.ok(settings.permissions.allow.includes('Bash(__PACKAGE_MANAGER__ install)'));
+    assert.ok(settings.permissions.allow.includes('Bash(__PACKAGE_MANAGER__ ci)'));
 });
 
 test('the settings wire the session start and git guard hooks to scripts of the kit', () => {

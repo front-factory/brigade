@@ -12,13 +12,14 @@
             "Bash(git show:*)",
             "Bash(__PACKAGE_MANAGER__ run:*)",
             "Bash(__PACKAGE_MANAGER__ test:*)",
-            "Bash(__PACKAGE_MANAGER__ install)"
+            "Bash(__PACKAGE_MANAGER__ ci)"
         ],
         "ask": [
             "Bash(git push:*)",
             "Bash(git merge:*)",
             "Bash(git rebase:*)",
-            "Bash(__PACKAGE_MANAGER__ install :*)",
+            "Bash(__PACKAGE_MANAGER__ install *)",
+            "Bash(__PACKAGE_MANAGER__ i *)",
             "Bash(__PACKAGE_MANAGER__ add:*)",
             "Bash(npx:*)",
             "Bash(pnpm dlx:*)",

@@ -132,8 +132,8 @@ test('settings: schema, readable .env.example, explicit env denies, dependency i
     assert.equal(settings.$schema, 'https://json.schemastore.org/claude-code-settings.json');
     assert.ok(deny.includes('Read(./.env)') && deny.includes('Edit(./**/.env.production)') && deny.includes('Edit(./**/*.key)'));
     assert.equal(deny.some((rule) => rule.includes('.env.example') || rule.includes('.env*')), false);
-    assert.ok(ask.includes('Bash(npm install :*)') && ask.includes('Bash(npm add:*)') && ask.includes('Bash(npx:*)'));
-    assert.ok(allow.includes('Bash(npm install)'));
+    assert.ok(ask.includes('Bash(npm install *)') && ask.includes('Bash(npm i *)') && ask.includes('Bash(npm add:*)') && ask.includes('Bash(npx:*)'));
+    assert.ok(allow.includes('Bash(npm ci)') && !allow.includes('Bash(npm install)'));
     assert.equal(settings.statusLine, undefined);
 });
 
