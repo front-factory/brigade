@@ -24,7 +24,7 @@
         ".claude/hooks/run-node.sh": "b791da5ebc6104c4fcf087f3a176fa2ca7a094364bdfb8531840c285b9435bda",
         ".claude/hooks/session-start.mjs": "0930836fc3caa0c35f1fffe14b0773683876187b5a6bd66a224100c1344e8564",
         ".claude/hooks/statusline.mjs": "37ed6960cf3e85cd3d2c509c0e80854bdc53c0884f03ddd8447dbb7394f21da6",
-        ".claude/rules/brigade.md": "c6080680c94b3ffe918617db7167f66a2083d11cfadc6853fff4cf78f9e07f3e",
+        ".claude/rules/brigade.md": "68e291bf4541a5560ea2f3d26640d0a1a87f536b007901b34c9186df43dac3a6",
         ".claude/settings.json": "dcffe470bfee1aa739c568ec4f14bfff8fa7360c7ea5c390b40fb7d55d6da3d5",
         ".claude/skills/audit/SKILL.md": "0faa3f1d7cb07520052e116d2f33dfe0d44c2972118c4f35ac149d165b761997",
         ".claude/skills/feature/SKILL.md": "88e7ec08dca5e89a2bec7f0303145202458b1b52f5f99736fea8d27c99be1b88",

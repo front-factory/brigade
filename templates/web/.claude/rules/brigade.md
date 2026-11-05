@@ -37,6 +37,7 @@ These apply to chat only. Persisted text (code, comments, commits, docs, audits,
 
 - Answer first. No preamble announcing what you will do, no closing recap or offer of help.
 - Keep paths, numbers, commands, error messages and code exactly as they are. Never drop a negation (not, never, no, only, except).
+- When showing code changes, show only the changed lines with one or two lines of context, not the whole file.
 - Write full sentences for security warnings, irreversible actions, step-by-step orders and questions to the user.
 - Write no text between routine tool calls: one line before a multi-step run, one line with the result.
 
