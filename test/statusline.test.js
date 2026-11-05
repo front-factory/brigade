@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
     mkdirSync, mkdtempSync, writeFileSync
 } from 'node:fs';
@@ -145,4 +145,59 @@ test('the session start hook stays silent and succeeds without a usable manifest
 
     assert.equal(second.status, 0);
     assert.equal(second.stdout, '');
+});
+
+test('the session start hook injects the branch, the feature and the open audits', () => {
+    const cwd = project({
+        head: null
+    });
+
+    execFileSync('git', [
+        'init',
+        '-q',
+        '-b',
+        'feat/x'
+    ], {
+        cwd
+    });
+
+    mkdirSync(join(cwd, '.claude/context/features'), {
+        recursive: true
+    });
+
+    mkdirSync(join(cwd, '.claude/context/audits'), {
+        recursive: true
+    });
+
+    writeFileSync(join(cwd, '.claude/context/features/feat-x.md'), '# Feature: x\n\n## Goal\n\nShip x.\n\n## Steps\n\n- [x] one\n- [ ] two\n');
+    writeFileSync(join(cwd, '.claude/context/audits/a.md'), 'Status: open\n');
+    writeFileSync(join(cwd, '.claude/context/audits/b.md'), 'Status: closed\n');
+    writeFileSync(join(cwd, '.claude/context/audits/_template.md'), 'Status: open\n');
+
+    const result = run(SESSION_START, '{}', {
+        CLAUDE_PROJECT_DIR: cwd
+    });
+    const output = JSON.parse(result.stdout);
+
+    assert.equal(output.hookSpecificOutput.additionalContext, [
+        'Brigade v1.3.0 manages this project.',
+        'Branch: feat/x.',
+        'Feature file: .claude/context/features/feat-x.md. Goal: Ship x. Next step: two.',
+        'Open audits: 1 (.claude/context/audits/).'
+    ].join('\n'));
+
+    assert.equal(output.systemMessage, 'Brigade v1.3.0 manages this project.');
+});
+
+test('the session start hook prints the version without a git repository', () => {
+    const cwd = project({
+        head: null
+    });
+
+    const result = run(SESSION_START, '{}', {
+        CLAUDE_PROJECT_DIR: cwd,
+        GIT_CEILING_DIRECTORIES: tmpdir()
+    });
+
+    assert.equal(JSON.parse(result.stdout).hookSpecificOutput.additionalContext, 'Brigade v1.3.0 manages this project.');
 });

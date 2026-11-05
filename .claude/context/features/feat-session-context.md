@@ -1,7 +1,7 @@
 # Feature: session-context (branch feat/session-context)
 
 Date: 2026-11-05
-Last commit: 7d6e0f3
+Last commit: c6e9dfa
 Base branch: develop
 
 ## Goal
@@ -11,7 +11,7 @@ Tighten orchestration rules taken from the caveman review, and have the SessionS
 ## Steps
 
 - [x] Rules: briefs stay in plain prose, keep existing comments, follow up with SendMessage, precise briefs, verify with git diff
-- [ ] SessionStart hook injects branch, feature goal and next step, open audit count; session-start skill relies on it
+- [x] SessionStart hook injects branch, feature goal and next step, open audit count; session-start skill relies on it
 
 ## Decisions and open questions
 
