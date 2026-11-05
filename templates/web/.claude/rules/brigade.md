@@ -8,7 +8,10 @@ Rules of the Brigade setup of this web project. Work is split between three role
 - **`implementer`** (Sonnet): development only.
 - **`git-operator`** (Haiku): git only, once the work is done.
 
-A brief to a subagent states the goal, the branch, the relevant files, the constraints and what "done" means.
+A brief to a subagent states the goal, the branch, the relevant files (with lines or symbols when known), the constraints and what "done" means.
+
+- To follow up on a subagent's report (a fix, a next step), continue the same agent with `SendMessage` instead of starting a new one: it keeps its context.
+- Verify a subagent's work with a targeted `git diff`, not by re-reading whole files.
 
 ## Git
 
@@ -33,7 +36,7 @@ A brief to a subagent states the goal, the branch, the relevant files, the const
 
 ## Replies
 
-These apply to chat only. Persisted text (code, comments, commits, docs, audits, feature files) stays in plain prose.
+These apply to chat only. Persisted text (code, comments, commits, docs, audits, feature files) and briefs to subagents stay in plain prose.
 
 - Answer first. No preamble announcing what you will do, no closing recap or offer of help.
 - Keep paths, numbers, commands, error messages and code exactly as they are. Never drop a negation (not, never, no, only, except).
