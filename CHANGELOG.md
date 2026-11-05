@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.8.0](https://github.com/front-factory/brigade/compare/v1.7.4...v1.8.0) (2026-11-05)
+
+### Features
+
+* **templates:** end skills with a stop condition ([7139160](https://github.com/front-factory/brigade/commit/71391606ac765d05ba6ad3fd45ea11695b70c30a))
+* **templates:** end subagent reports with a status line ([28bf73b](https://github.com/front-factory/brigade/commit/28bf73b812fdf788117ffa972befd98b0216c3c2))
+* **templates:** make git-operator report in short lines ([15ce2a5](https://github.com/front-factory/brigade/commit/15ce2a5c61b84d8070c6d900df05acf675787172))
+* **templates:** require a verification line in implementer reports ([0f2ee21](https://github.com/front-factory/brigade/commit/0f2ee213f1a331bf77fcead2a1e96fbe27914f49))
+* **templates:** stop implementer when the work outgrows the brief ([bf3c0a2](https://github.com/front-factory/brigade/commit/bf3c0a2d0f23aab0c2f1c078b9b8934c01f7e5e6))
+
 ## [1.7.4](https://github.com/front-factory/brigade/compare/v1.7.3...v1.7.4) (2026-10-30)
 
 ### Bug Fixes
