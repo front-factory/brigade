@@ -11,8 +11,8 @@
         "docsLanguage": "English"
     },
     "files": {
-        ".claude/agents/git-operator.md": "3019cafa74b4f2c1a179998153b264c7d3b1c01251e3dde6497860e1ef72e478",
-        ".claude/agents/implementer.md": "41eee7a216164473d3cc9ee86565b1a7d2b3284e86e8533ae5793e1bc3fc8da8",
+        ".claude/agents/git-operator.md": "6c371eeefc12937ddd655380c623f0a466a2e309d7541ee4750dd82ecd056f2f",
+        ".claude/agents/implementer.md": "ff351e6b147c19d136f22c2e55a6c1e3074f5fb27cfd06fa64feaad185d270a6",
         ".claude/commands/brigade-effort.md": "95250fce81b53018293146dc2566cdd8a19c9b6a05b23022ca49aa82d266bee8",
         ".claude/commands/brigade-language.md": "838fab3e4c8748ca9ac143ccd54619a72f6208196e2ea15eb0d7d863326a1f31",
         ".claude/commands/brigade-reference-branch.md": "2dd4e06a7a1c3a29f554337c5c172607addaac6d994449e9a4551007b9d6639d",
