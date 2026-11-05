@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.9.0](https://github.com/front-factory/brigade/compare/v1.8.0...v1.9.0) (2026-11-05)
+
+### Features
+
+* **templates:** add reply style rules ([d5033b4](https://github.com/front-factory/brigade/commit/d5033b4ab89a384d42feb3d46ab690cfb75648ec))
+* **templates:** show only changed lines in replies ([986720d](https://github.com/front-factory/brigade/commit/986720dbd6e5a876afe7368979b58bf0a758289b))
+
 ## [1.8.0](https://github.com/front-factory/brigade/compare/v1.7.4...v1.8.0) (2026-11-05)
 
 ### Features
