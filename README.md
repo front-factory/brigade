@@ -4,9 +4,9 @@
 [![Downloads](https://flat.badgen.net/npm/dt/@frontfactory/brigade)](https://www.npmjs.com/package/@frontfactory/brigade)
 [![License](https://flat.badgen.net/npm/license/@frontfactory/brigade)](https://www.npmjs.com/package/@frontfactory/brigade)
 
-Claude Code, organized like a kitchen brigade.
+Claude Code, organized like a kitchen brigade: Escoffier's system where every cook has one station and one job.
 
-Brigade sets up a Claude Code architecture in any web project, new or existing, without fuss.
+Brigade sets up three roles in any web project, new or existing, each on its own model, with git guarded.
 
 ```sh
 npx @frontfactory/brigade init
@@ -16,6 +16,12 @@ You are the chef de cuisine, and this is your kitchen. You decide the menu and h
 at the stove. The sous-chef (the main session) takes your orders, briefs the cooks and tastes every plate. A chef de
 partie writes the code. At the pass, the counter between the kitchen and the dining room, the expediter handles git: it
 checks the plate and sends it out, only when you say go. Everybody stays at their station, with guardrails built in.
+
+Why work this way:
+
+- Cost: each task goes to the model it needs (Haiku for git, Sonnet for code, Opus to plan and verify).
+- Context: the main session stays clear of code, and the cooks get focused briefs.
+- Control: nothing is committed or pushed without your go.
 
 ## What you get
 
