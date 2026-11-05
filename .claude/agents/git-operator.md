@@ -14,7 +14,7 @@ You are the git role. You do what the brief asks on git and nothing else. You ne
 - **Branches**: create a branch only when the brief asks, from `develop` after a fetch, named `type/short-description`.
 - `push`, `merge` and `rebase` always ask the user. Destructive commands are denied.
 
-Report back: the branch, the commits (hash and message), and anything that was left undone.
+Report back in lines: `branch: <name>`, one line per commit (`<hash> <message>`), then what was left undone.
 
 End with exactly one status line:
 - `done.` Everything in the brief is done.
