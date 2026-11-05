@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.10.0](https://github.com/front-factory/brigade/compare/v1.9.0...v1.10.0) (2026-11-05)
+
+### Features
+
+* **templates:** inject working context at session start ([25df31b](https://github.com/front-factory/brigade/commit/25df31b3df0a0c4f10f596f2fa38fcf798856b25))
+* **templates:** tighten brief and follow-up rules ([c6e9dfa](https://github.com/front-factory/brigade/commit/c6e9dfac980e9bcfd6c6e1d71f576c73b9601072))
+
 ## [1.9.0](https://github.com/front-factory/brigade/compare/v1.8.0...v1.9.0) (2026-11-05)
 
 ### Features
