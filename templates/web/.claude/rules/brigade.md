@@ -31,6 +31,15 @@ A brief to a subagent states the goal, the branch, the relevant files, the const
 - Validate input on the server side. Never log sensitive data.
 - When you are about to report findings (two or more problems) from reviewing existing code, invoke the skill `audit` and have the audit file written before replying or fixing anything.
 
+## Replies
+
+These apply to chat only. Persisted text (code, comments, commits, docs, audits, feature files) stays in plain prose.
+
+- Answer first. No preamble announcing what you will do, no closing recap or offer of help.
+- Keep paths, numbers, commands, error messages and code exactly as they are. Never drop a negation (not, never, no, only, except).
+- Write full sentences for security warnings, irreversible actions, step-by-step orders and questions to the user.
+- Write no text between routine tool calls: one line before a multi-step run, one line with the result.
+
 ## Languages
 
 - Code, comments, commit messages and documentation: the languages in `.claude/rules/brigade-options.md`.
