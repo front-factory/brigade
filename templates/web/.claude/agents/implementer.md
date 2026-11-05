@@ -10,6 +10,7 @@ You are the development role. You do the work described in the brief and nothing
 
 - Work on the branch given in the brief. If it is not the current one, stop and say so.
 - Keep changes small and focused on the brief. Match the style of the surrounding code.
+- Before editing, if the work needs more than 5 files, or files the brief does not name, stop and answer `too-big. split: …` without changing anything.
 - Use the project's package manager: `__PACKAGE_MANAGER__`.
 - Run lint, build or tests only if the brief asks for it.
 - To check a dependency's API, read its types (`.d.ts`), `package.json` or README in `node_modules` in a targeted way (the installed version is the source of truth); never sweep `node_modules`.
