@@ -12,3 +12,5 @@ An audit must survive between sessions, machines and developers: it is a committ
 - Keep the active audit's path and open IDs in the feature file (see skill `feature`).
 - To resume: work only on `open`/`deferred` rows, and run `git diff <baseline>..HEAD -- <files>` to find findings the code changed since. Re-audit only those.
 - A `wontfix` that sets a team-wide rule also goes in `.claude/context/decisions.md`.
+
+Stop once the audit file is written and its commit proposed: report its path and the count of findings per status. Fixing starts only on the user's go.

@@ -9,3 +9,5 @@ Check the current branch (`git branch --show-current`, `git status -sb`), read `
 - **No file**: just report the branch and the remote sync. No file is created.
 
 Also report the sync with the remote: `git status -sb` (ahead/behind) and `git log @{u}..HEAD --oneline` for unpushed commits. If the branch is behind or has no upstream, say so. If commits are unpushed, propose the push in one sentence.
+
+Stop after the report: this skill never starts coding.

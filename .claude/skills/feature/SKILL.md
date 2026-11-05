@@ -13,3 +13,5 @@ A feature = work with several steps, sessions or files. Only features get a bran
 - **Resume**: `session-start` reads the file and reports it, then runs the resume check: new commits on the base branch (`git log HEAD..<base> --oneline`) and conflict risk, changes to `.claude/context/decisions.md` since the saved date, audit rows still open.
 - **End**: remove the file in the last commit before the branch is merged.
 - The file is versioned with the branch, so it is shared between developers and machines. `CLAUDE.local.md` stays personal.
+
+Stop once the step at hand (start, pause, resume, end) is done: report the branch, the feature file and the next step.
