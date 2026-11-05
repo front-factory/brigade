@@ -12,7 +12,7 @@
     },
     "files": {
         ".claude/agents/git-operator.md": "6c371eeefc12937ddd655380c623f0a466a2e309d7541ee4750dd82ecd056f2f",
-        ".claude/agents/implementer.md": "ff351e6b147c19d136f22c2e55a6c1e3074f5fb27cfd06fa64feaad185d270a6",
+        ".claude/agents/implementer.md": "6d05d88f82beb0ecc50120fec2ca05d202050d01f0fa6b0b8665ba1ad12a5a15",
         ".claude/commands/brigade-effort.md": "95250fce81b53018293146dc2566cdd8a19c9b6a05b23022ca49aa82d266bee8",
         ".claude/commands/brigade-language.md": "838fab3e4c8748ca9ac143ccd54619a72f6208196e2ea15eb0d7d863326a1f31",
         ".claude/commands/brigade-reference-branch.md": "2dd4e06a7a1c3a29f554337c5c172607addaac6d994449e9a4551007b9d6639d",
