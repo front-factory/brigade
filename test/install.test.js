@@ -80,6 +80,7 @@ test('installs the skills and the context folder, decisions.md and architecture.
         'hooks/session-start.mjs',
         'hooks/run-node.sh',
         'skills/audit/SKILL.md',
+        'skills/debug/SKILL.md',
         'skills/feature/SKILL.md',
         'skills/session-start/SKILL.md',
         'context/architecture.md',

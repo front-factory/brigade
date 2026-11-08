@@ -36,7 +36,7 @@ Three roles, each limited to its mission:
 Plus base rules for work, security and efficiency, adapted to the stack (web for now). The setup is shared with the
 project and committed with it. The rest of the kit, all under `.claude/`:
 
-- Skills: `session-start`, `feature` (branch + state file for multi-step work), `audit`.
+- Skills: `session-start`, `feature` (branch + state file for multi-step work), `audit`, `debug` (root cause before any fix).
 - Commands: `/brigade-settings` sets your reply language, your effort per role and the reference-branch protection, all
   local.
 - Shared context in `context/`: `decisions.md`, `architecture.md` (optional), features and audits.

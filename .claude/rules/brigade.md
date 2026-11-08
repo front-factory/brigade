@@ -32,6 +32,7 @@ A brief to a subagent states the goal, the branch, the relevant files (with line
 - Never read or write secrets (`.env*`, keys, tokens).
 - Say so before adding a dependency.
 - Validate input on the server side. Never log sensitive data.
+- On a bug, a failing test or build, or unexpected behavior, invoke the skill `debug` before proposing or briefing a fix.
 - When you are about to report findings (two or more problems) from reviewing existing code, invoke the skill `audit` and have the audit file written before replying or fixing anything.
 
 ## Replies
