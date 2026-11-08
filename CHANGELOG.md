@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.11.0](https://github.com/front-factory/brigade/compare/v1.10.0...v1.11.0) (2026-11-08)
+
+### Features
+
+* **templates:** add debug skill for root cause first ([edd34eb](https://github.com/front-factory/brigade/commit/edd34eb35db577efa6e66db5e8e50701b05fbf23))
+* **templates:** check subagent work against the brief ([55beb0d](https://github.com/front-factory/brigade/commit/55beb0db9becda82d1dee74ba117146dcbb605ab))
+* **templates:** guide branch closing at feature end ([11096d6](https://github.com/front-factory/brigade/commit/11096d6850b81852235a205443103ca53f51fcbc))
+* **templates:** tie implementer verification to the brief ([f840e0a](https://github.com/front-factory/brigade/commit/f840e0afbaec09507928e07fb470e57d4b80bf87))
+
+### Bug Fixes
+
+* **templates:** resolve architecture coherence audit ([d9db54f](https://github.com/front-factory/brigade/commit/d9db54fafed25deda6d1c9c344934f9f809d04c2))
+
 ## [1.10.0](https://github.com/front-factory/brigade/compare/v1.9.0...v1.10.0) (2026-11-05)
 
 ### Features
