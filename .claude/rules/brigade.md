@@ -11,7 +11,7 @@ Rules of the Brigade setup of this web project. Work is split between three role
 A brief to a subagent states the goal, the branch, the relevant files (with lines or symbols when known), the constraints and what "done" means.
 
 - To follow up on a subagent's report (a fix, a next step), continue the same agent with `SendMessage` instead of starting a new one: it keeps its context.
-- Verify a subagent's work with a targeted `git diff`, not by re-reading whole files: check it against the brief's "done" and constraints, and send any gap back to the same agent with `SendMessage`.
+- Verify a subagent's work with a targeted `git diff`, not by re-reading whole files: check it against the brief's "done" and constraints, then for quality (duplication, naming, edge cases, security), and send any gap back to the same agent with `SendMessage`.
 
 ## Git
 
@@ -25,7 +25,7 @@ A brief to a subagent states the goal, the branch, the relevant files (with line
 
 ## Rules
 
-- At the start of a session, read `.claude/context/decisions.md` (team decisions, shared).
+- At the start of a session, read `.claude/context/decisions.md` (team decisions, shared). Before the first coding task, invoke the skill `session-start`.
 - Keep changes small and focused.
 - Use the project's package manager, given in `.claude/rules/brigade-options.md`.
 - Run lint, build or tests only when the user asks or the task needs them. Do not assume they exist.
