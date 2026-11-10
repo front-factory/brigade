@@ -306,6 +306,9 @@ function symbolicRefWrites(rest) {
 // True when `rest` holds one of the flags (a regex source), as a whole word.
 const flag = (rest, names, end = '\\s|$') => new RegExp(`(^|\\s)(${names})(${end})`).test(rest);
 
+// `rest` without the separate-token value of `--sort <key>` / `--format <fmt>`, which is not a name.
+const withoutListValues = (rest) => rest.replace(/(^|\s)--(sort|format)\s+\S+/g, '$1');
+
 // Subcommands read when their arguments match; any other form is a write.
 const READ_FORMS = {
     reflog: /^(?!(expire|delete)\b)/,
@@ -325,7 +328,7 @@ function writes({ sub, rest }) {
             return true;
         }
 
-        return !flag(rest, '-l|-a|-r|-v+|--list|--all|--remotes|--verbose|--show-current|--contains|--merged|--no-merged|--points-at') && /(^|\s)[^-\s]/.test(rest);
+        return !flag(rest, '-l|-a|-r|-v+|--list|--all|--remotes|--verbose|--show-current|--contains|--merged|--no-merged|--points-at') && /(^|\s)[^-\s]/.test(withoutListValues(rest));
     }
 
     if (sub === 'tag') {
@@ -333,7 +336,7 @@ function writes({ sub, rest }) {
             return true;
         }
 
-        return rest !== '' && !flag(rest, '-l|-n\\d*|--list|--contains|--points-at|--merged|--no-merged');
+        return !flag(rest, '-l|-n\\d*|--list|--contains|--points-at|--merged|--no-merged') && /(^|\s)[^-\s]/.test(withoutListValues(rest));
     }
 
     if (Object.hasOwn(READ_FORMS, sub)) {

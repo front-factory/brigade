@@ -133,7 +133,12 @@ test('harmless reads are not writes for the main session', () => {
         'git branch -a',
         'git branch -r',
         'git branch -vv',
-        'git branch --show-current'
+        'git branch --show-current',
+        'git tag --sort=-v:refname',
+        'git tag --sort -v:refname',
+        'git tag --format=\'%(refname)\'',
+        'git tag --column',
+        'git branch --sort committerdate'
     ]) {
         assert.equal(run(command, {
             agent: ''
@@ -148,6 +153,9 @@ test('tag, branch and reflog writes are still denied for the main session', () =
         'git tag -a v1 -m x',
         'git branch x',
         'git branch -d x',
+        'git tag --sort=x v1',
+        'git tag --format=x v1',
+        'git branch --sort x newbranch',
         'git reflog expire --all',
         'git reflog delete HEAD@{1}'
     ]) {
