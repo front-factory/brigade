@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.12.0](https://github.com/front-factory/brigade/compare/v1.11.0...v1.12.0) (2026-11-10)
+
+### Features
+
+* **templates:** add design and step plan to the feature workflow ([d71b60f](https://github.com/front-factory/brigade/commit/d71b60fbcd96c81923c0d976955a9ede228ab193))
+* **templates:** require a failing test first for feature steps when tests exist ([3f1530f](https://github.com/front-factory/brigade/commit/3f1530f3b45e3f4230dd393844515d97698e20d1))
+* **templates:** size feature steps as the smallest checked change ([8feb637](https://github.com/front-factory/brigade/commit/8feb637cfd10bb7fd2e1a133fc1c8df70e86704c))
+
+### Bug Fixes
+
+* **guard:** allow read-only tag and branch listing options ([72e1dd5](https://github.com/front-factory/brigade/commit/72e1dd5321ddd2f2b41ff56c025000cf4b60bdff))
+
 ## [1.11.0](https://github.com/front-factory/brigade/compare/v1.10.0...v1.11.0) (2026-11-08)
 
 ### Features
