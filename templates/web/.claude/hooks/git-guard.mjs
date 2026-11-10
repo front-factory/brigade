@@ -423,7 +423,7 @@ export function decide({ command, agent, branch: initial, protectedBranches }) {
         if (agent !== 'git-operator') {
             raise('deny', 'Only git-operator writes to git: delegate to it, after the user\'s go.');
         } else if (destructive(git)) {
-            raise('deny', `git ${git.sub}: destructive command, not allowed.`);
+            raise('ask', `git ${git.sub}: destructive command, needs the user's explicit confirmation.`);
         } else if (git.sub === '?') {
             raise('ask', 'Nested git command that cannot be analysed: confirm.');
         } else if (ASK.has(git.sub)) {

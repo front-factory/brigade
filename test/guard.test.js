@@ -165,7 +165,7 @@ test('tag, branch and reflog writes are still denied for the main session', () =
     }
 });
 
-test('git-operator: unknown write subcommands are asked, ref and history deletions denied', () => {
+test('git-operator: unknown write subcommands are asked, ref and history deletions asked with a destructive reason', () => {
     for (const command of [
         'git update-ref refs/heads/x HEAD',
         'git worktree remove ../w',
@@ -184,7 +184,7 @@ test('git-operator: unknown write subcommands are asked, ref and history deletio
         'git reflog delete HEAD@{1}',
         'git gc --prune=now'
     ]) {
-        assert.equal(run(command), 'deny', command);
+        assert.equal(run(command), 'ask', command);
     }
 });
 
@@ -293,11 +293,20 @@ test('git-operator asks on protected branches, push, merge and rebase', () => {
     assert.equal(run('git rebase develop'), 'ask');
 });
 
-test('destructive git is denied even for git-operator', () => {
-    assert.equal(run('git reset --hard HEAD~1'), 'deny');
-    assert.equal(run('git push --force'), 'deny');
-    assert.equal(run('git clean -fd'), 'deny');
-    assert.equal(run('git branch -D old'), 'deny');
+test('destructive git is asked for git-operator, denied for everyone else', () => {
+    assert.equal(run('git reset --hard HEAD~1'), 'ask');
+    assert.equal(run('git push --force'), 'ask');
+    assert.equal(run('git clean -fd'), 'ask');
+    assert.equal(run('git branch -D old'), 'ask');
+
+    for (const command of [
+        'git reset --hard HEAD~1',
+        'git push --force'
+    ]) {
+        assert.equal(run(command, {
+            agent: ''
+        }), 'deny', command);
+    }
 });
 
 test('quoted text is not read as a command', () => {
@@ -309,9 +318,9 @@ test('the strictest decision of a compound command wins', () => {
 });
 
 test('global options before the subcommand are skipped', () => {
-    assert.equal(run('git -C . push --force'), 'deny');
-    assert.equal(run('git -c user.name=x push -f'), 'deny');
-    assert.equal(run('git --git-dir=.git --no-pager reset --hard'), 'deny');
+    assert.equal(run('git -C . push --force'), 'ask');
+    assert.equal(run('git -c user.name=x push -f'), 'ask');
+    assert.equal(run('git --git-dir=.git --no-pager reset --hard'), 'ask');
     assert.equal(run('git --work-tree . -C app commit -m "x"', {
         branch: 'develop'
     }), 'ask');
@@ -349,8 +358,8 @@ test('nested git commands are analysed', () => {
         agent: ''
     }), 'deny');
 
-    assert.equal(run('sh -c \'git push --force\''), 'deny');
-    assert.equal(run('eval "git clean -fd"'), 'deny');
+    assert.equal(run('sh -c \'git push --force\''), 'ask');
+    assert.equal(run('eval "git clean -fd"'), 'ask');
     assert.equal(run('git ls-files | xargs git rm', {
         agent: ''
     }), 'deny');
@@ -370,13 +379,13 @@ test('nested git commands are analysed', () => {
 });
 
 test('commands that destroy uncommitted work are denied for git-operator', () => {
-    assert.equal(run('git checkout -- src/a.js'), 'deny');
-    assert.equal(run('git checkout .'), 'deny');
-    assert.equal(run('git checkout -f develop'), 'deny');
-    assert.equal(run('git restore src/a.js'), 'deny');
-    assert.equal(run('git switch --discard-changes develop'), 'deny');
-    assert.equal(run('git stash drop'), 'deny');
-    assert.equal(run('git stash clear'), 'deny');
+    assert.equal(run('git checkout -- src/a.js'), 'ask');
+    assert.equal(run('git checkout .'), 'ask');
+    assert.equal(run('git checkout -f develop'), 'ask');
+    assert.equal(run('git restore src/a.js'), 'ask');
+    assert.equal(run('git switch --discard-changes develop'), 'ask');
+    assert.equal(run('git stash drop'), 'ask');
+    assert.equal(run('git stash clear'), 'ask');
     assert.equal(run('git checkout develop'), 'allow');
     assert.equal(run('git checkout -b feat/y'), 'allow');
     assert.equal(run('git restore --staged src/a.js'), 'allow');
@@ -393,7 +402,7 @@ test('git-operator is asked when the protected branches are unknown', () => {
 
     assert.equal(unknown('git commit -m "x"'), 'ask');
     assert.equal(unknown('git add a'), 'allow');
-    assert.equal(unknown('git push --force'), 'deny');
+    assert.equal(unknown('git push --force'), 'ask');
 });
 
 test('an unreadable hook payload asks and exits cleanly', () => {
@@ -497,13 +506,13 @@ test('heredoc bodies are not read as commands', () => {
         assert.equal(run(message(open, '\'')), 'allow', open);
     }
 
-    assert.equal(run(`${message('\'EOF\'')} && git push --force`), 'deny');
-    assert.equal(run(`${message('\'EOF\'')}\ngit push --force`), 'deny');
-    assert.equal(run(`${message('EOF', '\'')}\ngit push --force`), 'deny');
+    assert.equal(run(`${message('\'EOF\'')} && git push --force`), 'ask');
+    assert.equal(run(`${message('\'EOF\'')}\ngit push --force`), 'ask');
+    assert.equal(run(`${message('EOF', '\'')}\ngit push --force`), 'ask');
 });
 
 test('an unquoted heredoc still runs its substitutions', () => {
-    assert.equal(run('cat <<EOF\n$(git reset --hard)\nEOF'), 'deny');
+    assert.equal(run('cat <<EOF\n$(git reset --hard)\nEOF'), 'ask');
     assert.equal(run('cat <<EOF\n`git push`\nEOF'), 'ask');
     assert.equal(run('cat <<\'EOF\'\n$(git reset --hard)\nEOF'), null);
 });
@@ -548,7 +557,7 @@ test('a switch or checkout that creates no branch makes the branch unknown', () 
 
     assert.equal(run('git checkout -- file.md && git commit -m x', {
         branch: 'main'
-    }), 'deny');
+    }), 'ask');
 
     assert.equal(run('git checkout a.md b.md && git commit -m x', {
         branch: 'main'
@@ -562,11 +571,11 @@ test('a switch or checkout that creates no branch makes the branch unknown', () 
 });
 
 test('a << inside quotes or an arithmetic expression does not open a heredoc', () => {
-    assert.equal(run('git commit -m "a << b"\ngit push --force'), 'deny');
-    assert.equal(run('git commit -m \'a <<EOF\'\ngit push --force'), 'deny');
-    assert.equal(run('echo $((1<<2))\ngit push --force'), 'deny');
-    assert.equal(run('echo "$((1<<2))"\ngit push --force'), 'deny');
-    assert.equal(run('git commit -m "$(cat <<\'EOF\'\nit\'s a << b\nEOF\n)"\ngit push --force'), 'deny');
+    assert.equal(run('git commit -m "a << b"\ngit push --force'), 'ask');
+    assert.equal(run('git commit -m \'a <<EOF\'\ngit push --force'), 'ask');
+    assert.equal(run('echo $((1<<2))\ngit push --force'), 'ask');
+    assert.equal(run('echo "$((1<<2))"\ngit push --force'), 'ask');
+    assert.equal(run('git commit -m "$(cat <<\'EOF\'\nit\'s a << b\nEOF\n)"\ngit push --force'), 'ask');
 });
 
 test('BRIGADE_UNPROTECT_REFERENCE_BRANCH=1 lifts the reference branch only', async () => {
@@ -607,7 +616,7 @@ test('BRIGADE_UNPROTECT_REFERENCE_BRANCH=1 lifts the reference branch only', asy
 
         assert.equal(on('git reset --hard', 'develop', {
             BRIGADE_UNPROTECT_REFERENCE_BRANCH: '1'
-        }), 'deny');
+        }), 'ask');
 
         assert.equal(on(commit, 'develop', {}), 'ask');
         assert.equal(on(commit, 'develop', {
