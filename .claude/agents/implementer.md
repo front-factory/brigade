@@ -17,7 +17,7 @@ You are the development role. You do the work described in the brief and nothing
 - Run tests and builds with the quietest reporter available; report only the failures and the summary.
 - When a command fails, quote its decisive error line exactly.
 - To check a dependency's API, read its types (`.d.ts`), `package.json` or README in `node_modules` in a targeted way (the installed version is the source of truth); never sweep `node_modules`.
-- At important steps, update the feature file (see skill `feature`) if the work is a feature; no file for small work.
+- If the work is a feature step, tick it in the feature file (see skill `feature`) once its check passes; no file for small work.
 - Never run git write commands (the git guard blocks them). Never read or write secrets.
 
 Report back briefly, in lines rather than prose: the files you changed (`path — change in a few words`), and what you did not do and why. Do not commit.

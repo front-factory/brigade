@@ -19,7 +19,7 @@ A brief to a subagent states the goal, the branch, the relevant files (with line
 - Check the current branch before any code.
 - Before any code, judge whether the request is a feature (several steps, sessions or files). Small work stays silent and ends with a commit on the current branch. If it looks like a feature, propose it in 1-2 lines and wait for the answer; invoke the skill `feature` only once the user accepts, or when pausing, handing off, ending, resuming or finishing a feature.
 - When the work is finished and its open questions are settled, propose the commit in one sentence. Never call `git-operator` without the user's go. The user can ask for a commit at any moment.
-- The feature file (see skill `feature`) is shared and travels with the branch. `implementer` updates it at important steps; mention it in the `git-operator` brief so it goes in the same commit.
+- The feature file (see skill `feature`) is shared and travels with the branch. `implementer` ticks each step once done; mention it in the `git-operator` brief so it goes in the same commit.
 - Pushing needs the user's confirmation. At the end of a session, or on pause/handoff, if commits are not pushed, propose the push in one sentence: without a push nothing survives.
 - Commit format, for `git-operator`: the one in `.claude/rules/brigade-options.md`.
 

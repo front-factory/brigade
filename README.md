@@ -136,7 +136,9 @@ non-interactive shells and restart.
 
 Only `git-operator` writes to git. `push`, `merge` and `rebase` ask for confirmation, destructive commands are denied.
 Brigade proposes a commit once the work is finished and never commits without your go. A feature gets its own branch
-and a state file `.claude/context/features/<branch>.md` (slashes become dashes), committed with the branch.
+and a state file `.claude/context/features/<branch>.md` (slashes become dashes), committed with the branch. It starts
+with a design (questions, then 2-3 approaches) and a plan of small steps, each with its files and a check; each step is
+one `implementer` brief, verified before the next.
 When the feature ends, Brigade asks how to close the branch: a pull request, a local merge, or keep it.
 
 ## Add a stack
