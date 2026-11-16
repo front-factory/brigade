@@ -8,6 +8,7 @@
         "test": "node --test \"test/*.test.js\"",
         "test:coverage": "node --test --experimental-test-coverage \"test/*.test.js\"",
         "release": "semantic-release",
+        "version": "node -e \"const f='.claude/brigade.json',m=JSON.parse(fs.readFileSync(f));m.version=process.env.npm_package_version;fs.writeFileSync(f,JSON.stringify(m,null,4)+'\\n')\"",
         "lint": "eslint .",
         "lint:fix": "eslint . --fix"
     },

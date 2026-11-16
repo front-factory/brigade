@@ -64,6 +64,10 @@ test('the committed .claude/brigade.json matches the kit and the answers', () =>
 
     assert.deepEqual(manifest.answers, ANSWERS);
 
+    const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
+
+    assert.equal(manifest.version, pkg.version, 'brigade.json version lags behind package.json');
+
     const paths = new Set();
 
     for (const source of listFiles(TEMPLATES)) {

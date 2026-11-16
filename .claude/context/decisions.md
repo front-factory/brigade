@@ -18,3 +18,4 @@
 - Manifest `answers` hold only the user's choices; kit-owned text is resolved at render time (like `commitFormatOf`): an update always brings the latest kit, whatever the options.
 - `node_modules` stays readable: a targeted read of the installed version beats web docs; broad searches skip it through `.gitignore`.
 - `defaultMode: plan` stays: the main session must never edit files, even if plain questions go through the plan workflow.
+- The release syncs the version of `.claude/brigade.json` through the npm `version` script (run by `@semantic-release/npm`) and commits it with `@semantic-release/git`, so the dogfood manifest never lags behind `package.json`.

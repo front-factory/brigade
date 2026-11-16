@@ -73,6 +73,12 @@ export default {
         [
             '@semantic-release/git',
             {
+                assets: [
+                    'CHANGELOG.md',
+                    'package.json',
+                    'package-lock.json',
+                    '.claude/brigade.json'
+                ],
                 message: 'chore(release): publish version ${nextRelease.version}'
             }
         ]
