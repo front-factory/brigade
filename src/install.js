@@ -9,8 +9,6 @@ import { commitFormatOf } from './conventions.js';
 
 export const MANIFEST = '.claude/brigade.json';
 export const OPTIONS_FILE = '.claude/rules/brigade-options.md';
-// Folder of base copies left by Brigade 1.3.0, removed at every update.
-export const LEGACY_BASE_DIR = '.claude/brigade-base';
 
 // Lines Brigade appends to the project files when missing. Existing lines are never touched or duplicated.
 export const APPENDS = {
@@ -23,10 +21,7 @@ export const APPENDS = {
     ]
 };
 
-const RULES_PATH = '.claude/rules/brigade.md';
-
 export const SETTINGS_PATH = '.claude/settings.json';
-const MIGRATION_NOTE = 'The kit\'s brigade.md no longer holds your options: they moved to .claude/rules/brigade-options.md. Merge brigade.md.proposed into your file, or delete your file\'s edits and re-run to take the new one.';
 
 // Written once, then the team's own: never updated, never proposed over.
 export const WRITE_ONCE = new Set([
@@ -423,16 +418,10 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
 
             hashes[path] = wanted;
 
-            const entry = {
+            report.push({
                 path,
                 status: 'proposed'
-            };
-
-            if (path === RULES_PATH && !text.includes('brigade-options.md')) {
-                entry.note = MIGRATION_NOTE;
-            }
-
-            report.push(entry);
+            });
         }
     }
 
@@ -465,17 +454,6 @@ export function planFiles({ cwd, stackDir, answers, previous }) {
                 status: 'obsolete'
             });
         }
-    }
-
-    // The base copies of Brigade 1.3.0 are of no use anymore.
-    const legacy = join(cwd, LEGACY_BASE_DIR);
-
-    if (existsSync(legacy) && statSync(legacy).isDirectory()) {
-        removals.push(legacy);
-        report.push({
-            path: `${LEGACY_BASE_DIR}/`,
-            status: 'removed'
-        });
     }
 
     return {

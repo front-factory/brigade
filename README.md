@@ -87,6 +87,8 @@ What happens to your files:
   is written to `<file>.proposed`, once per kit change. It stays until you delete it and is not recreated or rewritten
   unless the kit changes that file again. Diff, take what you want, delete it.
 - A kit file you deleted is recreated.
+- Updating from Brigade 1.3.0 or older: delete `.claude/brigade-base/` if it is still there, and merge
+  `.claude/rules/brigade.md.proposed` by hand.
 - A file the kit no longer ships is removed if untouched, otherwise kept and reported at each update.
 - `.claude/settings.json` is merged only when the kit's version of it changed since the last install; otherwise your
   file is kept as it is, and what you removed stays removed. When the merge runs, your values win, nothing is

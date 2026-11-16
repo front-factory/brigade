@@ -113,8 +113,6 @@ function summary({ version, answers, report, ignored, repo, personal, local, dry
         }
     }
 
-    const notes = report.filter(({ note }) => note).map(({ path, note }) => `${path}: ${note}`);
-
     const rows = [
         [
             'Brigade',
@@ -130,7 +128,6 @@ function summary({ version, answers, report, ignored, repo, personal, local, dry
 
     return {
         files,
-        notes,
         rows,
         added,
         kept: report.some(({ status }) => status === 'proposed'),
@@ -138,13 +135,7 @@ function summary({ version, answers, report, ignored, repo, personal, local, dry
     };
 }
 
-const plainFiles = (files, notes) => [
-    ...files.map(({ plain }) => plain),
-    ...(notes.length ? [
-        '',
-        ...notes
-    ] : [])
-].join('\n');
+const plainFiles = (files) => files.map(({ plain }) => plain).join('\n');
 
 function print(result, interactive) {
     const { prompter } = result;
@@ -159,12 +150,12 @@ function print(result, interactive) {
         return;
     }
 
-    const { files, notes, rows, added, kept, repo } = summary(result);
+    const { files, rows, added, kept, repo } = summary(result);
 
     if (result.dryRun) {
         const news = added ? `\n\nNew options, default used: ${added}` : '';
 
-        console.log(`Brigade dry run (stack: ${result.stack}). Nothing was written.\n\n${plainFiles(files, notes)}\n\n${plain(rows)}${news}\n\nRun without --dry-run to apply.`);
+        console.log(`Brigade dry run (stack: ${result.stack}). Nothing was written.\n\n${plainFiles(files)}\n\n${plain(rows)}${news}\n\nRun without --dry-run to apply.`);
 
         return;
     }
@@ -172,17 +163,13 @@ function print(result, interactive) {
     if (!interactive) {
         const news = added ? `\n\nNew options, default used: ${added}` : '';
 
-        console.log(`Brigade installed (stack: ${result.stack}).\n\n${plainFiles(files, notes)}\n\n${plain(rows)}${news}\n\nCommit .claude/ including .claude/brigade.json so the install is shared with your team and can be updated from any machine.`);
+        console.log(`Brigade installed (stack: ${result.stack}).\n\n${plainFiles(files)}\n\n${plain(rows)}${news}\n\nCommit .claude/ including .claude/brigade.json so the install is shared with your team and can be updated from any machine.`);
 
         return;
     }
 
     prompter.step(3, 3, 'Installation');
     prompter.files(files);
-
-    for (const note of notes) {
-        prompter.info(note);
-    }
 
     prompter.card('Your setup', rows);
 

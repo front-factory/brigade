@@ -5,7 +5,7 @@ import {
     join, resolve, sep
 } from 'node:path';
 import {
-    applyPlan, dropKitEntries, LEGACY_BASE_DIR, MANIFEST, OPTIONS_FILE, readManifest, render, renderOptions, SETTINGS_PATH, sha, stripSettings, WRITE_ONCE
+    applyPlan, dropKitEntries, MANIFEST, OPTIONS_FILE, readManifest, render, renderOptions, SETTINGS_PATH, sha, stripSettings, WRITE_ONCE
 } from './install.js';
 import { createPrompter } from './prompt.js';
 import { DEFAULT_STACK, STACKS } from './stacks.js';
@@ -143,16 +143,6 @@ export function planUninstall({ cwd, stackDir, manifest }) {
     }
 
     owned(OPTIONS_FILE, renderOptions(manifest.answers));
-
-    const legacy = join(cwd, LEGACY_BASE_DIR);
-
-    if (existsSync(legacy) && statSync(legacy).isDirectory()) {
-        removals.push(legacy);
-        report.push({
-            path: `${LEGACY_BASE_DIR}/`,
-            status: 'removed'
-        });
-    }
 
     // Last, so a failed run leaves the install described.
     removals.push(join(cwd, MANIFEST));

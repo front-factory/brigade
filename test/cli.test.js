@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
-    existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync
+    existsSync, mkdtempSync, readFileSync, writeFileSync
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -365,33 +365,4 @@ test('the dry run shows a proposal with the "would be" wording and writes nothin
 
     assert.match(out, /^yours kept, proposal would be written +\.claude\/rules\/brigade\.md\.proposed$/m);
     assert.ok(!existsSync(join(cwd, `${rule}.proposed`)));
-});
-
-test('an update removes the old .claude/brigade-base/ folder, the dry run only lists it', () => {
-    const first = brigade([
-        'init',
-        '--yes'
-    ]);
-
-    mkdirSync(join(first.cwd, '.claude/brigade-base/rules'), {
-        recursive: true
-    });
-
-    writeFileSync(join(first.cwd, '.claude/brigade-base/rules/brigade.md'), 'old base\n');
-
-    const preview = brigade([
-        'init',
-        '--dry-run'
-    ], first.cwd);
-
-    assert.match(preview.out, /^would be removed, no longer in the kit +\.claude\/brigade-base\/$/m);
-    assert.ok(existsSync(join(first.cwd, '.claude/brigade-base')));
-
-    const { out } = brigade([
-        'init',
-        '--yes'
-    ], first.cwd);
-
-    assert.match(out, /^removed, no longer in the kit +\.claude\/brigade-base\/$/m);
-    assert.ok(!existsSync(join(first.cwd, '.claude/brigade-base')));
 });

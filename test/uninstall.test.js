@@ -214,14 +214,9 @@ test('team content is kept: edited decisions.md, feature files', async () => {
     assert.ok(!existsSync(join(cwd, '.claude/rules')));
 });
 
-test('the legacy base folder goes, a path outside the project is ignored', async () => {
+test('a path outside the project is ignored', async () => {
     const cwd = await installed();
 
-    mkdirSync(join(cwd, '.claude/brigade-base'), {
-        recursive: true
-    });
-
-    writeFileSync(join(cwd, '.claude/brigade-base/old.md'), 'old\n');
     const outside = join(cwd, '..', 'brigade-outside.txt');
 
     writeFileSync(outside, 'keep me\n');
