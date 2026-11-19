@@ -145,6 +145,8 @@ Brigade proposes a commit once the work is finished and never commits without yo
 and a state file `.claude/context/features/<branch>.md` (slashes become dashes), committed with the branch. It starts
 with a design (questions, then 2-3 approaches) and a plan of small steps, each with its files and a check; each step is
 one `implementer` brief, verified before the next.
+Any behavior change starts with that discussion (questions one at a time, 2-3 approaches, you pick), and a plain question
+gets an answer, not an action.
 When the feature ends, Brigade asks how to close the branch: a pull request, a local merge, or keep it.
 
 ## Add a stack
