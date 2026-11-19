@@ -20,6 +20,8 @@ for (const prefix of PREFIXES) {
 
         assert.equal(count(text, 'A question gets an answer, not an action'), 1);
         assert.equal(count(text, 'Before any change of behavior'), 1);
+        assert.equal(count(text, 'A plan or a picked approach is not a go'), 1);
+        assert.equal(count(text, 'said go'), 1);
     });
 
     test(`${prefix}: the feature skill Design bullet points to brigade.md`, () => {
@@ -27,6 +29,13 @@ for (const prefix of PREFIXES) {
 
         assert.ok(design, 'Design bullet missing');
         assert.match(design, /brigade\.md/);
+    });
+
+    test(`${prefix}: the feature skill Plan bullet needs a go`, () => {
+        const plan = read(prefix, 'skills/feature/SKILL.md').split('\n').find((line) => line.startsWith('- **Plan**'));
+
+        assert.ok(plan, 'Plan bullet missing');
+        assert.match(plan, /says go/);
     });
 
     test(`${prefix}: the audit skill has Fixing, the discussion and the feature proposal`, () => {

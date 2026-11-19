@@ -11,7 +11,7 @@ An audit must survive between sessions, machines and developers: it is a committ
 - Audit files are NOT loaded by default: read them on demand. Never delete one; when every row is closed, set `Status: closed` (and commit it).
 - To resume: work only on `open`/`deferred` rows, and run `git diff <baseline>..HEAD -- <files>` to find findings the code changed since. Re-audit only those.
 - A `wontfix` that sets a team-wide rule also goes in `.claude/context/decisions.md`.
-- **Fixing**: on the user's go, a finding whose fix changes behavior goes through the discussion of `brigade.md` (Rules) first; the user picks the approach. Then, as in a feature step: one fix (or a few rows of the same file) = one `implementer` brief with a check as its "done", verified with `git diff` before the next, and its row set to `fixed` in the same brief.
+- **Fixing**: on the user's go, a finding whose fix changes behavior goes through the discussion of `brigade.md` (Rules) first; the user picks the approach and says go. Then, as in a feature step: one fix (or a few rows of the same file) = one `implementer` brief with a check as its "done", verified with `git diff` before the next, and its row set to `fixed` in the same brief.
 - When the fixes span several steps, files or sessions, propose a feature (see skill `feature`) and keep the audit path and open IDs in its file.
 
 Stop once the audit file is written and its commit proposed: report its path and the count of findings per status. Fixing starts only on the user's go.
