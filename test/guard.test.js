@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { decide } from '../templates/web/.claude/hooks/git-guard.mjs';
+import { decide, guardOff } from '../templates/web/.claude/hooks/git-guard.mjs';
 
 const protectedBranches = [
     'main',
@@ -176,8 +176,6 @@ test('git-operator: unknown write subcommands are asked, ref and history deletio
     }
 
     for (const command of [
-        'git tag -d v1',
-        'git tag --delete v1',
         'git update-ref -d refs/heads/x',
         'git filter-branch --all',
         'git reflog expire --all',
@@ -293,11 +291,11 @@ test('git-operator asks on protected branches, push, merge and rebase', () => {
     assert.equal(run('git rebase develop'), 'ask');
 });
 
-test('destructive git is denied even for git-operator', () => {
+test('irreversible git is denied even for git-operator, recoverable discards ask', () => {
     assert.equal(run('git reset --hard HEAD~1'), 'deny');
     assert.equal(run('git push --force'), 'deny');
     assert.equal(run('git clean -fd'), 'deny');
-    assert.equal(run('git branch -D old'), 'deny');
+    assert.equal(run('git branch -D old'), 'ask');
 });
 
 test('quoted text is not read as a command', () => {
@@ -369,14 +367,16 @@ test('nested git commands are analysed', () => {
     }), 'deny');
 });
 
-test('commands that destroy uncommitted work are denied for git-operator', () => {
-    assert.equal(run('git checkout -- src/a.js'), 'deny');
-    assert.equal(run('git checkout .'), 'deny');
-    assert.equal(run('git checkout -f develop'), 'deny');
-    assert.equal(run('git restore src/a.js'), 'deny');
-    assert.equal(run('git switch --discard-changes develop'), 'deny');
-    assert.equal(run('git stash drop'), 'deny');
-    assert.equal(run('git stash clear'), 'deny');
+test('commands that destroy uncommitted work ask for git-operator', () => {
+    assert.equal(run('git tag -d v1'), 'ask');
+    assert.equal(run('git tag --delete v1'), 'ask');
+    assert.equal(run('git checkout -- src/a.js'), 'ask');
+    assert.equal(run('git checkout .'), 'ask');
+    assert.equal(run('git checkout -f develop'), 'ask');
+    assert.equal(run('git restore src/a.js'), 'ask');
+    assert.equal(run('git switch --discard-changes develop'), 'ask');
+    assert.equal(run('git stash drop'), 'ask');
+    assert.equal(run('git stash clear'), 'ask');
     assert.equal(run('git checkout develop'), 'allow');
     assert.equal(run('git checkout -b feat/y'), 'allow');
     assert.equal(run('git restore --staged src/a.js'), 'allow');
@@ -548,7 +548,7 @@ test('a switch or checkout that creates no branch makes the branch unknown', () 
 
     assert.equal(run('git checkout -- file.md && git commit -m x', {
         branch: 'main'
-    }), 'deny');
+    }), 'ask');
 
     assert.equal(run('git checkout a.md b.md && git commit -m x', {
         branch: 'main'
@@ -623,6 +623,58 @@ test('BRIGADE_UNPROTECT_REFERENCE_BRANCH=1 lifts the reference branch only', asy
             force: true
         });
     }
+});
+
+test('BRIGADE_GIT_GUARD=off turns the hook off, any other value keeps it', () => {
+    const hook = fileURLToPath(new URL('../templates/web/.claude/hooks/git-guard.mjs', import.meta.url));
+
+    const out = (command, agent, value) => {
+        const env = {
+            ...process.env
+        };
+
+        delete env.BRIGADE_GIT_GUARD;
+
+        if (value !== undefined) {
+            env.BRIGADE_GIT_GUARD = value;
+        }
+
+        const result = spawnSync(process.execPath, [
+            hook
+        ], {
+            input: JSON.stringify({
+                agent_type: agent,
+                tool_input: {
+                    command
+                },
+                cwd: fileURLToPath(new URL('..', import.meta.url))
+            }),
+            encoding: 'utf8',
+            env
+        });
+
+        assert.equal(result.status, 0);
+
+        return result.stdout;
+    };
+
+    assert.equal(out('git commit -m x', '', 'off'), '');
+    assert.equal(out('git branch -D x', 'git-operator', 'off'), '');
+
+    for (const value of [
+        undefined,
+        '0',
+        'on'
+    ]) {
+        assert.match(out('git commit -m x', '', value), /"deny"/, String(value));
+        assert.match(out('git branch -D x', 'git-operator', value), /"ask"/, String(value));
+    }
+
+    assert.equal(guardOff({
+        BRIGADE_GIT_GUARD: 'off'
+    }), true);
+
+    assert.equal(guardOff({}), false);
 });
 
 test('timeout, stdbuf, a background & and a quoted subcommand are caught', () => {

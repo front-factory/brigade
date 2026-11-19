@@ -46,6 +46,10 @@ project and committed with it. The rest of the kit, all under `.claude/`:
 The guard protects the default branch and the reference branch. To lift the latter for yourself only, run
 `/brigade-settings`: it sets `BRIGADE_UNPROTECT_REFERENCE_BRANCH=1` in `.claude/settings.local.json`. Restart the session.
 
+To turn the git guard off for yourself only, so that just Claude Code's native permissions apply, set
+`BRIGADE_GIT_GUARD=off` the same way with `/brigade-settings`. Restart the session. The `settings.json` deny rules
+(`reset --hard`, force push, `clean -f`) still apply.
+
 For a personal effort per role (`implementer`, `git-operator`), copy `.claude/context/local-template.md` to
 `CLAUDE.local.md` at the project root (git-ignored), or let `/brigade-settings` write it.
 
@@ -136,7 +140,7 @@ The hooks run through a launcher that looks for `node`. If it finds none, it fai
 session, and Claude Code shows a "node was not found" warning when a hook runs. Add `node` to the PATH of
 non-interactive shells and restart.
 
-Only `git-operator` writes to git. `push`, `merge` and `rebase` ask for confirmation, destructive commands are denied.
+Only `git-operator` writes to git. `push`, `merge`, `rebase` and recoverable discards (`restore`, `checkout --`, `branch -D`, `stash drop`, `tag -d`) ask for confirmation, irreversible commands (`reset --hard`, force push, `clean -f`, history rewrites) are denied.
 Brigade proposes a commit once the work is finished and never commits without your go. A feature gets its own branch
 and a state file `.claude/context/features/<branch>.md` (slashes become dashes), committed with the branch. It starts
 with a design (questions, then 2-3 approaches) and a plan of small steps, each with its files and a check; each step is

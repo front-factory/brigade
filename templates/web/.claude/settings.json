@@ -16,14 +16,14 @@
         "ask": [
             "Bash(git push:*)",
             "Bash(git merge:*)",
-            "Bash(git rebase:*)"
+            "Bash(git rebase:*)",
+            "Bash(git branch -D:*)"
         ],
         "deny": [
             "Bash(git reset --hard:*)",
             "Bash(git push --force:*)",
             "Bash(git push -f:*)",
             "Bash(git clean -f:*)",
-            "Bash(git branch -D:*)",
             "Bash(rm -rf /:*)",
             "Bash(rm -rf ~:*)",
             "Read(./.env*)",
