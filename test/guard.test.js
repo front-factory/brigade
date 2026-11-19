@@ -711,3 +711,203 @@ test('redirections and && are not split as a background &', () => {
 
     assert.equal(run('git commit -m x && git push'), 'ask');
 });
+
+const DISCARDS = [
+    'git branch -D x',
+    'git branch -D -f x',
+    'git checkout -- a.js',
+    'git checkout .',
+    'git checkout -f',
+    'git checkout --force main',
+    'git restore a.js',
+    'git restore --worktree a.js',
+    'git restore -W a.js',
+    'git restore --staged --worktree a.js',
+    'git switch -f main',
+    'git switch --force main',
+    'git switch --discard-changes main',
+    'git stash drop',
+    'git stash drop stash@{1}',
+    'git stash clear',
+    'git tag -d v1',
+    'git tag --delete v1',
+    'git tag -d v1 v2'
+];
+
+const HARMLESS = [
+    'git restore --staged a.js',
+    'git restore -S a.js',
+    'git branch -d x',
+    'git checkout feat/x',
+    'git switch feat/x',
+    'git stash',
+    'git stash pop',
+    'git tag v1'
+];
+
+const IRREVERSIBLE = [
+    'git reset --hard',
+    'git reset --hard HEAD~1',
+    'git push --force',
+    'git push -f',
+    'git push --force-with-lease',
+    'git clean -f',
+    'git clean -fd',
+    'git clean -xdf',
+    'git update-ref -d refs/heads/x',
+    'git filter-branch --tree-filter x',
+    'git reflog expire --all',
+    'git reflog delete HEAD@{1}',
+    'git gc --prune=now'
+];
+
+test('discards: ask for git-operator, deny for the main session', () => {
+    for (const command of DISCARDS) {
+        assert.equal(run(command), 'ask', command);
+        assert.equal(run(command, {
+            agent: ''
+        }), 'deny', command);
+    }
+});
+
+test('harmless look-alikes stay allowed for git-operator on an unprotected branch', () => {
+    for (const command of HARMLESS) {
+        assert.equal(run(command), 'allow', command);
+    }
+});
+
+test('irreversible commands are denied for git-operator and the main session', () => {
+    for (const command of IRREVERSIBLE) {
+        assert.equal(run(command), 'deny', command);
+        assert.equal(run(command, {
+            agent: ''
+        }), 'deny', command);
+    }
+});
+
+test('compound commands: the strictest tier wins', () => {
+    assert.equal(run('git restore a && git reset --hard'), 'deny');
+    assert.equal(run('git reset --hard && git restore a'), 'deny');
+    assert.equal(run('git restore a && git push origin feat/x'), 'ask');
+    assert.equal(run('git stash drop && git commit -m x', {
+        branch: 'main'
+    }), 'ask');
+
+    assert.equal(run('git restore a && git status'), 'ask');
+});
+
+test('wrapped discards are asked for git-operator', () => {
+    for (const command of [
+        'env X=1 git branch -D x',
+        'sh -c "git stash drop"',
+        'echo $(git tag -d v1)'
+    ]) {
+        assert.equal(run(command), 'ask', command);
+        assert.equal(run(command, {
+            agent: ''
+        }), 'deny', command);
+    }
+});
+
+test('the protected-branch rule itself asks for a non-discard write', () => {
+    const on = (branch) => decide({
+        command: 'git restore --staged a.js && git commit -m x',
+        agent: 'git-operator',
+        branch,
+        protectedBranches
+    });
+
+    assert.equal(on('main').permissionDecision, 'ask');
+    assert.match(on('main').reason, /protected branch/);
+    assert.equal(on('feat/x').permissionDecision, 'allow');
+});
+
+test('reasons name the tier', () => {
+    const reason = (command) => decide({
+        command,
+        agent: 'git-operator',
+        branch: 'feat/x',
+        protectedBranches
+    }).reason;
+
+    assert.match(reason('git reset --hard'), /irreversible/);
+    assert.match(reason('git branch -D x'), /discards work/);
+});
+
+test('guardOff is true only for exactly "off"', () => {
+    assert.equal(guardOff({
+        BRIGADE_GIT_GUARD: 'off'
+    }), true);
+
+    for (const value of [
+        'OFF',
+        'false',
+        '0',
+        '',
+        undefined
+    ]) {
+        assert.equal(guardOff({
+            BRIGADE_GIT_GUARD: value
+        }), false, String(value));
+    }
+
+    assert.equal(guardOff({}), false);
+});
+
+test('the spawned hook prints nothing when off, and the usual decisions otherwise', () => {
+    const hook = fileURLToPath(new URL('../templates/web/.claude/hooks/git-guard.mjs', import.meta.url));
+    const cwd = fileURLToPath(new URL('..', import.meta.url));
+
+    const out = (command, agent, value) => {
+        const env = {
+            ...process.env
+        };
+
+        delete env.BRIGADE_GIT_GUARD;
+
+        if (value !== undefined) {
+            env.BRIGADE_GIT_GUARD = value;
+        }
+
+        const result = spawnSync(process.execPath, [
+            hook
+        ], {
+            input: JSON.stringify({
+                agent_type: agent,
+                tool_input: {
+                    command
+                },
+                cwd
+            }),
+            encoding: 'utf8',
+            env
+        });
+
+        assert.equal(result.status, 0);
+
+        return result.stdout;
+    };
+
+    const cases = [
+        {
+            command: 'git commit -m x',
+            agent: '',
+            expected: 'deny'
+        },
+        {
+            command: 'git reset --hard',
+            agent: 'git-operator',
+            expected: 'deny'
+        },
+        {
+            command: 'git branch -D x',
+            agent: 'git-operator',
+            expected: 'ask'
+        }
+    ];
+
+    for (const { command, agent, expected } of cases) {
+        assert.equal(out(command, agent, 'off'), '', command);
+        assert.match(out(command, agent), new RegExp(`"${expected}"`), command);
+    }
+});
