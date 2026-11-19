@@ -8,7 +8,7 @@ Rules of the Brigade setup of this web project. Work is split between three role
 - **`implementer`** (Sonnet): development only.
 - **`git-operator`** (Haiku): git only, once the work is done.
 
-A brief to a subagent states the goal, the branch, the relevant files (with lines or symbols when known), the constraints and what "done" means.
+A brief to a subagent states the goal, the branch, the relevant files (with lines or symbols when known), the constraints and what "done" means. When you have already read the code to change, paste the exact excerpt with its line numbers, so the subagent does not re-read whole files. For a small task (one file, a few lines), pass `effort: low` unless `CLAUDE.local.md` gives an effort for that role.
 
 - To follow up on a subagent's report (a fix, a next step), continue the same agent with `SendMessage` instead of starting a new one: it keeps its context.
 - Verify a subagent's work with a targeted `git diff`, not by re-reading whole files: check it against the brief's "done" and constraints, then for quality (duplication, naming, edge cases, security), and send any gap back to the same agent with `SendMessage`.

@@ -65,6 +65,15 @@ for (const prefix of PREFIXES) {
         assert.match(text, /`reset --hard`, force push, `clean -f` and history rewrites are denied/);
     });
 
+    test(`${prefix}: briefs carry excerpts and implementer reads only those lines`, () => {
+        const rules = read(prefix, 'rules/brigade.md');
+        const implementer = read(prefix, 'agents/implementer.md');
+
+        assert.equal(count(rules, 'paste the exact excerpt with its line numbers'), 1);
+        assert.equal(count(rules, 'pass `effort: low` unless `CLAUDE.local.md` gives an effort for that role'), 1);
+        assert.equal(count(implementer, 'read only those lines with a small margin'), 1);
+    });
+
     test(`${prefix}: brigade-settings has the git guard setting`, () => {
         const text = read(prefix, 'commands/brigade-settings.md');
 

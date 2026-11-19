@@ -27,11 +27,11 @@ Why work this way:
 
 Three roles, each limited to its mission:
 
-| In the kitchen | Brigade role   | Model (default effort)     | Mission                                                                                                                       |
-|----------------|----------------|----------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| Sous-chef      | Main session   | Opus (medium) | Discusses, plans, orchestrates, verifies, proposes. Goes back and forth with the subagents; never writes code or touches git. |
-| Chef de partie | `implementer`  | Sonnet (medium)            | Writes the code, as briefed. Nothing else.                                                                                    |
-| Expediter      | `git-operator` | Haiku (low)                | Handles git, once the work is done and you said go.                                                                           |
+| In the kitchen | Brigade role   | Model (default effort)               | Mission                                                                                                                       |
+|----------------|----------------|--------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| Sous-chef      | Main session   | Opus (medium)                        | Discusses, plans, orchestrates, verifies, proposes. Goes back and forth with the subagents; never writes code or touches git. |
+| Chef de partie | `implementer`  | Sonnet (medium, low for small tasks) | Writes the code, as briefed. Nothing else.                                                                                    |
+| Expediter      | `git-operator` | Haiku (low)                          | Handles git, once the work is done and you said go.                                                                           |
 
 Plus base rules for work, security and efficiency, adapted to the stack (web for now). The setup is shared with the
 project and committed with it. The rest of the kit, all under `.claude/`:
