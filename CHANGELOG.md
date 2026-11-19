@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.13.0](https://github.com/front-factory/brigade/compare/v1.12.0...v1.13.0) (2026-11-19)
+
+### Features
+
+* **guard:** ask on recoverable discards and add BRIGADE_GIT_GUARD=off ([942bb68](https://github.com/front-factory/brigade/commit/942bb68467d124dceb4654b79be937b2a2d9ada6))
+* **templates:** discuss before any behavior change ([bb0d914](https://github.com/front-factory/brigade/commit/bb0d914b8145e299815fb385c350e4e13186bdff))
+* **templates:** pass exact excerpts in briefs to cut implementer tokens ([bb3df79](https://github.com/front-factory/brigade/commit/bb3df79eec611bb8896bf9fcb8ccf721b397e4ce))
+* **templates:** wait for an explicit go after a plan or approach ([2ae4ac3](https://github.com/front-factory/brigade/commit/2ae4ac3f62a2283a244212f02fd8d38ffcf2a3bc))
+
 ## [1.12.0](https://github.com/front-factory/brigade/compare/v1.11.0...v1.12.0) (2026-11-10)
 
 ### Features
