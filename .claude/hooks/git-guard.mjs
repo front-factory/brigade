@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 
 const words = (list) => new Set(list.split(' '));
 
-const READ = words('status diff log show blame rev-parse ls-files ls-tree grep describe shortlog cat-file merge-base rev-list for-each-ref show-ref ls-remote fetch check-ignore check-attr check-ref-format diff-tree diff-index diff-files name-rev cherry range-diff whatchanged help version var count-objects verify-commit verify-tag');
+const READ = words('status diff log show blame rev-parse ls-files ls-tree grep describe shortlog cat-file merge-base rev-list for-each-ref show-ref ls-remote fetch check-ignore check-attr check-ref-format diff-tree diff-index diff-files name-rev cherry range-diff whatchanged help version var count-objects verify-commit verify-tag merge-tree show-branch annotate fsck verify-pack show-index');
 const ASK = words('push merge rebase');
 const ON_PROTECTED = words('commit cherry-pick revert am pull reset rm');
 
@@ -17,6 +17,15 @@ const SAFE = new Set([
     ...ON_PROTECTED,
     ...words('add restore switch checkout branch tag stash mv init clone submodule notes')
 ]);
+
+// Known writes that the checks of `writes()` and `decide()` do not handle one by one: git-operator is asked.
+const WRITE = words('update-ref update-index read-tree write-tree commit-tree hash-object apply replace prune prune-packed pack-refs repack gc fast-import unpack-objects index-pack checkout-index mktag mktree merge-file sparse-checkout maintenance bisect rerere filter-branch clean format-patch citool gui');
+
+// Subcommands whose read or write depends on their arguments.
+const FORMS = words('branch tag remote reflog worktree stash config symbolic-ref');
+
+// An unknown subcommand is not known to write: only git-operator treats it as a write.
+const known = (sub) => READ.has(sub) || SAFE.has(sub) || ASK.has(sub) || WRITE.has(sub) || FORMS.has(sub);
 
 const RANK = {
     allow: 0,
@@ -318,9 +327,17 @@ const READ_FORMS = {
 };
 
 // `git branch`, `tag`, `remote`... only read when listing: no mutating flag, no name to create.
-function writes({ sub, rest }) {
+function writes({ sub, rest, shell }, agent) {
+    if (shell) {
+        return true;
+    }
+
     if (READ.has(sub)) {
         return false;
+    }
+
+    if (sub !== '?' && !known(sub)) {
+        return agent === 'git-operator';
     }
 
     if (sub === 'branch') {
@@ -393,7 +410,36 @@ function branchesAfter({ sub, rest }, branches) {
     ];
 }
 
-export function decide({ command, agent, branch: initial, protectedBranches }) {
+// A plain alias is judged as the command it stands for (one level, no loop); a shell alias cannot be analysed.
+function resolveAlias(git, aliasOf) {
+    if (git.sub === '?' || known(git.sub)) {
+        return git;
+    }
+
+    const value = aliasOf(git.sub);
+
+    if (value === null || value === undefined) {
+        return git;
+    }
+
+    if (value.startsWith('!')) {
+        return {
+            ...git,
+            shell: true
+        };
+    }
+
+    const resolved = parseGit(`${value} ${git.rest}`) ?? UNKNOWN;
+
+    // An alias of an alias is not followed: it cannot be analysed.
+    if (resolved.sub !== '?' && !known(resolved.sub) && (aliasOf(resolved.sub) ?? null) !== null) {
+        return UNKNOWN;
+    }
+
+    return resolved;
+}
+
+export function decide({ command, agent, branch: initial, protectedBranches, aliasOf = () => null }) {
     let decision = {
         permissionDecision: 'allow',
         reason: ''
@@ -408,7 +454,9 @@ export function decide({ command, agent, branch: initial, protectedBranches }) {
         }
     };
 
-    const found = gitCommands(command).filter(writes);
+    const found = gitCommands(command)
+        .map((git) => resolveAlias(git, aliasOf))
+        .filter((git) => writes(git, agent));
 
     if (found.length === 0) {
         return null;
@@ -425,7 +473,9 @@ export function decide({ command, agent, branch: initial, protectedBranches }) {
 
         branches = branchesAfter(git, branches);
 
-        if (agent !== 'git-operator') {
+        if (git.shell) {
+            raise('ask', 'Shell alias, cannot be analysed: confirm.');
+        } else if (agent !== 'git-operator') {
             raise('deny', 'Only git-operator writes to git: delegate to it, after the user\'s go.');
         } else if (irreversible(git)) {
             raise('deny', `git ${git.sub}: irreversible command, not allowed.`);
@@ -473,6 +523,31 @@ function currentBranch(cwd) {
     }
 }
 
+// The value of `alias.<name>`, or null when there is none.
+function aliasValue(cwd, name) {
+    if (!/^[\w-]+$/.test(name)) {
+        return null;
+    }
+
+    try {
+        return execFileSync('git', [
+            'config',
+            '--get',
+            `alias.${name}`
+        ], {
+            cwd,
+            encoding: 'utf8',
+            stdio: [
+                'ignore',
+                'pipe',
+                'ignore'
+            ]
+        }).trim();
+    } catch {
+        return null;
+    }
+}
+
 // BRIGADE_UNPROTECT_REFERENCE_BRANCH=1 (personal, in .claude/settings.local.json) lifts the reference branch only.
 export function protectedBranches(root, env = process.env) {
     try {
@@ -513,7 +588,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href &
             command: input.tool_input?.command ?? '',
             agent: input.agent_type ?? '',
             branch: currentBranch(input.cwd || root),
-            protectedBranches: protectedBranches(root)
+            protectedBranches: protectedBranches(root),
+            aliasOf: (name) => aliasValue(input.cwd || root, name)
         })
         : {
             permissionDecision: 'ask',

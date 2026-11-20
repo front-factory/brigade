@@ -140,7 +140,7 @@ The hooks run through a launcher that looks for `node`. If it finds none, it fai
 session, and Claude Code shows a "node was not found" warning when a hook runs. Add `node` to the PATH of
 non-interactive shells and restart.
 
-Only `git-operator` writes to git. `push`, `merge`, `rebase` and recoverable discards (`restore`, `checkout --`, `branch -D`, `stash drop`, `tag -d`) ask for confirmation, irreversible commands (`reset --hard`, force push, `clean -f`, history rewrites) are denied.
+Only `git-operator` writes to git. For the main session, a git subcommand the guard does not know is treated as a read (aliases are resolved first), and known writes stay with `git-operator`. `push`, `merge`, `rebase` and recoverable discards (`restore`, `checkout --`, `branch -D`, `stash drop`, `tag -d`) ask for confirmation, irreversible commands (`reset --hard`, force push, `clean -f`, history rewrites) are denied.
 Brigade proposes a commit once the work is finished and never commits without your go. A feature gets its own branch
 and a state file `.claude/context/features/<branch>.md` (slashes become dashes), committed with the branch. It starts
 with a design (questions, then 2-3 approaches) and a plan of small steps, each with its files and a check; each step is

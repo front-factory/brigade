@@ -911,3 +911,53 @@ test('the spawned hook prints nothing when off, and the usual decisions otherwis
         assert.match(out(command, agent), new RegExp(`"${expected}"`), command);
     }
 });
+
+test('main session: unknown subcommands are not writes, known writes stay denied', () => {
+    for (const command of [
+        'git merge-tree --write-tree a b',
+        'git show-branch',
+        'git frobnicate',
+        'for b in $(git for-each-ref --format=\'%(refname:short)\' refs/heads --no-merged develop); do ahead=$(git rev-list --count develop..$b); echo "$b $ahead"; done; git merge-base develop chore/close-pending | cut -c1-7; git merge-tree --write-tree --name-only develop chore/close-pending 2>&1 | head -15'
+    ]) {
+        assert.equal(run(command, {
+            agent: '',
+            branch: 'develop'
+        }), null, command);
+    }
+
+    for (const command of [
+        'git update-ref refs/heads/x HEAD',
+        'git worktree remove ../w',
+        'git commit -m x',
+        'git gc'
+    ]) {
+        assert.equal(run(command, {
+            agent: '',
+            branch: 'develop'
+        }), 'deny', command);
+    }
+});
+
+test('aliases are resolved once, shell aliases are asked', () => {
+    const aliasOf = (name) => ({
+        c: 'ci',
+        ci: 'commit -v',
+        sh: '!echo hi'
+    })[name] ?? null;
+
+    const decision = (command, agent, branch) => decide({
+        command,
+        agent,
+        branch,
+        protectedBranches,
+        aliasOf
+    })?.permissionDecision ?? null;
+
+    assert.equal(decision('git ci -m x', '', 'feat/x'), 'deny');
+    assert.equal(decision('git ci -m x', 'git-operator', 'feat/x'), 'allow');
+    assert.equal(decision('git ci -m x', 'git-operator', 'develop'), 'ask');
+    assert.equal(decision('git c -m x', '', 'feat/x'), 'deny');
+    assert.equal(decision('git c -m x', 'git-operator', 'feat/x'), 'ask');
+    assert.equal(decision('git sh', '', 'feat/x'), 'ask');
+    assert.equal(decision('git sh', 'git-operator', 'feat/x'), 'ask');
+});
